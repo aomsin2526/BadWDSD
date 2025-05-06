@@ -1,5 +1,5 @@
 #define SC_PUTS_BUFFER_ENABLED 1
-//#define SC_LV1_LOGGING_ENABLED 1
+#define SC_LV1_LOGGING_ENABLED 1
 
 #pragma GCC optimize("align-functions=8")
 #pragma GCC diagnostic ignored "-Wunused-function"

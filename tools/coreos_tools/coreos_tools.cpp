@@ -157,7 +157,7 @@ void extract_coreos(const char *rosPath, const char *outDir)
         return;
     }
 
-    uint8_t *rosData = (uint8_t *)malloc(rosFileSize);
+    uint8_t *rosData = (uint8_t *)malloc(rosFileSize + 16);
 
     if (rosData == NULL)
     {
@@ -169,6 +169,9 @@ void extract_coreos(const char *rosPath, const char *outDir)
 
     fread(rosData, 1, rosFileSize, rosFile);
     fclose(rosFile);
+
+    if (*((uint64_t*)rosData) != 0)
+        memmove(rosData + 16, rosData, rosFileSize);
 
     {
         size_t curOffset = 0;

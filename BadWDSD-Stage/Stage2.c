@@ -27,20 +27,20 @@ FUNC_DEF void Stage2()
         uint64_t lv1FileAddress;
         uint64_t lv1FileSize;
 
-        {
-            uint8_t found = 0;
+        uint8_t foundlv1file = 0;
 
-            if (found == 0)
+        {
+            if (foundlv1file == 0)
             {
                 puts("Searching for lv1.elf...\n");
 
                 if (CoreOS_FindFileEntry(coreOSStartAddress, "lv1.elf", &lv1FileAddress, &lv1FileSize))
-                    found = 1;
+                    foundlv1file = 1;
                 else
                     puts("File not found!\n");
             }
 
-            if (found == 0)
+            if (foundlv1file == 0)
             {
                 puts("Searching for lv1.zelf...\n");
 
@@ -49,7 +49,7 @@ FUNC_DEF void Stage2()
 
                 if (CoreOS_FindFileEntry(coreOSStartAddress, "lv1.zelf", &zelfFileAddress, &zelfFileSize))
                 {
-                    found = 1;
+                    foundlv1file = 1;
 
                     puts("zelfFileAddress = ");
                     print_hex(zelfFileAddress);
@@ -62,28 +62,78 @@ FUNC_DEF void Stage2()
                     lv1FileAddress = 0xC000000;
                     lv1FileSize = (8 * 1024 * 1024);
 
-                    ZelfDecompress(zelfFileAddress, (void*)lv1FileAddress, &lv1FileSize);
+                    ZelfDecompress(zelfFileAddress, (void *)lv1FileAddress, &lv1FileSize);
                 }
                 else
                     puts("File not found!\n");
             }
-
-            if (found == 0)
-            {
-                dead_beep();
-            }
         }
 
-        puts("lv1FileAddress = ");
-        print_hex(lv1FileAddress);
-        puts("\n");
+        if (foundlv1file != 0)
+        {
+            puts("lv1FileAddress = ");
+            print_hex(lv1FileAddress);
+            puts("\n");
 
-        puts("lv1FileSize = ");
-        print_decimal(lv1FileSize);
-        puts("\n");
+            puts("lv1FileSize = ");
+            print_decimal(lv1FileSize);
+            puts("\n");
 
-        puts("Loading lv1...\n");
-        LoadElf(lv1FileAddress, 0x0);
+            puts("Loading lv1...\n");
+            LoadElf(lv1FileAddress, 0x0);
+        }
+
+        {
+            puts("Searching for lv1.diff...\n");
+
+            uint64_t lv1DiffFileAddress;
+            uint64_t lv1DiffFileSize;
+
+            if (CoreOS_FindFileEntry(coreOSStartAddress, "lv1.diff", &lv1DiffFileAddress, &lv1DiffFileSize))
+            {
+                puts("lv1DiffFileAddress = ");
+                print_hex(lv1DiffFileAddress);
+
+                puts(", lv1DiffFileSize = ");
+                print_decimal(lv1DiffFileSize);
+
+                puts("\n");
+
+                {
+                    uint64_t curAddress = lv1DiffFileAddress;
+
+                    uint32_t diffCount = *((uint32_t *)curAddress);
+                    curAddress += 4;
+
+                    puts("diffCount = ");
+                    print_decimal(diffCount);
+                    puts("\n");
+
+                    for (uint32_t i = 0; i < diffCount; ++i)
+                    {
+                        uint32_t addr = *((uint32_t *)curAddress);
+                        curAddress += 4;
+
+                        uint8_t value = (uint8_t)(*((uint32_t *)curAddress));
+                        curAddress += 4;
+
+#if 0
+                        puts("addr = ");
+                        print_hex(addr);
+
+                        puts(", value = ");
+                        print_hex(value);
+
+                        puts("\n");
+#endif
+
+                        *((uint8_t*)(uint64_t)addr) = value;
+                    }
+                }
+            }
+            else
+                puts("File not found!\n");
+        }
 
         puts("Booting lv1...\n");
 

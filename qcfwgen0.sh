@@ -82,15 +82,6 @@ mkdir inros
 
 temp/coreos_tools extract_coreos inros.bin inros || exit 1
 
-echo Deleting creserved_0...
-rm inros/creserved_0
-
-echo Deleting hdd_copy.self...
-rm inros/hdd_copy.self
-
-echo Deleting lv2_kernel.self...
-rm inros/lv2_kernel.self
-
 echo Install stage2j to lv0.elf...
 temp/lv0gen lv0gen lv0.elf lv0.stage2j.elf temp/Stage2j.bin || exit 1
 
@@ -100,17 +91,26 @@ temp/zgen zelf_gen lv0.stage2j.elf lv0.stage2j.zelf || exit 1
 echo Install stage3j/4j to lv1.elf...
 temp/lv1gen lv1gen lv1.elf lv1.stage3j4j.elf temp/Stage3j.bin temp/Stage4j.bin || exit 1
 
-echo Generate lv1.stage3j4j.zelf
-temp/zgen zelf_gen lv1.stage3j4j.elf lv1.stage3j4j.zelf || exit 1
+echo Generate lv1.diff
+temp/lv1gen lv1diff lv1.elf lv1.stage3j4j.elf lv1.diff || exit 1
 
 echo Copying inros to outros...
 cp -a inros outros || exit 1
 
+echo Deleting creserved_0...
+rm outros/creserved_0
+
+#echo Deleting hdd_copy.self...
+#rm outros/hdd_copy.self
+
+echo Deleting lv2_kernel.self...
+rm outros/lv2_kernel.self
+
 echo Copying lv0.stage2j.zelf to outros/lv0.zelf...
 cp -a lv0.stage2j.zelf outros/lv0.zelf || exit 1
 
-echo Copying lv1.stage3j4j.zelf to outros/lv1.zelf...
-cp -a lv1.stage3j4j.zelf outros/lv1.zelf || exit 1
+echo Copying lv1.diff to outros/lv1.diff...
+cp -a lv1.diff outros/lv1.diff || exit 1
 
 echo Generate lv2_kernel.zelf
 temp/zgen zelf_gen lv2_kernel.elf lv2_kernel.zelf || exit 1

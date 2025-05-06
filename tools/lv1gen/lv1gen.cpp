@@ -231,13 +231,137 @@ void lv1gen(const char* inFilePath, const char* outFilePath, const char* stage3j
     fclose(outFile);
 }
 
+void lv1diff(const char* inFilePath1, const char* inFilePath2, const char* outFilePath)
+{
+    printf("lv1diff()\n");
+    
+    printf("inFilePath1 = %s\n", inFilePath1);
+    printf("inFilePath2 = %s\n", inFilePath2);
+    printf("outFilePath = %s\n", outFilePath);
+
+    FILE* inFile1 = fopen(inFilePath1, "rb");
+    FILE* inFile2 = fopen(inFilePath2, "rb");
+    FILE* outFile = fopen(outFilePath, "wb");
+
+    if (inFile1 == NULL || inFile2 == NULL || outFile == NULL)
+    {
+        printf("open file failed!\n");
+
+        abort();
+        return;
+    }
+
+    size_t inFileSize1 = get_file_size(inFile1);
+    printf("inFileSize1 = %lu\n", inFileSize1);
+
+    uint8_t* inData1 = (uint8_t*)malloc(inFileSize1);
+
+    if (inData1 == NULL)
+    {
+        printf("malloc failed!\n");
+        
+        abort();
+        return;
+    }
+
+    fread(inData1, 1, inFileSize1, inFile1);
+    fclose(inFile1);
+
+    size_t inFileSize2 = get_file_size(inFile2);
+    printf("inFileSize2 = %lu\n", inFileSize2);
+
+    uint8_t* inData2 = (uint8_t*)malloc(inFileSize2);
+
+    if (inData2 == NULL)
+    {
+        printf("malloc failed!\n");
+        
+        abort();
+        return;
+    }
+
+    fread(inData2, 1, inFileSize2, inFile2);
+    fclose(inFile2);
+
+    if (inFileSize1 != inFileSize2)
+    {
+        printf("file size must be equal!\n");
+        
+        abort();
+        return;
+    }
+
+    size_t sz = inFileSize1;
+    uint32_t diffCount = 0;
+
+    for (size_t i = 0x10000; i < sz; ++i)
+    {
+        if (inData1[i] != inData2[i])
+            ++diffCount;
+    }
+
+    printf("diffCount = %u\n", diffCount);
+
+    diffCount = endswap32(diffCount);
+    fwrite(&diffCount, 4, 1, outFile);
+    diffCount = endswap32(diffCount);
+
+    uint32_t diffCount2 = 0;
+
+    for (size_t i = 0x10000; i < sz; ++i)
+    {
+        if (inData1[i] != inData2[i])
+        {
+            uint32_t addr = (uint32_t)(i);
+            uint32_t val = (uint8_t)inData2[i];
+
+            // shitty code
+
+            if (addr >= 0x3f0000)
+                addr += (0x600000 - 0x3f0000);
+            else if (addr >= 0x1f0000)
+                addr += (0x400000 - 0x1f0000);
+            else if (addr >= 0x20000)
+                addr += (0x200000 - 0x20000);
+            else if (addr >= 0x10000)
+                addr -= 0x10000;
+            else
+                continue;
+
+            addr = endswap32(addr);
+            val = endswap32(val);
+
+            fwrite(&addr, 4, 1, outFile);
+            fwrite(&val, 4, 1, outFile);
+
+            ++diffCount2;
+        }
+    }
+
+    if (diffCount != diffCount2)
+    {
+        printf("diffCount must be equal!\n");
+        
+        abort();
+        return;
+    }
+
+    free(inData2);
+    free(inData1);
+
+    fclose(outFile);
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 6 && !strcmp(argv[1], "lv1gen"))
         lv1gen(argv[2], argv[3], argv[4], argv[5]);
+    else if (argc == 5 && !strcmp(argv[1], "lv1diff"))
+        lv1diff(argv[2], argv[3], argv[4]);
     else
     {
         printf("lv1gen <inFile> <outFile> <stage3j> <stage4j>\n");
+        printf("lv1diff <inFile1> <inFile2> <outFile>\n");
     }
 
     return 0;

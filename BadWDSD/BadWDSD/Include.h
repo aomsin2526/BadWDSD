@@ -63,7 +63,7 @@ extern bool Led_IsInited();
 
 // XDRs
 
-//#define XDR_IS_X32 1
+#define XDR_IS_X32 1
 
 static const uint32_t XDR_GPO_CLK_PIN_ID = 6;
 static const uint32_t XDR_GPO_CLK_PIN_ID2 = 7;
@@ -221,7 +221,7 @@ extern void Xdr_GenerateReadyWDSLData_x32(const uint8_t* inData, uint8_t* outWDS
 
 // Button
 
-#define BUTTON_MODE_ENABLED 0
+//#define BUTTON_MODE_ENABLED 1
 
 static const uint32_t BUTTON_PIN_ID = 15;
 
@@ -251,7 +251,7 @@ extern void Uart_Puts(uart_inst_t* uartId, const char* buf);
 
 //
 
-//#define SC_IS_SW 1
+#define SC_IS_SW 1
 
 static const uint32_t SC_UART_RX_PIN_ID = 17;
 static const uint32_t SC_UART_TX_PIN_ID = 16;
@@ -293,6 +293,9 @@ extern bool Sc_GetScBypass();
 
 static const uint32_t SC_BANKSEL_PIN_ID = 28;
 extern bool Sc_GetScBanksel();
+
+static const uint32_t SC_RECOVERY_PIN_ID = 22;
+extern bool Sc_GetScRecovery();
 
 extern void Sc_Init();
 

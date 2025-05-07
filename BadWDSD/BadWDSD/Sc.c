@@ -101,6 +101,11 @@ bool Sc_GetScBanksel()
     return Gpio_GetOnce(SC_BANKSEL_PIN_ID);
 }
 
+bool Sc_GetScRecovery()
+{
+    return !Gpio_GetOnce(SC_RECOVERY_PIN_ID);
+}
+
 volatile struct Sc_SendCommandContext_s cmdCtx;
 
 void Sc_Init()
@@ -251,10 +256,10 @@ void Sc_Init()
                     uint8_t *valx = (uint8_t *)&val;
                     auth1r[i] = valx[0];
 
-                    //PrintLog("%02X", (uint32_t)auth1r[i]);
+                    // PrintLog("%02X", (uint32_t)auth1r[i]);
                 }
 
-                //PrintLog("\n");
+                // PrintLog("\n");
 
                 uint8_t data[48];
                 aes_decrypt_cbc(&auth1r[16], 48, data, sc2tb_key_schedule, 128, (BYTE *)iv);
@@ -343,6 +348,7 @@ void Sc_Init()
 
         {
             bool banksel = Sc_GetScBanksel();
+            bool recovery = Sc_GetScRecovery();
 
 #if SC_IS_SW
 
@@ -359,6 +365,13 @@ void Sc_Init()
 
             {
                 sprintf(cmdCtx.cmd, "w 1211 03\r\n");
+                sprintf(cmdCtx.expectedResponse, "OK 00000000");
+
+                Sc_SendCommand(&cmdCtx);
+            }
+
+            {
+                sprintf(cmdCtx.cmd, "w 1261 %s\r\n", recovery ? "00" : "ff");
                 sprintf(cmdCtx.expectedResponse, "OK 00000000");
 
                 Sc_SendCommand(&cmdCtx);
@@ -384,7 +397,19 @@ void Sc_Init()
                 Sc_SendCommand(&cmdCtx);
             }
 
+            {
+                sprintf(cmdCtx.cmd, "w 48c61 %s\r\n", recovery ? "00" : "ff");
+                sprintf(cmdCtx.expectedResponse, "w complete!");
+
+                Sc_SendCommand(&cmdCtx);
+            }
+
 #endif
+
+            if (recovery)
+            {
+                Sc_Puts("bringup\r\n");
+            }
         }
     }
 }

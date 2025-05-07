@@ -196,7 +196,11 @@ void Watchdog()
         {
             Sc_Puts("shutdown\r\n");
             busy_wait_ms(2500);
-            Sc_Puts("powersw\r\n");
+
+            if (Sc_GetScRecovery())
+                Sc_Puts("bringup\r\n");
+            else
+                Sc_Puts("powersw\r\n");
 
             break;
         }

@@ -79,6 +79,51 @@ FUNC_DEF void Stage1()
 
             if (found == 0)
             {
+                puts("Searching for lv0 self...\n");
+
+                uint64_t lv0SelfFileAddress;
+                uint64_t lv0SelfFileSize;
+
+                if (CoreOS_FindFileEntry(coreOSStartAddress, "lv0", &lv0SelfFileAddress, &lv0SelfFileSize))
+                {
+                    found = 1;
+
+                    puts("lv0SelfFileAddress = ");
+                    print_hex(lv0SelfFileAddress);
+
+                    puts(", lv0SelfFileSize = ");
+                    print_decimal(lv0SelfFileSize);
+
+                    puts("\n");
+
+                    lv0FileAddress = 0xC000000;
+                    lv0FileSize = (4 * 1024 * 1024);
+
+                    memset((void*)lv0FileAddress, 0, lv0FileSize);
+
+                    WaitInMs(1500);
+                    sc_triple_beep();
+
+                    DecryptLv0Self((void*)lv0FileAddress, (const void*)lv0SelfFileAddress);
+
+                    {
+                        uint8_t searchData[] = {0x38, 0x60, 0x01, 0x00, 0x7C, 0x69, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x60, 0x00, 0x00, 0x00};
+                        
+                        uint8_t stage2jData[] = {0x48, 0x00, 0x00, 0x05, 0x7C, 0x68, 0x02, 0xA6, 0x38, 0x63, 0xFF, 0xFC, 0xE8, 0x83, 0x00, 0x18,
+                             0x7C, 0x89, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x00, 0x00, 0x02, 0x40, 0x1F, 0x03, 0x11, 0x00};
+
+                        puts("Installing stage2j...\n");
+                
+                        if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, 16, stage2jData, 32))
+                            puts("Install failed!\n");
+                    }
+                }
+                else
+                    puts("File not found!\n");
+            }
+
+            if (found == 0)
+            {
                 dead_beep();
             }
         }

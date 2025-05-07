@@ -1,5 +1,5 @@
 #define SC_PUTS_BUFFER_ENABLED 1
-#define SC_LV1_LOGGING_ENABLED 1
+//#define SC_LV1_LOGGING_ENABLED 1
 
 #pragma GCC optimize("align-functions=8")
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -1742,6 +1742,290 @@ FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset)
     }
 
     eieio();
+}
+
+struct SceHeader_s
+{
+    uint32_t magic;
+    uint32_t version;
+    uint16_t attribute;
+    uint16_t category;
+    uint32_t ext_header_size;
+    uint64_t file_offset;
+    uint64_t file_size;
+};
+
+struct SceMetaInfo_s
+{
+    uint64_t key[2];
+    uint8_t key_pad[16];
+    uint64_t iv[2];
+    uint8_t iv_pad[16];
+};
+
+struct SceMetaHeader_s
+{
+    uint64_t sign_offset;
+    uint32_t sign_algorithm; // 1 = ECDSA160, 2 = HMACSHA1, 3 = SHA1, 5 = RSA2048, 6 = HMACSHA256 (?not used?)
+    uint32_t section_entry_num;
+    uint32_t key_entry_num;
+    uint32_t optional_header_size;
+    uint64_t pad;
+};
+
+struct SceMetaSectionHeader_s
+{
+    uint64_t segment_offset;
+    uint64_t segment_size;
+    uint32_t segment_type;   // 1 = shdr, 2 = phdr, 3 = sceversion
+    uint32_t segment_id;     // 0,1,2,3,etc for phdr, always 3 for shdrs, sceversion shdr number for sceversion
+    uint32_t sign_algorithm; // 1 = ECDSA160 (not used), 2 = HMACSHA1, 3 = SHA1, 5 = RSA2048 (not used), 6 = HMACSHA256
+    uint32_t sign_idx;
+    uint32_t enc_algorithm;  // 1 = none, 2 = aes128cbccfb, 3 = aes128ctr
+    uint32_t key_idx;        // -1 when enc_algorithm = none
+    uint32_t iv_idx;         // -1 when enc_algorithm = none
+    uint32_t comp_algorithm; // 1 = plain, 2 = zlib
+};
+
+struct SceMetaKey_s
+{
+    uint64_t key[2];
+};
+
+#include "Aes/Aes.c"
+
+FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
+{
+    puts("DecryptLv0Self()\n");
+
+    uint8_t *dest = (uint8_t *)inDest;
+    const uint8_t *src = (const uint8_t *)inSrc;
+
+    uint64_t curSrcOffset = 0;
+
+    struct SceHeader_s sceHeader;
+    memcpy(&sceHeader, &src[curSrcOffset], sizeof(struct SceHeader_s));
+
+    if ((sceHeader.magic) != 0x53434500)
+    {
+        puts("SCE magic check failed!, ");
+        print_hex(sceHeader.magic);
+        puts("\n");
+
+        dead_beep();
+        return;
+    }
+
+    puts("sceHeader:\n");
+
+    puts("ext_header_size = ");
+    print_hex(sceHeader.ext_header_size);
+    puts("\n");
+
+    puts("file_offset = ");
+    print_hex(sceHeader.file_offset);
+    puts("\n");
+
+    puts("file_size = ");
+    print_hex(sceHeader.file_size);
+    puts("\n");
+
+    // erk=CA7A24EC38BDB45B 98CCD7D363EA2AF0 C326E65081E0630C B9AB2D215865878A
+    // riv=F9205F46F6021697 E670F13DFA726212
+
+    uint64_t meta_key[4];
+    meta_key[0] = (0xCA7A24EC38BDB45B);
+    meta_key[1] = (0x98CCD7D363EA2AF0);
+    meta_key[2] = (0xC326E65081E0630C);
+    meta_key[3] = (0xB9AB2D215865878A);
+
+    uint64_t meta_iv[2];
+    meta_iv[0] = (0xF9205F46F6021697);
+    meta_iv[1] = (0xE670F13DFA726212);
+
+    WORD meta_aes_key[60];
+    aes_key_setup((const uint8_t *)meta_key, meta_aes_key, 256);
+
+    curSrcOffset = 0x200;
+
+    struct SceMetaInfo_s metaInfo;
+    aes_decrypt_cbc(
+
+        &src[curSrcOffset],
+        sizeof(struct SceMetaInfo_s),
+
+        (uint8_t *)&metaInfo,
+
+        meta_aes_key,
+        256,
+
+        (const uint8_t *)meta_iv);
+
+    curSrcOffset += sizeof(struct SceMetaInfo_s);
+
+    puts("metaInfo:\n");
+
+    puts("metaInfo.key[0] = ");
+    print_hex(metaInfo.key[0]);
+    puts("\n");
+
+    puts("metaInfo.key[1] = ");
+    print_hex(metaInfo.key[1]);
+    puts("\n");
+
+    puts("metaInfo.iv[0] = ");
+    print_hex(metaInfo.iv[0]);
+    puts("\n");
+
+    puts("metaInfo.iv[1] = ");
+    print_hex(metaInfo.iv[1]);
+    puts("\n");
+
+    WORD meta_header_key[60];
+    aes_key_setup((const uint8_t *)metaInfo.key, meta_header_key, 128);
+
+    uint64_t metasSize = (sceHeader.file_offset) - sizeof(struct SceHeader_s) + (sceHeader.ext_header_size) + sizeof(struct SceMetaInfo_s);
+
+    puts("metasSize = ");
+    print_decimal(metasSize);
+    puts("\n");
+
+    uint8_t metasBuf[16384];
+    
+    aes_decrypt_ctr(
+
+        &src[curSrcOffset],
+        metasSize,
+
+        metasBuf,
+
+        meta_header_key,
+        128,
+
+        (const uint8_t *)metaInfo.iv
+    
+    );
+
+    struct SceMetaHeader_s* metaHeader = (struct SceMetaHeader_s*)&metasBuf[0];
+
+    puts("metaHeader:\n");
+
+    puts("section_entry_num = ");
+    print_decimal(metaHeader->section_entry_num);
+    puts("\n");
+
+    puts("key_entry_num = ");
+    print_decimal(metaHeader->key_entry_num);
+    puts("\n");
+
+    struct SceMetaSectionHeader_s* metaSectionHeaders = (struct SceMetaSectionHeader_s*)&metasBuf[sizeof(struct SceMetaHeader_s)];
+
+    for (uint32_t i = 0; i < (metaHeader->section_entry_num); ++i)
+    {
+        struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
+    
+        puts("section_headers[");
+        print_decimal(i);
+        puts("]:\n");
+
+        puts("segment_id = ");
+        print_decimal(h->segment_id);
+
+        puts(", segment_offset = ");
+        print_hex(h->segment_offset);
+
+        puts(", segment_size = ");
+        print_hex(h->segment_size);
+
+        puts(", enc_algorithm = ");
+        print_decimal(h->enc_algorithm);
+
+        puts(", key_idx = ");
+        print_decimal(h->key_idx);
+
+        puts(", iv_idx = ");
+        print_decimal(h->iv_idx);
+
+        puts("\n");
+    }
+
+    struct SceMetaKey_s* metaKeys = (struct SceMetaKey_s*)&metasBuf[sizeof(struct SceMetaHeader_s) + ((metaHeader->section_entry_num) * sizeof(struct SceMetaSectionHeader_s))];
+
+    for (uint32_t i = 0; i < (metaHeader->key_entry_num); ++i)
+    {
+        struct SceMetaKey_s *k = &metaKeys[i];
+    
+        puts("keys[");
+        print_decimal(i);
+        puts("]: ");
+
+        puts("key[0] = ");
+        print_hex(k->key[0]);
+
+        puts(", key[1] = ");
+        print_hex(k->key[1]);
+
+        puts("\n");
+    }
+
+    struct ElfHeader_s* elfHeader = (struct ElfHeader_s*)&src[0x90];
+
+    memcpy(dest, elfHeader, sizeof(struct ElfHeader_s));
+    memcpy(dest + (elfHeader->e_phoff), &src[0x90 + (elfHeader->e_phoff)], (elfHeader->e_phentsize) * (elfHeader->e_phnum));
+
+    struct ElfPhdr_s* elfPhdrs = (struct ElfPhdr_s*)(dest + (elfHeader->e_phoff));
+
+    for (uint16_t i = 0; i < (elfHeader->e_phnum); ++i)
+    {
+        struct ElfPhdr_s* phdr = &elfPhdrs[i];
+
+        puts("decrypting phdr ");
+        print_decimal(i);
+        puts("...\n");
+
+        struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
+
+        struct SceMetaKey_s* key = &metaKeys[(h->key_idx)];
+        struct SceMetaKey_s* iv = &metaKeys[(h->iv_idx)];
+
+        WORD aes_key[60];
+        aes_key_setup((const uint8_t *)key->key, aes_key, 128);
+
+        puts("segment_offset = ");
+        print_hex(h->segment_offset);
+        puts(", segment_size = ");
+        print_hex(h->segment_size);
+
+        puts(", p_offset = ");
+        print_hex(h->segment_offset);
+
+        uint64_t in_addr = (uint64_t)&src[(h->segment_offset)];
+        uint64_t out_addr = (uint64_t)dest + phdr->p_offset;
+
+        puts(", in_addr = ");
+        print_hex(in_addr);
+
+        puts(", out_addr = ");
+        print_hex(out_addr);
+
+        puts("\n");
+
+        aes_decrypt_ctr(
+
+            (uint8_t*)in_addr,
+            (h->segment_size),
+    
+            (uint8_t*)out_addr,
+    
+            aes_key,
+            128,
+    
+            (const uint8_t *)iv->key
+        
+        );
+    }
+
+    puts("DecryptLv0Self() done.\n");
 }
 
 #include "tinf/tinf.h"

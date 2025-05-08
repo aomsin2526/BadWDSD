@@ -6,8 +6,10 @@
 # contents of <work_dir> must be:
 # inros.bin (OFW)
 # lv0.elf (OFW)
-# lv1.elf (OFW)
-# lv2_kernel.elf (OFW or pre-patched)
+# lv1.elf.orig (OFW)
+# lv1.elf (OFW or patched)
+# lv2_kernel.elf.orig (OFW)
+# lv2_kernel.elf (OFW or patched)
 
 if [[ $# -eq 0 ]] ; then
     echo 'missing args'
@@ -35,6 +37,9 @@ cd $ROOT_DIR/tools/lv0gen || exit 1
 cd $ROOT_DIR/tools/lv1gen || exit 1
 ./build.sh || exit 1
 
+cd $ROOT_DIR/tools/lv2gen || exit 1
+./build.sh || exit 1
+
 cd $ROOT_DIR/tools/zgen || exit 1
 ./build.sh || exit 1
 
@@ -50,11 +55,8 @@ rm -rf temp
 rm lv0.stage2j.elf
 rm lv0.stage2j.zelf
 
-rm lv1.stage3j4j.elf
-rm lv1.stage3j4j.zelf
-
-rm lv2_kernel.zelf
-rm lv2_kernel.zzelf
+rm lv1.stage3j3jz.elf
+rm lv1.stage3j3jz.zelf
 
 rm outros.bin
 
@@ -69,11 +71,12 @@ mkdir temp || exit 1
 
 cp $ROOT_DIR/BadWDSD-Stage/Stage2j.bin temp/Stage2j.bin || exit 1
 cp $ROOT_DIR/BadWDSD-Stage/Stage3j.bin temp/Stage3j.bin || exit 1
-cp $ROOT_DIR/BadWDSD-Stage/Stage4j.bin temp/Stage4j.bin || exit 1
+cp $ROOT_DIR/BadWDSD-Stage/Stage3jz.bin temp/Stage3jz.bin || exit 1
 
 cp $ROOT_DIR/tools/coreos_tools/coreos_tools temp/coreos_tools || exit 1
 cp $ROOT_DIR/tools/lv0gen/lv0gen temp/lv0gen || exit 1
 cp $ROOT_DIR/tools/lv1gen/lv1gen temp/lv1gen || exit 1
+cp $ROOT_DIR/tools/lv2gen/lv2gen temp/lv2gen || exit 1
 cp $ROOT_DIR/tools/zgen/zgen temp/zgen || exit 1
 cp $ROOT_DIR/tools/dtbImage_ps3_bin_to_elf/dtbImage_ps3_bin_to_elf temp/dtbImage_ps3_bin_to_elf || exit 1
 
@@ -88,11 +91,14 @@ temp/lv0gen lv0gen lv0.elf lv0.stage2j.elf temp/Stage2j.bin || exit 1
 echo Generate lv0.stage2j.zelf...
 temp/zgen zelf_gen lv0.stage2j.elf lv0.stage2j.zelf || exit 1
 
-echo Install stage3j/4j to lv1.elf...
-temp/lv1gen lv1gen lv1.elf lv1.stage3j4j.elf temp/Stage3j.bin temp/Stage4j.bin || exit 1
+echo Install stage3j/3jz to lv1.elf...
+temp/lv1gen lv1gen lv1.elf lv1.stage3j3jz.elf temp/Stage3j.bin temp/Stage3jz.bin || exit 1
 
 echo Generate lv1.diff
-temp/lv1gen lv1diff lv1.elf lv1.stage3j4j.elf lv1.diff || exit 1
+temp/lv1gen lv1diff lv1.elf.orig lv1.stage3j3jz.elf lv1.diff || exit 1
+
+echo Generate lv2_kernel.diff
+temp/lv2gen lv2diff lv2_kernel.elf.orig lv2_kernel.elf lv2_kernel.diff || exit 1
 
 echo Copying inros to outros...
 cp -a inros outros || exit 1
@@ -103,26 +109,16 @@ rm outros/creserved_0
 #echo Deleting hdd_copy.self...
 #rm outros/hdd_copy.self
 
-echo Deleting lv2_kernel.self...
-rm outros/lv2_kernel.self
-
 echo Copying lv0.stage2j.zelf to outros/lv0.zelf...
 cp -a lv0.stage2j.zelf outros/lv0.zelf || exit 1
 
 echo Copying lv1.diff to outros/lv1.diff...
 cp -a lv1.diff outros/lv1.diff || exit 1
 
-echo Generate lv2_kernel.zelf
-temp/zgen zelf_gen lv2_kernel.elf lv2_kernel.zelf || exit 1
+echo Copying lv2_kernel.diff to outros/lv2_kernel.diff...
+cp -a lv2_kernel.diff outros/lv2_kernel.diff || exit 1
 
-echo Generate lv2_kernel.zzelf
-temp/dtbImage_ps3_bin_to_elf lv2_kernel.zelf lv2_kernel.zzelf || exit 1
-
-echo Generate lv2_kernel.zfself using this command: make_fself -u lv2_kernel.zzelf lv2_kernel.zfself
-read -p "then press ENTER to continue"
-
-echo Copying lv2_kernel.zfself to outros/lv2_kernel.self...
-cp -a lv2_kernel.zfself outros/lv2_kernel.self || exit 1
+read -p "Modify outros now then press ENTER to continue"
 
 echo Generate outros.bin...
 temp/coreos_tools create_coreos outros outros.bin || exit 1

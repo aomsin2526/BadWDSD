@@ -1,5 +1,5 @@
 #define SC_PUTS_BUFFER_ENABLED 1
-//#define SC_LV1_LOGGING_ENABLED 1
+#define SC_LV1_LOGGING_ENABLED 1
 
 #pragma GCC optimize("align-functions=8")
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -98,6 +98,8 @@ FUNC_DECL void sc_hard_restart();
 
 FUNC_DECL void puts(const char *str);
 
+FUNC_DECL void print_hex(uint64_t v);
+
 //
 
 register uint64_t r13 asm("r13");
@@ -109,6 +111,7 @@ register uint64_t r23 asm("r23");
 register uint64_t r24 asm("r24");
 
 register uint64_t is_lv1 asm("r17"); // 0x9669
+register uint64_t lv1_rtoc asm("r18");
 
 register uint64_t stage_entry_ra asm("r19");
 register uint64_t stage_rtoc asm("r20");
@@ -653,6 +656,30 @@ FUNC_DEF uint8_t SearchAndReplace(void* in_data, uint64_t dataSize, const void* 
         if (!memcmp(&data[i], searchData, searchDataSize))
         {
             memcpy(&data[i], replaceData, replaceDataSize);
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+FUNC_DEF uint8_t SearchMemory(void* in_data, uint64_t dataSize, const void* in_searchData, uint64_t searchDataSize, uint64_t* outFoundAddr)
+{
+    uint8_t* data = (uint8_t*)in_data;
+
+    const uint8_t* searchData = (const uint8_t*)in_searchData;
+
+    for (uint64_t i = 0; i < dataSize; ++i)
+    {
+        if (!memcmp(&data[i], searchData, searchDataSize))
+        {
+            if (outFoundAddr != NULL)
+                *outFoundAddr = (uint64_t)&data[i];
+
+            //puts("foundAddr: ");
+            //print_hex((uint64_t)&data[i]);
+            //puts("\n");
+
             return 1;
         }
     }
@@ -1794,6 +1821,9 @@ struct SceMetaKey_s
 
 #include "Aes/Aes.c"
 
+#pragma GCC push_options
+#pragma GCC optimize("O0")
+
 FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
 {
     puts("DecryptLv0Self()\n");
@@ -2028,6 +2058,8 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
     puts("DecryptLv0Self() done.\n");
 }
 
+#pragma GCC pop_options
+
 #include "tinf/tinf.h"
 
 #include "tinf/adler32.c"
@@ -2110,4 +2142,3 @@ FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void* destAddress, uint64
 #include "Stage1.c"
 #include "Stage2.c"
 #include "Stage3.c"
-#include "Stage4.c"

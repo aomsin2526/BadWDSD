@@ -14,5 +14,5 @@ powerpc64-linux-gnu-gcc $FLAGS -T Stage2j.ld Stage2j.S -o Stage2j.bin -Wl,--ofor
 powerpc64-linux-gnu-gcc $FLAGS -T Stage3j.ld Stage3j.S -o Stage3j.elf || exit 1
 powerpc64-linux-gnu-gcc $FLAGS -T Stage3j.ld Stage3j.S -o Stage3j.bin -Wl,--oformat=binary || exit 1
 
-powerpc64-linux-gnu-gcc $FLAGS -T Stage4j.ld Stage4j.c -o Stage4j.elf || exit 1
-powerpc64-linux-gnu-gcc $FLAGS -T Stage4j.ld Stage4j.c -o Stage4j.bin -Wl,--oformat=binary || exit 1
+powerpc64-linux-gnu-gcc $FLAGS -T Stage3jz.ld Stage3jz.S -o Stage3jz.elf || exit 1
+powerpc64-linux-gnu-gcc $FLAGS -T Stage3jz.ld Stage3jz.S -o Stage3jz.bin -Wl,--oformat=binary || exit 1

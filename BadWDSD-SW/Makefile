@@ -24,7 +24,7 @@ SOURCES		:=	source
 DATA		:=	data
 INCLUDES	:=
 
-TITLE		:=	BadWDSD-SW build 6
+TITLE		:=	BadWDSD-SW 20250508
 APPID		:=	KAFU00006
 CONTENTID	:=	UP0001-$(APPID)_00-0000000000000000
 #---------------------------------------------------------------------------------

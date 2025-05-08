@@ -1825,9 +1825,9 @@ void BadWDSD_Write_Stagex()
 	PrintLog("BadWDSD_Write_Stagex() done,\n");
 }
 
-void BadWDSD_Write_ros0(bool compare)
+void BadWDSD_Write_ros(bool compare, bool doFlashRos1)
 {
-	PrintLog("BadWDSD_Write_ros0()\n");
+	PrintLog("BadWDSD_Write_ros()\n");
 
 	if (!FlashIsNor())
 	{
@@ -1916,8 +1916,8 @@ void BadWDSD_Write_ros0(bool compare)
 		free(ros0);
 	}
 
-	PrintLog("Writing to flash...\n");
-	NorWrite(0x0C0000, code, size);
+	PrintLog("Writing to flash (%s)...\n", doFlashRos1 ? "ros1" : "ros0");
+	NorWrite(doFlashRos1 ? 0x7C0000 : 0x0C0000, code, size);
 
 	{
 		PrintLog("0x%lx\n", lv1_peek(0x2401F000200));
@@ -1925,7 +1925,7 @@ void BadWDSD_Write_ros0(bool compare)
 	}
 
 	free(code);
-	PrintLog("BadWDSD_Write_ros0() done.\n");
+	PrintLog("BadWDSD_Write_ros() done.\n");
 }
 
 int main(int argc, char *argv[])
@@ -2100,9 +2100,10 @@ int main(int argc, char *argv[])
 			LoadLv2Kernel("dtbImage.ps3.zfself", LoadLv2KernelType_e::OtherOS_Fself);
 
 		bool doSkipRosCompare = IsFileExist("/dev_hdd0/BadWDSD_doSkipRosCompare.txt");
+		bool doFlashRos1 = IsFileExist("/dev_hdd0/BadWDSD_doFlashRos1.txt");
 
 		BadWDSD_Write_Stagex();
-		BadWDSD_Write_ros0(!doSkipRosCompare);
+		BadWDSD_Write_ros(!doSkipRosCompare, doFlashRos1);
 	}
 
 	PrintLog("Bye!\n");

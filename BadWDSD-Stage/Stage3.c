@@ -414,30 +414,117 @@ FUNC_DEF void Stage3()
         }
     }
 
-    {
-        puts("Patching ps2_netemu.self -> ps2_netemu.zfself\n");
-
-        // 35
-        uint8_t searchData[] = { 0x2F, 0x6C, 0x6F, 0x63, 0x61, 0x6C, 0x5F, 0x73, 0x79, 0x73, 0x30, 0x2F, 0x70, 0x73, 0x32, 0x65, 
-            0x6D, 0x75, 0x2F, 0x70, 0x73, 0x32, 0x5F, 0x6E, 0x65, 0x74, 0x65, 0x6D, 0x75, 0x2E, 0x73, 0x65, 0x6C, 0x66, 0x00 };
-
-        // 37
-        uint8_t replaceData[] = { 0x2F, 0x6C, 0x6F, 0x63, 0x61, 0x6C, 0x5F, 0x73, 0x79, 0x73, 0x30, 0x2F, 0x70, 0x73, 0x32, 0x65,
-            0x6D, 0x75, 0x2F, 0x70, 0x73, 0x32, 0x5F, 0x6E, 0x65, 0x74, 0x65, 0x6D, 0x75, 0x2E, 0x7A, 0x66, 0x73, 0x65, 0x6C, 0x66, 0x00 };
-
-        if (!SearchAndReplace((void*)0, (16 * 1024 * 1024), searchData, 35, replaceData, 37))
-            puts("Patch failed!\n");
-    }
-
     eieio();
 
     puts("Stage3 done.\n");
 }
 
+FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
+{
+    puts("Stage3_AuthLv2(), laid = ");
+    print_hex(laid);
+    puts("\n");
+
+    // uint8_t* destPtr = (uint8_t*)0x8000000;
+
+    // ps2 = 0x1020000003000001
+    // ps3 = 0x1070000002000001
+
+#if 0
+
+    // apply lv2 diff....
+
+    {
+        uint8_t searchData[] = {0x7C, 0x71, 0x43, 0xA6, 0x7C, 0x92, 0x43, 0xA6, 0x7C, 0xB3, 0x43, 0xA6, 0x7C, 0x7A, 0x02, 0xA6, 0x7C, 0x9B, 0x02,
+                                0xA6, 0x7C, 0xA0, 0x00, 0xA6, 0x60, 0xA5, 0x00, 0x30, 0x7C, 0xBB, 0x03, 0xA6, 0x3C, 0xA0, 0x80, 0x00, 0x60, 0xA5,
+                                0x00, 0x00, 0x78, 0xA5, 0x07, 0xC6, 0x64, 0xA5, 0x00, 0x00, 0x60, 0xA5, 0x08, 0x3C, 0x7C, 0xBA, 0x03, 0xA6, 0x4C, 0x00, 0x00, 0x24};
+
+        uint64_t foundAddr;
+
+        if (SearchMemory((void *)0x1000000, (240 * 1024 * 1024), searchData, sizeof(searchData), &foundAddr))
+        {
+            foundAddr -= 0x800;
+
+            puts("foundAddr = ");
+            print_hex(foundAddr);
+            puts("\n");
+
+            {
+                uint8_t os_bank_indicator = sc_read_os_bank_indicator();
+
+                puts("os_bank_indicator = ");
+                print_hex(os_bank_indicator);
+                puts("\n");
+
+                if (os_bank_indicator == 0xff)
+                    puts("Will use ros0\n");
+                else
+                    puts("Will use ros1\n");
+
+                uint64_t coreOSStartAddress = (os_bank_indicator == 0xff) ? 0x2401F0C0000 : 0x2401F7C0000;
+
+                puts("Searching for lv2_kernel.diff...\n");
+
+                uint64_t lv2DiffFileAddress;
+                uint64_t lv2DiffFileSize;
+
+                if (CoreOS_FindFileEntry(coreOSStartAddress, "lv2_kernel.diff", &lv2DiffFileAddress, &lv2DiffFileSize))
+                {
+                    puts("lv2DiffFileAddress = ");
+                    print_hex(lv2DiffFileAddress);
+
+                    puts(", lv2DiffFileSize = ");
+                    print_decimal(lv2DiffFileSize);
+
+                    puts("\n");
+
+                    {
+                        uint64_t curAddress = lv2DiffFileAddress;
+
+                        uint32_t diffCount = *((uint32_t *)curAddress);
+                        curAddress += 4;
+
+                        puts("diffCount = ");
+                        print_decimal(diffCount);
+                        puts("\n");
+
+                        for (uint32_t i = 0; i < diffCount; ++i)
+                        {
+                            uint32_t addr = *((uint32_t *)curAddress);
+                            curAddress += 4;
+
+                            uint8_t value = (uint8_t)(*((uint32_t *)curAddress));
+                            curAddress += 4;
+
+#if 0
+                            puts("addr = ");
+                            print_hex(addr);
+        
+                            puts(", value = ");
+                            print_hex(value);
+        
+                            puts("\n");
+#endif
+
+                            *((uint8_t *)(uint64_t)(addr + foundAddr)) = value;
+                        }
+                    }
+                }
+                else
+                    puts("File not found!\n");
+            }
+        }
+    }
+
+#endif
+
+    eieio();
+
+    puts("Stage3_AuthLv2() done.\n");
+}
+
 #pragma GCC push_options
 #pragma GCC optimize("O0")
-
-FUNC_DECL void Stage4();
 
 __attribute__((section("main3"))) void stage3_main()
 {
@@ -450,16 +537,17 @@ __attribute__((section("main3"))) void stage3_main()
     // peek: r6 = addr, r4 = outValue
     // poke: r6 = addr, r7 = value
 
+    uint64_t r5_2 = r5;
     uint64_t r6_2 = r6;
     uint64_t r7_2 = r7;
 
     // peekpoke64
-    if (r5 == 0x1)
+    if (r5_2 == 0x1)
     {
         asm volatile("ld %0, 0(%1)" : "=r"(r4) : "r"(r6) :);
         return;
     }
-    else if (r5 == 0x2)
+    else if (r5_2 == 0x2)
     {
         asm volatile("std %0, 0(%1)" ::"r"(r7), "r"(r6) :);
 
@@ -478,12 +566,12 @@ __attribute__((section("main3"))) void stage3_main()
     }
 
     // peekpoke32
-    if (r5 == 0x3)
+    if (r5_2 == 0x3)
     {
         asm volatile("lwz %0, 0(%1)" : "=r"(r4) : "r"(r6) :);
         return;
     }
-    else if (r5 == 0x4)
+    else if (r5_2 == 0x4)
     {
         asm volatile("stw %0, 0(%1)" ::"r"(r7), "r"(r6) :);
 
@@ -502,16 +590,16 @@ __attribute__((section("main3"))) void stage3_main()
     }
 
     // peekpoke8
-    if (r5 == 0x7)
+    if (r5_2 == 0x7)
     {
         asm volatile("lbz %0, 0(%1)" : "=r"(r4) : "r"(r6) :);
         return;
     }
-    else if (r5 == 0x8)
+    else if (r5_2 == 0x8)
     {
         asm volatile("stb %0, 0(%1)" ::"r"(r7), "r"(r6) :);
 
-        //if ((r6_2 % 0x10000) == 0)
+        // if ((r6_2 % 0x10000) == 0)
         {
             sc_puts_init();
 
@@ -526,7 +614,7 @@ __attribute__((section("main3"))) void stage3_main()
     }
 
     // print hex value
-    if (r5 == 0x20)
+    if (r5_2 == 0x20)
     {
         sc_puts_init();
 
@@ -537,17 +625,19 @@ __attribute__((section("main3"))) void stage3_main()
         return;
     }
 
-    // Call stage4
-    if (r5 == 0x21)
-    {
-        Stage4();
-        return;
-    }
-
     // r4 = 0
     asm volatile("li 4, 0");
 
-    if (r5 != 0x0)
+    // auth lv2
+    if (r5_2 == 0x30)
+    {
+        sc_puts_init();
+
+        // r6 = laid
+        Stage3_AuthLv2(r6_2);
+    }
+
+    if ((r5_2 != 0x0) && (r5_2 != 0x30))
         return;
 
     uint64_t *alreadyDone = (uint64_t *)0x128;
@@ -568,6 +658,7 @@ __attribute__((section("main3"))) void stage3_main()
 // r5 = arg1
 // r6 = arg2
 // r7 = arg3
+// r8 = arg3
 
 // out:
 // r3 = 0
@@ -605,6 +696,9 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
     asm volatile("bl 4");
     asm volatile("mflr %0" : "=r"(stage_entry_ra)::);
     stage_entry_ra -= (4 * 10);
+
+    // set lv1_rtoc
+    asm volatile("mr %0, 2" : "=r"(lv1_rtoc)::);
 
     // set is_lv1 to 0x9669
     is_lv1 = 0x9669;

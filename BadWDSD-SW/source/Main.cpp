@@ -1928,6 +1928,92 @@ void BadWDSD_Write_ros(bool compare, bool doFlashRos1)
 	PrintLog("BadWDSD_Write_ros() done.\n");
 }
 
+void Sputest()
+{
+	PrintLog("Sputest()\n");
+
+	InstallOurHvcall();
+
+	{
+		uint64_t spu_id = 5;
+
+		{
+			//ls = 0x0
+			//status = 0x2
+			//Mbox = 0x1
+			//runcntl = 0x2
+			//privcntl = 0x0
+
+			uint32_t ls = SPU_LS_Read32(spu_id, 0);
+			PrintLog("ls = 0x%x\n", ls);
+
+			uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
+			PrintLog("status = 0x%x\n", status);
+
+			uint32_t mbox = SPU_PS_Read32(spu_id, 0x04004);
+			PrintLog("Mbox = 0x%x\n", mbox);
+
+			uint32_t runcntl = SPU_PS_Read32(spu_id, 0x0401C);
+			PrintLog("runcntl = 0x%x\n", runcntl);
+
+			uint64_t privcntl = SPU_P2_Read64(spu_id, 0x04040);
+			PrintLog("privcntl = 0x%lx\n", privcntl);
+		}
+
+		// 0x41099B8260DD5682 0x21A00E0232000000
+		SPU_LS_Write64(spu_id, 0, 0x41099B8260DD5682);
+		SPU_LS_Write64(spu_id, 8, 0x21A00E0232000000);
+
+		PrintLog("1\n");
+
+		// SPU_PRIVCNTL = 0x00
+		SPU_P2_Write64(spu_id, 0x04040, 0x0);
+
+		PrintLog("2\n");
+
+		// SPU_NPC[0:29] = entry (LS)
+		SPU_PS_Write32(spu_id, 0x04034, 0x0);
+
+		PrintLog("3\n");
+
+		eieio();
+
+		// SPU_RUNCNTL = 0x1
+		SPU_PS_Write32(spu_id, 0x0401C, 0x1);
+		eieio();
+
+		PrintLog("4\n");
+
+		WaitInMs(1000);
+
+		while (1)
+		{
+			//ls = 0x41099b82
+			//status = 0x1
+			//Mbox = 0x1337baad
+			//runcntl = 0x1
+			//privcntl = 0x0
+
+			uint32_t ls = SPU_LS_Read32(spu_id, 0);
+			PrintLog("ls = 0x%x\n", ls);
+
+			uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
+			PrintLog("status = 0x%x\n", status);
+
+			uint32_t mbox = SPU_PS_Read32(spu_id, 0x04004);
+			PrintLog("Mbox = 0x%x\n", mbox);
+
+			uint32_t runcntl = SPU_PS_Read32(spu_id, 0x0401C);
+			PrintLog("runcntl = 0x%x\n", runcntl);
+
+			uint64_t privcntl = SPU_P2_Read64(spu_id, 0x04040);
+			PrintLog("privcntl = 0x%lx\n", privcntl);
+
+			WaitInMs(1000);
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	lv2_beep_triple();
@@ -2081,6 +2167,8 @@ int main(int argc, char *argv[])
 		}
 #endif
 
+#if 1 
+
 		bool doLoadLv2Kernel_Fself = IsFileExist("/dev_hdd0/BadWDSD_doLoadLv2Kernel_Fself.txt");
 		bool doLoadLv2Kernel_ZFself = IsFileExist("/dev_hdd0/BadWDSD_doLoadLv2Kernel_ZFself.txt");
 
@@ -2104,6 +2192,10 @@ int main(int argc, char *argv[])
 
 		BadWDSD_Write_Stagex();
 		BadWDSD_Write_ros(!doSkipRosCompare, doFlashRos1);
+
+#endif
+
+		//Sputest();
 	}
 
 	PrintLog("Bye!\n");

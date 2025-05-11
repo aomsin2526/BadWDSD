@@ -18,6 +18,24 @@
 /*************************** HEADER FILES ***************************/
 //#include <stdlib.h>
 //#include <memory.h>
+
+typedef char int8_t;
+typedef unsigned char uint8_t;
+
+typedef short int16_t;
+typedef unsigned short uint16_t;
+
+typedef int int32_t;
+typedef unsigned int uint32_t;
+
+typedef long int64_t;
+typedef unsigned long uint64_t;
+
+typedef uint64_t size_t;
+
+extern void memset(void *buf, uint8_t v, uint64_t count);
+extern void memcpy(void *dest, const void *src, uint64_t count);
+
 #include "Aes.h"
 
 /****************************** MACROS ******************************/

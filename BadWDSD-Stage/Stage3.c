@@ -430,7 +430,7 @@ FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
     // ps2 = 0x1020000003000001
     // ps3 = 0x1070000002000001
 
-#if 0
+#if 1
 
     // apply lv2 diff....
 
@@ -468,8 +468,7 @@ FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
                 uint64_t lv2DiffFileAddress;
                 uint64_t lv2DiffFileSize;
 
-                //if (CoreOS_FindFileEntry(coreOSStartAddress, "lv2_kernel.diff", &lv2DiffFileAddress, &lv2DiffFileSize))
-                if (0)
+                if (CoreOS_FindFileEntry(coreOSStartAddress, "lv2_kernel.diff", &lv2DiffFileAddress, &lv2DiffFileSize))
                 {
                     puts("lv2DiffFileAddress = ");
                     print_hex(lv2DiffFileAddress);
@@ -514,9 +513,6 @@ FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
                 else
                     puts("File not found!\n");
             }
-
-            // fail
-            *(uint64_t*)(foundAddr + 0x150) = 0x1;
         }
     }
 
@@ -712,7 +708,7 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
 
     // set stage_rtoc
     stage_rtoc = stage_entry_ra;
-    stage_rtoc += 0x200; // .toc
+    stage_rtoc += 0x600; // .toc
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc

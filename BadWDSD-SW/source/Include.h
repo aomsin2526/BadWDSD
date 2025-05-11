@@ -36,6 +36,8 @@ extern "C"
 
 #include "mm.h"
 
+#include "Spu.h"
+
 extern uint64_t CalcHTAB_EA_Addr_By_HtabIdx(uint64_t base, uint32_t htab_idx);
 extern uint64_t CalcGameOSHTAB_EA_Addr_By_HtabIdx(uint32_t htab_idx);
 

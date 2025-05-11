@@ -46,10 +46,10 @@ uint64_t FindHvcallTable()
 		uint64_t v[4];
 		lv1_read_114(i, 32, v);
 
-		if ((v[0] == invalid_handler_addr) && 
-		(v[1] == invalid_handler_addr) &&
-		(v[2] != invalid_handler_addr) &&
-		(v[3] == invalid_handler_addr))
+		if ((v[0] == invalid_handler_addr) &&
+			(v[1] == invalid_handler_addr) &&
+			(v[2] != invalid_handler_addr) &&
+			(v[3] == invalid_handler_addr))
 		{
 			table_addr_found = true;
 			table_addr = (i - (22 * 8));
@@ -81,7 +81,7 @@ bool IsOurHvcallInstalled()
 		ctx.num = 35;
 
 		ctx.args[0] = 0x0; // addr
-		ctx.args[1] = 0; // val
+		ctx.args[1] = 0;   // val
 
 		CallLv1Function(&ctx);
 
@@ -95,7 +95,7 @@ bool IsOurHvcallInstalled()
 
 	ctx.ea = (uint64_t)our_lv1_exec_test_do;
 	ctx.size = our_lv1_exec_test_do_size;
-	
+
 	CallLv1ExecEa(&ctx);
 
 	if (ctx.out[0] != 0x39)
@@ -165,8 +165,8 @@ void InstallOurHvcall()
 	uint64_t ra = htab_ra_from_lpar(lpar_addr);
 	PrintLog("ra = 0x%lx\n", ra);
 
-	//uint64_t ea = 0x8000000016000000ul;
-	//map_lpar_to_lv2_ea(lpar_addr, ea, SIZE_4KB, false, true);
+	// uint64_t ea = 0x8000000016000000ul;
+	// map_lpar_to_lv2_ea(lpar_addr, ea, SIZE_4KB, false, true);
 
 	PrintLog("Writing our code and to lv1 memory and hvcall table...\n");
 
@@ -259,10 +259,44 @@ void InstallOurHvcall()
 
 		lv1_write_114(table_addr + (36 * 8), 8, &offset);
 
-		lv1_write_114(offset, our_lv1_exec_do_size, (void*)our_lv1_exec_do);
+		lv1_write_114(offset, our_lv1_exec_do_size, (void *)our_lv1_exec_do);
 		offset += our_lv1_exec_do_size;
 
 #endif
+
+		// 37 = peek32
+
+		{
+			lv1_write_114(table_addr + (37 * 8), 8, &offset);
+
+			// 80 63 00 00 4E 80 00 20
+
+			uint64_t val = 0x806300004E800020;
+			lv1_write_114(offset, 8, &val);
+			offset += 8;
+		}
+
+		// 38 = poke32
+
+		{
+			lv1_write_114(table_addr + (38 * 8), 8, &offset);
+
+			{
+				// 90 83 00 00 38 60 00 00
+
+				uint64_t val = 0x9083000038600000;
+				lv1_write_114(offset, 8, &val);
+				offset += 8;
+			}
+
+			{
+				// 4E 80 00 20
+
+				uint32_t val = 0x4E800020;
+				lv1_write_114(offset, 4, &val);
+				offset += 4;
+			}
+		}
 	}
 
 	PrintLog("write done.\n");
@@ -312,7 +346,7 @@ void UninstallOurHvcall()
 	PrintLog("UninstallOurHvcall() done.\n");
 }
 
-void CallLv1Exec(CallLv1Exec_Context_s* ctx)
+void CallLv1Exec(CallLv1Exec_Context_s *ctx)
 {
 	CallLv1Function_Context_s ctxx;
 
@@ -324,7 +358,7 @@ void CallLv1Exec(CallLv1Exec_Context_s* ctx)
 	ctxx.args[3] = ctx->args[3];
 	ctxx.args[4] = ctx->args[4];
 	ctxx.args[5] = ctx->args[5];
-	
+
 	ctxx.args[6] = ctx->ra;
 
 	CallLv1Function(&ctxx);
@@ -339,7 +373,7 @@ void CallLv1Exec(CallLv1Exec_Context_s* ctx)
 	ctx->out[7] = ctxx.out[7];
 }
 
-void CallLv1ExecEa(CallLv1ExecEa_Context_s* ctx)
+void CallLv1ExecEa(CallLv1ExecEa_Context_s *ctx)
 {
 	if (ctx->size > 4096)
 	{
@@ -349,7 +383,7 @@ void CallLv1ExecEa(CallLv1ExecEa_Context_s* ctx)
 		return;
 	}
 
-	//PrintLog("ctx->ea = 0x%lx, ctx->size = %lu\n", ctx->ea, ctx->size);
+	// PrintLog("ctx->ea = 0x%lx, ctx->size = %lu\n", ctx->ea, ctx->size);
 
 	CallLv1Function_Context_s ctxx;
 
@@ -361,7 +395,7 @@ void CallLv1ExecEa(CallLv1ExecEa_Context_s* ctx)
 	ctxx.args[3] = ctx->args[3];
 	ctxx.args[4] = ctx->args[4];
 	ctxx.args[5] = ctx->args[5];
-	
+
 	int32_t res;
 
 	uint64_t lpar_addr = 0;
@@ -377,12 +411,12 @@ void CallLv1ExecEa(CallLv1ExecEa_Context_s* ctx)
 		return;
 	}
 
-	//PrintLog("lpar_addr = 0x%lx\n", lpar_addr);
+	// PrintLog("lpar_addr = 0x%lx\n", lpar_addr);
 
 	uint64_t ra = htab_ra_from_lpar(lpar_addr);
 	PrintLog("ra = 0x%lx\n", ra);
 
-	lv1_write(ra, ctx->size, (void*)ctx->ea);
+	lv1_write(ra, ctx->size, (void *)ctx->ea);
 
 	ctxx.args[6] = ra;
 
@@ -420,7 +454,7 @@ void lv1_test_puts()
 
 	ctx.ea = (uint64_t)our_lv1_test_puts_do;
 	ctx.size = our_lv1_test_puts_do_size;
-	
+
 	CallLv1ExecEa(&ctx);
 
 	PrintLog("lv1_test_puts() done.\n");
@@ -434,7 +468,7 @@ void lv1_apply_rsx_clock(uint64_t core_mul, uint64_t mem_mul)
 
 	ctx.ea = (uint64_t)our_lv1_apply_rsx_clock_do;
 	ctx.size = our_lv1_apply_rsx_clock_do_size;
-	
+
 	ctx.args[0] = core_mul;
 	ctx.args[1] = mem_mul;
 
@@ -448,17 +482,17 @@ void BadWDSD_Stage1_Test()
 	PrintLog("BadWDSD_Stage1_Test()\n");
 
 	uint64_t size = (__stop_BadWDSD_Stage1_Test_Do_Section - __start_BadWDSD_Stage1_Test_Do_Section);
-	//uint64_t size = 40;
+	// uint64_t size = 40;
 	PrintLog("size = %lu\n", size);
 
 	CallLv1ExecEa_Context_s ctx;
 
-	uint64_t xxx = *((uint64_t*)__start_BadWDSD_Stage1_Test_Do_Section);
+	uint64_t xxx = *((uint64_t *)__start_BadWDSD_Stage1_Test_Do_Section);
 	PrintLog("xxx = 0x%lx\n", xxx);
 
 	ctx.ea = (uint64_t)__start_BadWDSD_Stage1_Test_Do_Section;
 	ctx.size = size;
-	
+
 	CallLv1ExecEa(&ctx);
 
 	PrintLog("BadWDSD_Stage1_Test() done. r3 = 0x%lx\n", (uint64_t)ctx.out[0]);
@@ -468,7 +502,7 @@ void BadWDSD_Stage1_Bin_Test()
 {
 	PrintLog("BadWDSD_Stage1_Bin_Test()\n");
 
-	FILE* f = fopen("/app_home/Stage1.bin", "rb");
+	FILE *f = fopen("/app_home/Stage1.bin", "rb");
 
 	if (f == NULL)
 	{
@@ -481,7 +515,7 @@ void BadWDSD_Stage1_Bin_Test()
 	size_t size = GetFileSize(f);
 	PrintLog("size = %lu\n", size);
 
-	void* code = malloc(size);
+	void *code = malloc(size);
 	fread(code, 1, size, f);
 
 	fclose(f);
@@ -492,7 +526,7 @@ void BadWDSD_Stage1_Bin_Test()
 
 	ctx.ea = (uint64_t)code;
 	ctx.size = size;
-	
+
 	CallLv1ExecEa(&ctx);
 
 	free(code);
@@ -512,7 +546,7 @@ void BadWDSD_Stage1_Bin_Flash_Test(bool exec)
 		return;
 	}
 
-	FILE* f = fopen("/app_home/Stage1.bin", "rb");
+	FILE *f = fopen("/app_home/Stage1.bin", "rb");
 
 	if (f == NULL)
 	{
@@ -525,7 +559,7 @@ void BadWDSD_Stage1_Bin_Flash_Test(bool exec)
 	size_t size = GetFileSize(f);
 	PrintLog("size = %lu\n", size);
 
-	void* code = malloc(size);
+	void *code = malloc(size);
 	fread(code, 1, size, f);
 
 	fclose(f);
@@ -541,7 +575,7 @@ void BadWDSD_Stage1_Bin_Flash_Test(bool exec)
 	}
 
 	PrintLog("Writing to flash...\n");
-	//lv1_write(0x2401F031000, size, code);
+	// lv1_write(0x2401F031000, size, code);
 	NorWrite(0x31000, code, size);
 
 	{

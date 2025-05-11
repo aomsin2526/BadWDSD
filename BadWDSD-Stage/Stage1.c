@@ -155,6 +155,10 @@ FUNC_DEF void Stage1()
 
 __attribute__((section("main1"))) void stage1_main()
 {
+    // zeroing ram
+    memset((void*)0x0, 0, (256 * 1024 * 1024));
+    eieio();
+
     sc_puts_init();
 
     Stage1();
@@ -182,11 +186,44 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
 
     // set stage_rtoc
     stage_rtoc = stage_entry_ra;
-    stage_rtoc += 0x400; // .toc
+    stage_rtoc += 0x800; // .toc
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc
     asm volatile("mr 2, %0" ::"r"(stage_rtoc) :);
+
+    // restore XDR now
+    {
+        //register uint64_t r3 asm("r3");
+        //r3 = (XDR_SCMD(SCMD_SDW, 0, XDR_CFG) | 0x5); // SLE Disabled, x32
+
+        //register uint64_t r4 asm("r4");
+        //r4 = (MMIO_BE_MIC | YREG_YDRAM_DTA_0);
+
+        //asm volatile("stw %0, 0(%1)" ::"r"(r3),"r"(r4):);
+        //eieio();
+
+#if 0
+        //entry1:000002401F031028                 lis       r3_0, 0x400
+        //entry1:000002401F03102C                 ori       r3_0, r3_0, 0x205 # 0x4000205
+        //entry1:000002401F031030                 lis       r4_0, 0x200
+        //entry1:000002401F031034                 ori       r4_0, r4_0, 0x50 # 'P' # 0x2000050
+        //entry1:000002401F031038                 sldi      r4_0, r4_0, 16
+        //entry1:000002401F03103C                 ori       r4_0, r4_0, 0xA108
+        //entry1:000002401F031040                 stw       r3_0, 0(r4_0)
+#endif
+
+        asm volatile("lis 3, 0x400");
+        asm volatile("ori 3, 3, 0x205");
+
+        asm volatile("lis 4, 0x200");
+        asm volatile("ori 4, 4, 0x50");
+        asm volatile("sldi 4, 4, 16");
+        asm volatile("ori 4, 4, 0xA108");
+
+        asm volatile("stw 3, 0(4)");
+        eieio();
+    }
 
     // set stage_sp to 0xE000000
     stage_sp = 0xE000000;

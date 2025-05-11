@@ -244,6 +244,8 @@ void lv1_poke(uint64_t addr, uint64_t val)
 
 	CallLv1Function(&ctx);
 
+#if 0
+
 	if (ctx.out[0] != 0)
 	{
 		PrintLog("lv1_poke failed!\n");
@@ -262,6 +264,33 @@ void lv1_poke(uint64_t addr, uint64_t val)
 		abort();
 		return;
 	}
+
+#endif
+}
+
+uint32_t lv1_peek32(uint64_t addr)
+{
+	CallLv1Function_Context_s ctx;
+
+	ctx.num = 37;
+
+	ctx.args[0] = addr;
+
+	CallLv1Function(&ctx);
+
+	return (uint32_t)ctx.out[0];
+}
+
+void lv1_poke32(uint64_t addr, uint32_t val)
+{
+	CallLv1Function_Context_s ctx;
+
+	ctx.num = 38;
+
+	ctx.args[0] = addr;
+	ctx.args[1] = val;
+
+	CallLv1Function(&ctx);
 }
 
 void lv1_read(uint64_t addr, uint64_t size, void *out_Buf)

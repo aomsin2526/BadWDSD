@@ -239,7 +239,7 @@ __attribute__((noreturn, section("entry2"))) void stage2_entry()
 
     // set stage_rtoc
     stage_rtoc = stage_entry_ra;
-    stage_rtoc += 0x300; // .toc
+    stage_rtoc += 0x700; // .toc
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc

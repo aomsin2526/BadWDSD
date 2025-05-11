@@ -337,7 +337,7 @@ void Sc_Thread_x32_Stage0()
 
             //
 
-            Xdr_SendDisableSLE_x32_PerDevice(0);
+            //Xdr_SendDisableSLE_x32_PerDevice(0);
 
             //
 

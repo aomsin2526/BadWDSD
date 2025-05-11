@@ -1,13 +1,16 @@
 #define SC_PUTS_BUFFER_ENABLED 1
 #define SC_LV1_LOGGING_ENABLED 1
 
+#define STAGE5_LOG_ENABLED 1
+
 #pragma GCC optimize("align-functions=8")
 #pragma GCC diagnostic ignored "-Wunused-function"
 
-#define FUNC_DECL __attribute__((noinline, section("code"))) static
+#define FUNC_DECL __attribute__((section("code")))
 #define FUNC_DEF FUNC_DECL
 
-#define FUNC_DECL_NONSTATIC __attribute__((noinline, section("bcode")))
+// branch code
+#define FUNC_DECL_NONSTATIC __attribute__((section("bcode")))
 #define FUNC_DEF_NONSTATIC FUNC_DECL_NONSTATIC
 
 typedef char int8_t;
@@ -23,6 +26,8 @@ typedef long int64_t;
 typedef unsigned long uint64_t;
 
 typedef uint64_t size_t;
+
+typedef uint64_t uintptr_t;
 
 #define NULL 0
 
@@ -110,7 +115,7 @@ register uint64_t r16 asm("r16");
 register uint64_t r23 asm("r23");
 register uint64_t r24 asm("r24");
 
-register uint64_t is_lv1 asm("r17"); // 0x9669
+register uint64_t is_lv1 asm("r17"); // 0x9669, 0x9666 (stage5)
 register uint64_t lv1_rtoc asm("r18");
 
 register uint64_t stage_entry_ra asm("r19");
@@ -120,7 +125,12 @@ register uint64_t stage_zero asm("r22");
 
 FUNC_DEF uint8_t IsLv1()
 {
-    return (is_lv1 == 0x9669) ? 1 : 0;
+    return (is_lv1 == 0x9669) || (is_lv1 == 0x9666) ? 1 : 0;
+}
+
+FUNC_DEF uint8_t IsStage5()
+{
+    return (is_lv1 == 0x9666) ? 1 : 0;
 }
 
 // PPU core init
@@ -598,10 +608,10 @@ FUNC_DEF void memcpy(void *dest, const void *src, uint64_t count)
         destt[i] = srcc[i];
 }
 
-FUNC_DEF uint8_t memcmp(const void* p1, const void* p2, uint64_t count)
+FUNC_DEF uint8_t memcmp(const void *p1, const void *p2, uint64_t count)
 {
-    const uint8_t* pp1 = (const uint8_t*)p1;
-    const uint8_t* pp2 = (const uint8_t*)p2;
+    const uint8_t *pp1 = (const uint8_t *)p1;
+    const uint8_t *pp2 = (const uint8_t *)p2;
 
     for (uint64_t i = 0; i < count; ++i)
     {
@@ -644,12 +654,12 @@ FUNC_DEF uint8_t strcmp(const char *str1, const char *str2)
     return 0;
 }
 
-FUNC_DEF uint8_t SearchAndReplace(void* in_data, uint64_t dataSize, const void* in_searchData, uint64_t searchDataSize, const void* in_replaceData, uint64_t replaceDataSize)
+FUNC_DEF uint8_t SearchAndReplace(void *in_data, uint64_t dataSize, const void *in_searchData, uint64_t searchDataSize, const void *in_replaceData, uint64_t replaceDataSize)
 {
-    uint8_t* data = (uint8_t*)in_data;
+    uint8_t *data = (uint8_t *)in_data;
 
-    const uint8_t* searchData = (const uint8_t*)in_searchData;
-    const uint8_t* replaceData = (const uint8_t*)in_replaceData;
+    const uint8_t *searchData = (const uint8_t *)in_searchData;
+    const uint8_t *replaceData = (const uint8_t *)in_replaceData;
 
     for (uint64_t i = 0; i < dataSize; ++i)
     {
@@ -663,11 +673,11 @@ FUNC_DEF uint8_t SearchAndReplace(void* in_data, uint64_t dataSize, const void* 
     return 0;
 }
 
-FUNC_DEF uint8_t SearchMemory(void* in_data, uint64_t dataSize, const void* in_searchData, uint64_t searchDataSize, uint64_t* outFoundAddr)
+FUNC_DEF uint8_t SearchMemory(void *in_data, uint64_t dataSize, const void *in_searchData, uint64_t searchDataSize, uint64_t *outFoundAddr)
 {
-    uint8_t* data = (uint8_t*)in_data;
+    uint8_t *data = (uint8_t *)in_data;
 
-    const uint8_t* searchData = (const uint8_t*)in_searchData;
+    const uint8_t *searchData = (const uint8_t *)in_searchData;
 
     for (uint64_t i = 0; i < dataSize; ++i)
     {
@@ -676,9 +686,9 @@ FUNC_DEF uint8_t SearchMemory(void* in_data, uint64_t dataSize, const void* in_s
             if (outFoundAddr != NULL)
                 *outFoundAddr = (uint64_t)&data[i];
 
-            //puts("foundAddr: ");
-            //print_hex((uint64_t)&data[i]);
-            //puts("\n");
+            // puts("foundAddr: ");
+            // print_hex((uint64_t)&data[i]);
+            // puts("\n");
 
             return 1;
         }
@@ -995,6 +1005,16 @@ FUNC_DEF void sc_hard_restart()
 
 FUNC_DEF void sc_puts_init()
 {
+#if !SC_LV1_LOGGING_ENABLED
+    if (IsLv1())
+        return;
+#endif
+
+#if !STAGE5_LOG_ENABLED
+    if (IsStage5())
+        return;
+#endif
+
 #if SC_PUTS_BUFFER_ENABLED
     uint64_t *sc_puts_buflen = (uint64_t *)0xD000000;
     char *sc_puts_buf = (char *)0xD000010;
@@ -1095,8 +1115,13 @@ FUNC_DEF uint8_t sc_read_os_bank_indicator()
 
 FUNC_DEF void puts(const char *str)
 {
-#if !SC_LV1_LOGGING_ENABLED    
+#if !SC_LV1_LOGGING_ENABLED
     if (IsLv1())
+        return;
+#endif
+
+#if !STAGE5_LOG_ENABLED
+    if (IsStage5())
         return;
 #endif
 
@@ -1261,8 +1286,6 @@ FUNC_DEF void dead_beep()
 
 #define XDR_SCMD(CMD, SSID, REG) (((CMD) << 28) | 0x04000000 | ((SSID) << 16) | ((REG) << 8))
 
-FUNC_DEF void XdrRegWrite(uint32_t data)
-{
 #define BE_MMIO_BASE 0x20000000000UL
 #define MMIO_BE_MIC (0x50A000 | BE_MMIO_BASE)
 
@@ -1274,6 +1297,8 @@ FUNC_DEF void XdrRegWrite(uint32_t data)
 #define YREG_YDRAM_DTA_1 0x148
 #define MIC_YREG_STAT_1 0x150
 
+FUNC_DEF void XdrRegWrite(uint32_t data)
+{
     volatile uint32_t *reg = (volatile uint32_t *)(MMIO_BE_MIC | YREG_YDRAM_DTA_0);
     *reg = data;
     eieio();
@@ -1328,6 +1353,8 @@ FUNC_DEF void Xdr_ConvertDataToWDSLData_x32(const uint8_t *inData, uint8_t *outW
         wdslData[i] = Xdr_ConvertToWDSLWord(data[i]);
     }
 }
+
+#if 0
 
 FUNC_DEF void PatternTest_x16()
 {
@@ -1631,6 +1658,8 @@ FUNC_DEF void Memtest()
     }
 }
 
+#endif
+
 struct coreos_header_s
 {
     uint64_t unknown0;
@@ -1710,6 +1739,36 @@ struct ElfPhdr_s
     uint64_t p_align;  /* Segment alignment */
 };
 
+struct ElfHeader32_s
+{
+    uint8_t e_ident[16];  /* ELF identification */
+    uint16_t e_type;      /* object file type */
+    uint16_t e_machine;   /* machine type */
+    uint32_t e_version;   /* object file version */
+    uint32_t e_entry;     /* entry point address */
+    uint32_t e_phoff;     /* program header offset */
+    uint32_t e_shoff;     /* section header offset */
+    uint32_t e_flags;     /* processor-specific flags */
+    uint16_t e_ehsize;    /* ELF header size */
+    uint16_t e_phentsize; /* size of program header entry */
+    uint16_t e_phnum;     /* number of program header entries */
+    uint16_t e_shentsize; /* size of section header entry */
+    uint16_t e_shnum;     /* number of section header entries */
+    uint16_t e_shstrndx;  /* section name string table index */
+} __attribute__((packed));
+
+struct ElfPhdr32_s
+{
+    uint32_t p_type;   /* Segment type */
+    uint32_t p_offset; /* Segment file offset */
+    uint32_t p_vaddr;  /* Segment virtual address */
+    uint32_t p_paddr;  /* Segment physical address */
+    uint32_t p_filesz; /* Segment size in file */
+    uint32_t p_memsz;  /* Segment size in memory */
+    uint32_t p_flags;  /* Segment flags */
+    uint32_t p_align;  /* Segment alignment */
+};
+
 FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset)
 {
     struct ElfHeader_s *elfHdr = (struct ElfHeader_s *)elfFileAddress;
@@ -1759,7 +1818,7 @@ FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset)
 
         puts(", loadAddress = ");
         print_hex(loadAddress);
-    
+
         puts("\n");
 
         memset((void *)(loadAddress), 0, phdr->p_memsz);
@@ -1819,7 +1878,8 @@ struct SceMetaKey_s
     uint64_t key[2];
 };
 
-#include "Aes/Aes.c"
+#include "tinyAES/aes.h"
+#include "Aes/Aes.h"
 
 FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
 {
@@ -1918,7 +1978,7 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
     puts("\n");
 
     uint8_t metasBuf[16384];
-    
+
     aes_decrypt_ctr(
 
         &src[curSrcOffset],
@@ -1930,10 +1990,10 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
         128,
 
         (const uint8_t *)metaInfo.iv
-    
+
     );
 
-    struct SceMetaHeader_s* metaHeader = (struct SceMetaHeader_s*)&metasBuf[0];
+    struct SceMetaHeader_s *metaHeader = (struct SceMetaHeader_s *)&metasBuf[0];
 
     puts("metaHeader:\n");
 
@@ -1945,12 +2005,12 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
     print_decimal(metaHeader->key_entry_num);
     puts("\n");
 
-    struct SceMetaSectionHeader_s* metaSectionHeaders = (struct SceMetaSectionHeader_s*)&metasBuf[sizeof(struct SceMetaHeader_s)];
+    struct SceMetaSectionHeader_s *metaSectionHeaders = (struct SceMetaSectionHeader_s *)&metasBuf[sizeof(struct SceMetaHeader_s)];
 
     for (uint32_t i = 0; i < (metaHeader->section_entry_num); ++i)
     {
         struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
-    
+
         puts("section_headers[");
         print_decimal(i);
         puts("]:\n");
@@ -1976,12 +2036,12 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
         puts("\n");
     }
 
-    struct SceMetaKey_s* metaKeys = (struct SceMetaKey_s*)&metasBuf[sizeof(struct SceMetaHeader_s) + ((metaHeader->section_entry_num) * sizeof(struct SceMetaSectionHeader_s))];
+    struct SceMetaKey_s *metaKeys = (struct SceMetaKey_s *)&metasBuf[sizeof(struct SceMetaHeader_s) + ((metaHeader->section_entry_num) * sizeof(struct SceMetaSectionHeader_s))];
 
     for (uint32_t i = 0; i < (metaHeader->key_entry_num); ++i)
     {
         struct SceMetaKey_s *k = &metaKeys[i];
-    
+
         puts("keys[");
         print_decimal(i);
         puts("]: ");
@@ -1995,16 +2055,16 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
         puts("\n");
     }
 
-    struct ElfHeader_s* elfHeader = (struct ElfHeader_s*)&src[0x90];
+    struct ElfHeader_s *elfHeader = (struct ElfHeader_s *)&src[0x90];
 
     memcpy(dest, elfHeader, sizeof(struct ElfHeader_s));
     memcpy(dest + (elfHeader->e_phoff), &src[0x90 + (elfHeader->e_phoff)], (elfHeader->e_phentsize) * (elfHeader->e_phnum));
 
-    struct ElfPhdr_s* elfPhdrs = (struct ElfPhdr_s*)(dest + (elfHeader->e_phoff));
+    struct ElfPhdr_s *elfPhdrs = (struct ElfPhdr_s *)(dest + (elfHeader->e_phoff));
 
     for (uint16_t i = 0; i < (elfHeader->e_phnum); ++i)
     {
-        struct ElfPhdr_s* phdr = &elfPhdrs[i];
+        struct ElfPhdr_s *phdr = &elfPhdrs[i];
 
         puts("decrypting phdr ");
         print_decimal(i);
@@ -2012,11 +2072,8 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
 
         struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
 
-        struct SceMetaKey_s* key = &metaKeys[(h->key_idx)];
-        struct SceMetaKey_s* iv = &metaKeys[(h->iv_idx)];
-
-        WORD aes_key[60];
-        aes_key_setup((const uint8_t *)key->key, aes_key, 128);
+        struct SceMetaKey_s *key = &metaKeys[(h->key_idx)];
+        struct SceMetaKey_s *iv = &metaKeys[(h->iv_idx)];
 
         puts("segment_offset = ");
         print_hex(h->segment_offset);
@@ -2037,19 +2094,34 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
 
         puts("\n");
 
+#if 1
+
+        struct AES_ctx aes_key_ctx;
+        AES_init_ctx_iv(&aes_key_ctx, (const uint8_t *)key->key, (const uint8_t *)iv->key);
+
+        memcpy((void*)out_addr, (const void*)in_addr, (h->segment_size));
+        AES_CTR_xcrypt_buffer(&aes_key_ctx, (uint8_t *)out_addr, (h->segment_size));
+
+#else
+
+        WORD aes_key[60];
+        aes_key_setup((const uint8_t *)key->key, aes_key, 128);
+
         aes_decrypt_ctr(
 
-            (uint8_t*)in_addr,
+            (uint8_t *)in_addr,
             (h->segment_size),
-    
-            (uint8_t*)out_addr,
-    
+
+            (uint8_t *)out_addr,
+
             aes_key,
             128,
-    
+
             (const uint8_t *)iv->key
-        
+
         );
+
+#endif
     }
 
     puts("DecryptLv0Self() done.\n");
@@ -2070,7 +2142,7 @@ struct ZelfHeader_s
     uint64_t compressed_size;
 };
 
-FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void* destAddress, uint64_t* destSize)
+FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void *destAddress, uint64_t *destSize)
 {
     puts("ZelfDecompress()\n");
 
@@ -2137,6 +2209,7 @@ FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void* destAddress, uint64
 #include "Stage1.c"
 #include "Stage2.c"
 #include "Stage3.c"
+#include "Stage5.c"
 
 #pragma GCC push_options
 #pragma GCC optimize("O0")
@@ -2146,6 +2219,7 @@ void stage_link_entry()
     asm volatile("bl stage1_entry");
     asm volatile("bl stage2_entry");
     asm volatile("bl stage3_entry");
+    asm volatile("bl stage5_entry");
 }
 
 #pragma GCC pop_options

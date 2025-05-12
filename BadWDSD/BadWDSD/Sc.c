@@ -522,7 +522,13 @@ void Sc_SendCommand(volatile struct Sc_SendCommandContext_s *ctx)
     Sc_Puts(ctx->cmd);
     sync();
 
+    uint64_t t1 = get_time_in_ms();
+
     while (!ctx->done)
     {
+        uint64_t t2 = get_time_in_ms();
+
+        if ((t2 - t1) > 2000)
+            watchdog_reboot(0,0,0);
     }
 }

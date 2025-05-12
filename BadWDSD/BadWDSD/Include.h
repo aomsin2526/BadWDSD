@@ -9,6 +9,7 @@
 #include "hardware/irq.h"
 #include "hardware/clocks.h"
 #include "hardware/vreg.h"
+#include "hardware/watchdog.h"
 
 #include "pico/multicore.h"
 #include "pico/rand.h"

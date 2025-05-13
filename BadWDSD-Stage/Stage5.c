@@ -1,26 +1,6 @@
 // note: log should be disabled in normal use
 // STAGE5_LOG_ENABLED
 
-FUNC_DEF uint8_t FindLv2(uint64_t *outFoundAddr)
-{
-    uint8_t searchData[] = {0x7C, 0x71, 0x43, 0xA6, 0x7C, 0x92, 0x43, 0xA6, 0x7C, 0xB3, 0x43, 0xA6, 0x7C, 0x7A, 0x02, 0xA6, 0x7C, 0x9B, 0x02,
-                            0xA6, 0x7C, 0xA0, 0x00, 0xA6, 0x60, 0xA5, 0x00, 0x30, 0x7C, 0xBB, 0x03, 0xA6, 0x3C, 0xA0, 0x80, 0x00, 0x60, 0xA5,
-                            0x00, 0x00, 0x78, 0xA5, 0x07, 0xC6, 0x64, 0xA5, 0x00, 0x00, 0x60, 0xA5, 0x08, 0x3C, 0x7C, 0xBA, 0x03, 0xA6, 0x4C, 0x00, 0x00, 0x24};
-
-    for (uint64_t addr = 0x0; addr < (250 * 1024 * 1024); addr += 0x800)
-    {
-        if (!memcmp((const void *)addr, searchData, sizeof(searchData)))
-        {
-            if (outFoundAddr != NULL)
-                *outFoundAddr = (addr - 0x800);
-
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
 FUNC_DEF uint64_t SPU_CalcMMIOAddress(uint64_t spu_id, uint64_t offset)
 {
     return 0x20000000000 + (0x80000 * spu_id) + offset;
@@ -202,12 +182,25 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id)
 }
 
 #pragma GCC push_options
-#pragma GCC optimize("O0")
+//#pragma GCC optimize("O0")
 
 FUNC_DEF void Stage5_2()
 {
+    puts("Stage5_2()\n");
+
+    uint64_t *stage5_loopCount = (uint64_t *)0x220;
+    ++(*stage5_loopCount);
+
+    if ((*stage5_loopCount) > 2)
+        return;
+
+    uint64_t *lv1_lv2AreaAddrPtr = (uint64_t *)0x370F20; // 0x8000000000000000
+    uint64_t *lv1_lv2AreaSizePtr = (uint64_t *)0x370F28; // 0x352230
+
+    uint64_t *lv1_lv2AreaHashPtr = (uint64_t *)0x370F30;
+
     uint64_t stage5_lv2AreaAddr;
-    uint64_t stage5_lv2AreaSize = (1 * 1024 * 1024);
+    uint64_t stage5_lv2AreaSize = *lv1_lv2AreaSizePtr; // hash check size
 
     if (!FindLv2(&stage5_lv2AreaAddr))
     {
@@ -215,8 +208,28 @@ FUNC_DEF void Stage5_2()
         return;
     }
 
-    //*((uint64_t*)stage5_lv2AreaAddr + 0x150) = 0x6969;
-    *((uint64_t*)0x12ED560) = 0x0;
+    if ((*stage5_loopCount) == 2)
+    {
+        //ApplyLv2Diff(stage5_lv2AreaAddr, 1);
+    }
+    else
+    {
+        uint8_t* snapshot_ofw = (uint8_t*)0xA000000; // todo spu as storage?
+        uint8_t* lv2AreaPtr = (uint8_t*)stage5_lv2AreaAddr;
+
+        for (uint64_t offset = 0; offset < (*lv1_lv2AreaSizePtr); ++offset)
+        {
+            if ((offset % 0x10000) == 0)
+            {
+                print_hex(offset);
+                puts("\n");
+            }
+
+            lv2AreaPtr[offset] = snapshot_ofw[offset];
+        }
+    }
+
+    //*((uint64_t *)stage5_lv2AreaAddr + 0x150) = 0x9669;
     eieio();
 
     uint64_t *stage5_lv2HashCachePtr = (uint64_t *)0x218;
@@ -225,7 +238,11 @@ FUNC_DEF void Stage5_2()
     for (uint64_t offset = 0; offset < stage5_lv2AreaSize; offset += 8)
         stage5_curLv2Hash += *((uint64_t *)(stage5_lv2AreaAddr + offset));
 
-    if (*stage5_lv2HashCachePtr == stage5_curLv2Hash)
+    puts("stage5_curLv2Hash = ");
+    print_hex(stage5_curLv2Hash);
+    puts("\n");
+
+    if ((*stage5_lv2HashCachePtr) == stage5_curLv2Hash)
         return;
 
     *stage5_lv2HashCachePtr = stage5_curLv2Hash;
@@ -240,11 +257,6 @@ FUNC_DEF void Stage5_2()
     print_hex(stage5_curLv2Hash);
 
     puts("\n");
-
-    uint64_t *lv1_lv2AreaAddrPtr = (uint64_t *)0x370F20; // 0x8000000000000000
-    uint64_t *lv1_lv2AreaSizePtr = (uint64_t *)0x370F28; // 0x352230
-
-    uint64_t *lv1_lv2AreaHashPtr = (uint64_t *)0x370F30;
 
     puts("before_lv1_lv2AreaAddr = ");
     print_hex(*lv1_lv2AreaAddrPtr);
@@ -318,7 +330,7 @@ FUNC_DEF void Stage5_2()
                 found = 1;
 
                 puts("Found!\n");
-                
+
                 puts("spu_id = ");
                 print_decimal(spu_id);
                 puts("\n");
@@ -360,8 +372,8 @@ FUNC_DEF void Stage5_2()
 
                 puts("Waiting for spu start...\n");
 
-                //while ((status & SPU_STATUS_RUN_MASK) == 0)
-                while (status != 0x690002)
+                // while ((status & SPU_STATUS_RUN_MASK) == 0)
+                while ((status & 0xFF0000) != 0x690000) // 0x690002
                 {
                     status = SPU_PS_Read32(spu_id, 0x04024);
 
@@ -384,6 +396,8 @@ FUNC_DEF void Stage5_2()
 
                     puts("\n");
 
+#if 0
+
                     for (uint64_t off = 0x39000; off < 0x39200; off += 8)
                     {
                         uint64_t x = SPU_LS_Read64(spu_id, off);
@@ -403,6 +417,8 @@ FUNC_DEF void Stage5_2()
                         print_hex(x);
                         puts("\n");
                     }
+
+#endif
 
                     WaitInMs(1000);
 
@@ -462,17 +478,17 @@ FUNC_DEF void Stage5_2()
 
 FUNC_DEF void Stage5()
 {
-    //puts("BadWDSD Stage5 by Kafuu(aomsin2526)\n");
+    // puts("BadWDSD Stage5 by Kafuu(aomsin2526)\n");
 
-    //puts("(Build Date: ");
-    //puts(__DATE__);
-    //puts(" ");
-    //puts(__TIME__);
-    //puts(")\n");
+    // puts("(Build Date: ");
+    // puts(__DATE__);
+    // puts(" ");
+    // puts(__TIME__);
+    // puts(")\n");
 
     Stage5_2();
 
-    //puts("Stage5 done.\n");
+    // puts("Stage5 done.\n");
 }
 
 __attribute__((section("main5"))) void stage5_main()

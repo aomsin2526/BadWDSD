@@ -137,7 +137,7 @@ FUNC_DEF void Stage1()
         puts("\n");
 
         puts("Loading lv0...\n");
-        LoadElf(lv0FileAddress, 0x0);
+        LoadElf(lv0FileAddress, 0x0, 1);
 
         // write lv0 .vector
         volatile uint64_t *ea0 = (volatile uint64_t *)0x0;

@@ -419,7 +419,108 @@ FUNC_DEF void Stage3()
     puts("Stage3 done.\n");
 }
 
+FUNC_DEF uint8_t FindLv2(uint64_t *outFoundAddr)
+{
+    uint8_t searchData[] = {0x7C, 0x71, 0x43, 0xA6, 0x7C, 0x92, 0x43, 0xA6, 0x7C, 0xB3, 0x43, 0xA6, 0x7C, 0x7A, 0x02, 0xA6, 0x7C, 0x9B, 0x02,
+                            0xA6, 0x7C, 0xA0, 0x00, 0xA6, 0x60, 0xA5, 0x00, 0x30, 0x7C, 0xBB, 0x03, 0xA6, 0x3C, 0xA0, 0x80, 0x00, 0x60, 0xA5,
+                            0x00, 0x00, 0x78, 0xA5, 0x07, 0xC6, 0x64, 0xA5, 0x00, 0x00, 0x60, 0xA5, 0x08, 0x3C, 0x7C, 0xBA, 0x03, 0xA6, 0x4C, 0x00, 0x00, 0x24};
+
+    for (uint64_t addr = 0x0; addr < (250 * 1024 * 1024); addr += 0x800)
+    {
+        if (!memcmp((const void *)addr, searchData, sizeof(searchData)))
+        {
+            if (outFoundAddr != NULL)
+                *outFoundAddr = (addr - 0x800);
+
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal)
+{
+    puts("ApplyLv2Diff()\n");
+
+    puts("lv2AreaAddr = ");
+    print_hex(lv2AreaAddr);
+    puts("\n");
+
+    {
+        uint8_t os_bank_indicator = sc_read_os_bank_indicator();
+
+        puts("os_bank_indicator = ");
+        print_hex(os_bank_indicator);
+        puts("\n");
+
+        if (os_bank_indicator == 0xff)
+            puts("Will use ros0\n");
+        else
+            puts("Will use ros1\n");
+
+        uint64_t coreOSStartAddress = (os_bank_indicator == 0xff) ? 0x2401F0C0000 : 0x2401F7C0000;
+
+        puts("Searching for lv2_kernel.diff...\n");
+
+        uint64_t lv2DiffFileAddress;
+        uint64_t lv2DiffFileSize;
+
+        if (CoreOS_FindFileEntry(coreOSStartAddress, "lv2_kernel.diff", &lv2DiffFileAddress, &lv2DiffFileSize))
+        {
+            puts("lv2DiffFileAddress = ");
+            print_hex(lv2DiffFileAddress);
+
+            puts(", lv2DiffFileSize = ");
+            print_decimal(lv2DiffFileSize);
+
+            puts("\n");
+
+            {
+                uint64_t curAddress = lv2DiffFileAddress;
+
+                uint32_t diffCount = *((uint32_t *)curAddress);
+                curAddress += 4;
+
+                puts("diffCount = ");
+                print_decimal(diffCount);
+                puts("\n");
+
+                for (uint32_t i = 0; i < diffCount; ++i)
+                {
+                    uint32_t addr = *((uint32_t *)curAddress);
+                    curAddress += 4;
+
+                    uint32_t value = (*((uint32_t *)curAddress));
+                    curAddress += 4;
+
+                    uint8_t newVal = (uint8_t)(value >> 8);
+                    uint8_t origVal = (uint8_t)(value & 0xFF);
+
 #if 0
+                    puts("addr = ");
+                    print_hex(addr);
+        
+                    puts(", newVal = ");
+                    print_hex(newVal);
+        
+                    puts(", origVal = ");
+                    print_hex(origVal);
+
+                    puts("\n");
+#endif
+
+                    *((uint8_t *)(uint64_t)(addr + lv2AreaAddr)) = useNewVal ? newVal : origVal;
+                }
+            }
+        }
+        else
+            puts("File not found!\n");
+    }
+
+    eieio();
+    puts("ApplyLv2Diff() done.\n");
+}
 
 FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
 {
@@ -432,100 +533,42 @@ FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
     // ps2 = 0x1020000003000001
     // ps3 = 0x1070000002000001
 
-#if 1
+    uint64_t *stage5_loopCount = (uint64_t *)0x220;
+    *stage5_loopCount = 0;
 
-    // apply lv2 diff....
+    uint64_t *lv1_lv2AreaSizePtr = (uint64_t *)0x370F28; // 0x352230
+
+    puts("lv1_lv2AreaSize = ");
+    print_hex(*lv1_lv2AreaSizePtr);
+    puts("\n");
 
     {
-        uint8_t searchData[] = {0x7C, 0x71, 0x43, 0xA6, 0x7C, 0x92, 0x43, 0xA6, 0x7C, 0xB3, 0x43, 0xA6, 0x7C, 0x7A, 0x02, 0xA6, 0x7C, 0x9B, 0x02,
-                                0xA6, 0x7C, 0xA0, 0x00, 0xA6, 0x60, 0xA5, 0x00, 0x30, 0x7C, 0xBB, 0x03, 0xA6, 0x3C, 0xA0, 0x80, 0x00, 0x60, 0xA5,
-                                0x00, 0x00, 0x78, 0xA5, 0x07, 0xC6, 0x64, 0xA5, 0x00, 0x00, 0x60, 0xA5, 0x08, 0x3C, 0x7C, 0xBA, 0x03, 0xA6, 0x4C, 0x00, 0x00, 0x24};
+        uint64_t lv2AreaAddr;
 
-        uint64_t foundAddr;
-
-        if (SearchMemory((void *)0x1000000, (240 * 1024 * 1024), searchData, sizeof(searchData), &foundAddr))
+        if (!FindLv2(&lv2AreaAddr))
         {
-            foundAddr -= 0x800;
-
-            puts("foundAddr = ");
-            print_hex(foundAddr);
-            puts("\n");
-
-            {
-                uint8_t os_bank_indicator = sc_read_os_bank_indicator();
-
-                puts("os_bank_indicator = ");
-                print_hex(os_bank_indicator);
-                puts("\n");
-
-                if (os_bank_indicator == 0xff)
-                    puts("Will use ros0\n");
-                else
-                    puts("Will use ros1\n");
-
-                uint64_t coreOSStartAddress = (os_bank_indicator == 0xff) ? 0x2401F0C0000 : 0x2401F7C0000;
-
-                puts("Searching for lv2_kernel.diff...\n");
-
-                uint64_t lv2DiffFileAddress;
-                uint64_t lv2DiffFileSize;
-
-                if (CoreOS_FindFileEntry(coreOSStartAddress, "lv2_kernel.diff", &lv2DiffFileAddress, &lv2DiffFileSize))
-                {
-                    puts("lv2DiffFileAddress = ");
-                    print_hex(lv2DiffFileAddress);
-
-                    puts(", lv2DiffFileSize = ");
-                    print_decimal(lv2DiffFileSize);
-
-                    puts("\n");
-
-                    {
-                        uint64_t curAddress = lv2DiffFileAddress;
-
-                        uint32_t diffCount = *((uint32_t *)curAddress);
-                        curAddress += 4;
-
-                        puts("diffCount = ");
-                        print_decimal(diffCount);
-                        puts("\n");
-
-                        for (uint32_t i = 0; i < diffCount; ++i)
-                        {
-                            uint32_t addr = *((uint32_t *)curAddress);
-                            curAddress += 4;
-
-                            uint8_t value = (uint8_t)(*((uint32_t *)curAddress));
-                            curAddress += 4;
-
-#if 0
-                            puts("addr = ");
-                            print_hex(addr);
-        
-                            puts(", value = ");
-                            print_hex(value);
-        
-                            puts("\n");
-#endif
-
-                            *((uint8_t *)(uint64_t)(addr + foundAddr)) = value;
-                        }
-                    }
-                }
-                else
-                    puts("File not found!\n");
-            }
+            puts("lv2 area not found!\n");
+            return;
         }
-    }
 
-#endif
+        puts("lv2AreaAddr = ");
+        print_hex(lv2AreaAddr);
+        puts("\n");
+
+        uint8_t* snapshot_ofw = (uint8_t*)0xA000000;
+        uint8_t* lv2AreaPtr = (uint8_t*)lv2AreaAddr;
+
+        for (uint64_t offset = 0; offset < (*lv1_lv2AreaSizePtr); ++offset)
+            snapshot_ofw[offset] = lv2AreaPtr[offset];
+
+        //ApplyLv2Diff(lv2AreaAddr, 1);
+        //*((uint64_t *)lv2AreaAddr + 0x150) = 0x9669;
+    }
 
     eieio();
 
     puts("Stage3_AuthLv2() done.\n");
 }
-
-#endif
 
 #pragma GCC push_options
 #pragma GCC optimize("O0")
@@ -632,7 +675,7 @@ __attribute__((section("main3"))) void stage3_main()
     // r4 = 0
     asm volatile("li 4, 0");
 
-#if 0
+#if 1
 
     // auth lv2
     if (r5_2 == 0x30)

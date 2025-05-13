@@ -115,7 +115,12 @@ void lv2diff(const char *inFilePath1, const char *inFilePath2, const char *outFi
         if (inData1[i] != inData2[i])
         {
             uint32_t addr = (uint32_t)(i);
-            uint32_t val = (uint8_t)inData2[i];
+
+            uint32_t val = 0;
+
+            val |= (uint8_t)inData2[i]; // new
+            val <<= 8;
+            val |= (uint8_t)inData1[i]; // orig
 
             // shitty code
 

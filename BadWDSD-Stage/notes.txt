@@ -8,3 +8,4 @@
 
 // 0x210 - 0x217 = stage5j (0x2401F031300)
 // 0x218 - 0x21f = stage5 lv2 hash cache
+// 0x220 - 0x227 = stage5 temp loopCount

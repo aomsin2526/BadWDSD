@@ -529,6 +529,6 @@ void Sc_SendCommand(volatile struct Sc_SendCommandContext_s *ctx)
         uint64_t t2 = get_time_in_ms();
 
         if ((t2 - t1) > 2000)
-            watchdog_reboot(0,0,0);
+            watchdog_reboot(0, 0, 0);
     }
 }

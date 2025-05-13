@@ -1769,7 +1769,7 @@ struct ElfPhdr32_s
     uint32_t p_align;  /* Segment alignment */
 };
 
-FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset)
+FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset, uint8_t doZero)
 {
     struct ElfHeader_s *elfHdr = (struct ElfHeader_s *)elfFileAddress;
 
@@ -1821,7 +1821,9 @@ FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset)
 
         puts("\n");
 
-        memset((void *)(loadAddress), 0, phdr->p_memsz);
+        if (doZero)
+            memset((void *)(loadAddress), 0, phdr->p_memsz);
+            
         memcpy((void *)(loadAddress), (void *)(elfFileAddress + phdr->p_offset), phdr->p_filesz);
 
         ++phdr;

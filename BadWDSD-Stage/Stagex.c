@@ -2218,6 +2218,11 @@ FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void *destAddress, uint64
     *destSize = xxx;
 }
 
+// todo DecryptLv2Self
+
+
+
+
 #include "Stage1.c"
 #include "Stage2.c"
 #include "Stage3.c"

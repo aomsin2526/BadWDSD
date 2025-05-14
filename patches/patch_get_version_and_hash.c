@@ -23,10 +23,18 @@ __attribute__((noreturn)) void patches()
     //4B FF 45 D1 E8 1F 00 80 F8 1C 00 00 38 9D 00 08
 
     register uint64_t r0 asm("r0");
-    //   0x4008400000000
-    r0 = 0x4000000000000;
+    //0x4008400000000
+    
+    //r0 = 0x3006000000000;
+
+    asm volatile("li %0, 0x3006" :"=r"(r0)::);
+    asm volatile("sldi %0, %0, 36" :"=r"(r0)::);
 
     asm volatile("std %0, 0(28)" ::"r"(r0):);
+
+    //38 00 30 06 78 00 26 C6 F8 1C 00 00 38 9D 00 08
+
+    // 0x4000000000000
 
     //lis       r0, 4
     //sldi      r0, r0, 32

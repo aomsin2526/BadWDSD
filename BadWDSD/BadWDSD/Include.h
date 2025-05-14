@@ -1,3 +1,12 @@
+//
+
+//#define PICO_IS_ZERO 1
+
+#define SC_IS_SW 1
+#define XDR_IS_X32 1
+
+//
+
 #include <stdio.h>
 #include <string.h>
 
@@ -29,7 +38,11 @@ static const uint32_t HOLD_PIN_ID = 2;
 
 extern void Hold_Init();
 
+#if PICO_IS_ZERO
+static const uint32_t LED_PIN_ID = 11;
+#else
 static const uint32_t LED_PIN_ID = PICO_DEFAULT_LED_PIN;
+#endif
 
 static const uint32_t LED_STATUS_OFF = 0;
 static const uint32_t LED_STATUS_ON = 1;
@@ -64,13 +77,23 @@ extern bool Led_IsInited();
 
 // XDRs
 
-#define XDR_IS_X32 1
+#if PICO_IS_ZERO
+
+static const uint32_t XDR_GPO_CLK_PIN_ID = 6;
+static const uint32_t XDR_GPO_CLK_PIN_ID2 = 7;
+
+static const uint32_t XDR_GPO_CMD_PIN_ID = 10;
+static const uint32_t XDR_GPO_CMD_PIN_ID2 = 9;
+
+#else
 
 static const uint32_t XDR_GPO_CLK_PIN_ID = 6;
 static const uint32_t XDR_GPO_CLK_PIN_ID2 = 7;
 
 static const uint32_t XDR_GPO_CMD_PIN_ID = 10;
 static const uint32_t XDR_GPO_CMD_PIN_ID2 = 11;
+
+#endif
 
 #if 0
 
@@ -224,7 +247,11 @@ extern void Xdr_GenerateReadyWDSLData_x32(const uint8_t* inData, uint8_t* outWDS
 
 //#define BUTTON_MODE_ENABLED 1
 
+#if PICO_IS_ZERO
+static const uint32_t BUTTON_PIN_ID = 26;
+#else
 static const uint32_t BUTTON_PIN_ID = 15;
+#endif
 
 extern void Button_Thread();
 
@@ -252,10 +279,13 @@ extern void Uart_Puts(uart_inst_t* uartId, const char* buf);
 
 //
 
-#define SC_IS_SW 1
-
+#if PICO_IS_ZERO
+static const uint32_t SC_UART_RX_PIN_ID = 13;
+static const uint32_t SC_UART_TX_PIN_ID = 12;
+#else
 static const uint32_t SC_UART_RX_PIN_ID = 17;
 static const uint32_t SC_UART_TX_PIN_ID = 16;
+#endif
 
 #if SC_IS_SW
 static const uint32_t SC_UART_BAUD = 57600;
@@ -289,13 +319,18 @@ extern void Sc_Thread();
 
 extern bool Sc_IsInited();
 
+#if PICO_IS_ZERO
+static const uint32_t SC_BYPASS_PIN_ID = 3;
+static const uint32_t SC_BANKSEL_PIN_ID = 14;
+static const uint32_t SC_RECOVERY_PIN_ID = 15;
+#else
 static const uint32_t SC_BYPASS_PIN_ID = 14;
-extern bool Sc_GetScBypass();
-
 static const uint32_t SC_BANKSEL_PIN_ID = 28;
-extern bool Sc_GetScBanksel();
-
 static const uint32_t SC_RECOVERY_PIN_ID = 22;
+#endif
+
+extern bool Sc_GetScBypass();
+extern bool Sc_GetScBanksel();
 extern bool Sc_GetScRecovery();
 
 extern void Sc_Init();

@@ -52,6 +52,9 @@ void DebugUart_Init()
     PrintLog("Debug Uart ready.\n");
 
     PrintLog("BadWDSD Pico By Kafuu(aomsin2526) (Build date: %s %s)\n", __DATE__, __TIME__);
+#if PICO_IS_ZERO
+    PrintLog("Zero version.\n");
+#endif
 }
 
 void DebugUart_Putc(char c)

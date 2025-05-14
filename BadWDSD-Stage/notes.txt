@@ -9,6 +9,13 @@
 // 0x210 - 0x217 = stage5j (0x2401F031300)
 // 0x218 - 0x21f = stage5 lv2 hash cache
 // 0x220 - 0x227 = stage5 temp loopCount
+// 0x228 - 0x22f = stage3 is custom lv2 (== 0x77)
+
+// 0x1000000 = lv2
+// 0x8000000 = otheros
+
+// Stagex:
+// 0xD000000 = sc_puts_buffer
 
 // Stage1:
 // 0xE000000 = stage_sp
@@ -17,3 +24,11 @@
 // Stage2:
 // 0xE000000 = stage_sp
 // 0xC000000 = temp lv1FileAddress
+
+// Stage5:
+// 0xC000000 = temp lv2FileAddress
+// 0xB000000 = tempBuf
+// 0xA000000 = temp loaded lv2
+
+// spu0 = generate lv2 hash
+// spu6 = diff storage

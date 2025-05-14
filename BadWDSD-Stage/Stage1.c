@@ -20,19 +20,6 @@ FUNC_DEF void Stage1()
     // puts("hello superslim :)\n");
 
     {
-        uint8_t os_bank_indicator = sc_read_os_bank_indicator();
-
-        puts("os_bank_indicator = ");
-        print_hex(os_bank_indicator);
-        puts("\n");
-
-        if (os_bank_indicator == 0xff)
-            puts("Will use ros0\n");
-        else
-            puts("Will use ros1\n");
-
-        uint64_t coreOSStartAddress = (os_bank_indicator == 0xff) ? 0x2401F0C0000 : 0x2401F7C0000;
-
         uint64_t lv0FileAddress;
         uint64_t lv0FileSize;
 
@@ -43,7 +30,7 @@ FUNC_DEF void Stage1()
             {
                 puts("Searching for lv0.elf...\n");
 
-                if (CoreOS_FindFileEntry(coreOSStartAddress, "lv0.elf", &lv0FileAddress, &lv0FileSize))
+                if (CoreOS_FindFileEntry_CurrentBank("lv0.elf", &lv0FileAddress, &lv0FileSize))
                     found = 1;
                 else
                     puts("File not found!\n");
@@ -56,7 +43,7 @@ FUNC_DEF void Stage1()
                 uint64_t zelfFileAddress;
                 uint64_t zelfFileSize;
 
-                if (CoreOS_FindFileEntry(coreOSStartAddress, "lv0.zelf", &zelfFileAddress, &zelfFileSize))
+                if (CoreOS_FindFileEntry_CurrentBank("lv0.zelf", &zelfFileAddress, &zelfFileSize))
                 {
                     found = 1;
 
@@ -84,7 +71,7 @@ FUNC_DEF void Stage1()
                 uint64_t lv0SelfFileAddress;
                 uint64_t lv0SelfFileSize;
 
-                if (CoreOS_FindFileEntry(coreOSStartAddress, "lv0", &lv0SelfFileAddress, &lv0SelfFileSize))
+                if (CoreOS_FindFileEntry_CurrentBank("lv0", &lv0SelfFileAddress, &lv0SelfFileSize))
                 {
                     found = 1;
 

@@ -155,9 +155,9 @@ void lv1gen(const char *inFilePath, const char *outFilePath, const char *stage3j
     size_t stage5jFileSize = get_file_size(stage5jFile);
     printf("stage5jFileSize = %lu\n", stage5jFileSize);
 
-    if (stage5jFileSize != 20)
+    if (stage5jFileSize != 16)
     {
-        printf("bad stage2j file size!\n");
+        printf("bad stage5j file size!\n");
 
         abort();
         return;
@@ -249,7 +249,7 @@ void lv1gen(const char *inFilePath, const char *outFilePath, const char *stage3j
 #if 1
 
     {
-        uint8_t searchData[] = { 0x4B, 0xFF, 0xFC, 0x8D, 0x7C, 0x7E, 0x1B, 0x78, 0x38, 0x00, 0x00, 0x00, 0x7C, 0x01, 0x01, 0x64 };
+        uint8_t searchData[] = { 0xE9, 0x22, 0xCF, 0x08, 0x7C, 0x80, 0x23, 0x78, 0x7C, 0xA6, 0x2B, 0x78 };
         
         uint64_t replaceDataSize = sizeof(searchData) + stage5jFileSize;
         uint8_t replaceData[replaceDataSize];

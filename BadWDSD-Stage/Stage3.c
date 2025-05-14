@@ -448,25 +448,12 @@ FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal)
     puts("\n");
 
     {
-        uint8_t os_bank_indicator = sc_read_os_bank_indicator();
-
-        puts("os_bank_indicator = ");
-        print_hex(os_bank_indicator);
-        puts("\n");
-
-        if (os_bank_indicator == 0xff)
-            puts("Will use ros0\n");
-        else
-            puts("Will use ros1\n");
-
-        uint64_t coreOSStartAddress = (os_bank_indicator == 0xff) ? 0x2401F0C0000 : 0x2401F7C0000;
-
         puts("Searching for lv2_kernel.diff...\n");
 
         uint64_t lv2DiffFileAddress;
         uint64_t lv2DiffFileSize;
 
-        if (CoreOS_FindFileEntry(coreOSStartAddress, "lv2_kernel.diff", &lv2DiffFileAddress, &lv2DiffFileSize))
+        if (CoreOS_FindFileEntry_CurrentBank("lv2_kernel.diff", &lv2DiffFileAddress, &lv2DiffFileSize))
         {
             puts("lv2DiffFileAddress = ");
             print_hex(lv2DiffFileAddress);
@@ -522,6 +509,137 @@ FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal)
     puts("ApplyLv2Diff() done.\n");
 }
 
+#pragma GCC push_options
+#pragma GCC optimize("O0")
+
+FUNC_DEF void RegenLv2AreaHash(uint64_t spu_id)
+{
+    puts("RegenLv2AreaHash()\n");
+
+    puts("spu_id = ");
+    print_decimal(spu_id);
+    puts("\n");
+
+    uint64_t lv2AreaAddrRa = 0x0;
+
+    if (!FindLv2(&lv2AreaAddrRa))
+    {
+        puts("lv2 area not found!\n");
+        return;
+    }
+
+    puts("lv2AreaAddrRa = ");
+    print_hex(lv2AreaAddrRa);
+    puts("\n");
+
+    uint64_t *lv1_lv2AreaAddrPtr = (uint64_t *)0x370F20; // 0x8000000000000000
+    uint64_t *lv1_lv2AreaSizePtr = (uint64_t *)0x370F28; // 0x352230
+
+    uint64_t *lv1_lv2AreaHashPtr = (uint64_t *)0x370F30;
+
+    puts("before_lv1_lv2AreaAddr = ");
+    print_hex(*lv1_lv2AreaAddrPtr);
+
+    puts(", before_lv1_lv2AreaSize = ");
+    print_hex(*lv1_lv2AreaSizePtr);
+
+    puts("\n");
+
+    puts("before_lv1_lv2AreaHash[0] = ");
+    print_hex(lv1_lv2AreaHashPtr[0]);
+    puts("\n");
+
+    puts("before_lv1_lv2AreaHash[1] = ");
+    print_hex(lv1_lv2AreaHashPtr[1]);
+    puts("\n");
+
+    puts("before_lv1_lv2AreaHash[2] = ");
+    print_hex(lv1_lv2AreaHashPtr[2]);
+    puts("\n");
+
+    {
+        puts("Searching for lv2hashgen.elf...\n");
+
+        uint64_t lv2HashGenFileAddress;
+        uint64_t lv2HashGenFileSize;
+
+        if (CoreOS_FindFileEntry_CurrentBank("lv2hashgen.elf", &lv2HashGenFileAddress, &lv2HashGenFileSize))
+        {
+            puts("lv2HashGenFileAddress = ");
+            print_hex(lv2HashGenFileAddress);
+
+            puts(", lv2HashGenFileSize = ");
+            print_decimal(lv2HashGenFileSize);
+
+            puts("\n");
+
+            // relocation off
+
+            uint64_t old_mfc_sr1 = SPU_P1_Read64(spu_id, 0x0);
+            SPU_P1_Write64(spu_id, 0x0, (old_mfc_sr1 & 0xFFFFFFFFFFFFFFEF));
+
+            //
+
+            LoadElfSpu(lv2HashGenFileAddress, spu_id);
+            eieio();
+
+            //
+
+            SPU_LS_Write64(spu_id, 0x3A0F0, lv2AreaAddrRa);
+            SPU_LS_Write64(spu_id, 0x3A0F8, *lv1_lv2AreaSizePtr);
+
+            eieio();
+
+            //
+
+            // SPU_RUNCNTL = 0x1
+            SPU_PS_Write32(spu_id, 0x0401C, 0x1);
+            eieio();
+
+            //
+
+            puts("Waiting for spu start/stop...\n");
+
+            uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
+
+            while ((status & 0xFF0000) != 0x690000) // 0x690002
+            {
+                status = SPU_PS_Read32(spu_id, 0x04024);
+            }
+
+            //
+
+            // restore MFC_SR1
+            SPU_P1_Write64(spu_id, 0x0, old_mfc_sr1);
+            eieio();
+
+            //
+
+            lv1_lv2AreaHashPtr[0] = SPU_LS_Read64(spu_id, 0x39010);
+            lv1_lv2AreaHashPtr[1] = SPU_LS_Read64(spu_id, 0x39018);
+            lv1_lv2AreaHashPtr[2] = SPU_LS_Read64(spu_id, 0x39020);
+
+            //
+        }
+        else
+            puts("File not found!\n");
+    }
+
+    puts("after_lv1_lv2AreaHash[0] = ");
+    print_hex(lv1_lv2AreaHashPtr[0]);
+    puts("\n");
+
+    puts("after_lv1_lv2AreaHash[1] = ");
+    print_hex(lv1_lv2AreaHashPtr[1]);
+    puts("\n");
+
+    puts("after_lv1_lv2AreaHash[2] = ");
+    print_hex(lv1_lv2AreaHashPtr[2]);
+    puts("\n");
+
+    puts("RegenLv2AreaHash done.\n");
+}
+
 FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
 {
     puts("Stage3_AuthLv2(), laid = ");
@@ -536,39 +654,32 @@ FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
     uint64_t *stage5_loopCount = (uint64_t *)0x220;
     *stage5_loopCount = 0;
 
-    uint64_t *lv1_lv2AreaSizePtr = (uint64_t *)0x370F28; // 0x352230
-
-    puts("lv1_lv2AreaSize = ");
-    print_hex(*lv1_lv2AreaSizePtr);
-    puts("\n");
-
     {
-        uint64_t lv2AreaAddr;
+        uint64_t lv2AreaAddrRa = 0x0;
 
-        if (!FindLv2(&lv2AreaAddr))
+        if (!FindLv2(&lv2AreaAddrRa))
         {
             puts("lv2 area not found!\n");
             return;
         }
 
-        puts("lv2AreaAddr = ");
-        print_hex(lv2AreaAddr);
+        puts("lv2AreaAddrRa = ");
+        print_hex(lv2AreaAddrRa);
         puts("\n");
 
-        uint8_t* snapshot_ofw = (uint8_t*)0xA000000;
-        uint8_t* lv2AreaPtr = (uint8_t*)lv2AreaAddr;
+        ApplyLv2Diff(lv2AreaAddrRa, 1);
 
-        for (uint64_t offset = 0; offset < (*lv1_lv2AreaSizePtr); ++offset)
-            snapshot_ofw[offset] = lv2AreaPtr[offset];
-
-        //ApplyLv2Diff(lv2AreaAddr, 1);
-        //*((uint64_t *)lv2AreaAddr + 0x150) = 0x9669;
+        //*((uint64_t*)(lv2AreaAddrRa + 0x110)) = 0x69;
+        eieio();
     }
 
+    //RegenLv2AreaHash(6);
     eieio();
 
     puts("Stage3_AuthLv2() done.\n");
 }
+
+#pragma GCC pop_options
 
 #pragma GCC push_options
 #pragma GCC optimize("O0")
@@ -765,11 +876,23 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
     // set r2 to stage_rtoc
     asm volatile("mr 2, %0" ::"r"(stage_rtoc) :);
 
+    // set lv1_sp
+    asm volatile("mr %0, 1" :"=r"(lv1_sp)::);
+
+    // set stage_sp to 0xE000000
+    //stage_sp = 0xE000000;
+
+    // set r1 to stage_sp
+    //asm volatile("mr 1, %0" ::"r"(stage_sp) :);
+
     // sync
     asm volatile("sync");
 
     // jump to stage3_main
     asm volatile("bl stage3_main");
+
+    // set r1 to lv1_sp
+    asm volatile("mr 1, %0" ::"r"(lv1_sp) :);
 
     // restore original lr from stack
     asm volatile("ld %0, 8(1)" : "=r"(r3)::);

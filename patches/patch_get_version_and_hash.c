@@ -28,7 +28,7 @@ __attribute__((noreturn)) void patches()
     //r0 = 0x3006000000000;
 
     asm volatile("li %0, 0x3006" :"=r"(r0)::);
-    asm volatile("sldi %0, %0, 36" :"=r"(r0)::);
+    asm volatile("sldi %0, %1, 36" :"=r"(r0):"r"(r0):);
 
     asm volatile("std %0, 0(28)" ::"r"(r0):);
 

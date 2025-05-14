@@ -117,6 +117,7 @@ register uint64_t r24 asm("r24");
 
 register uint64_t is_lv1 asm("r17"); // 0x9669, 0x9666 (stage5)
 register uint64_t lv1_rtoc asm("r18");
+register uint64_t lv1_sp asm("r25");
 
 register uint64_t stage_entry_ra asm("r19");
 register uint64_t stage_rtoc asm("r20");
@@ -1709,6 +1710,24 @@ FUNC_DEF uint8_t CoreOS_FindFileEntry(uint64_t startAddress, const char *fileNam
     return 0;
 }
 
+FUNC_DEF uint8_t CoreOS_FindFileEntry_CurrentBank(const char *fileName, uint64_t *outFileAddress, uint64_t *outFileSize)
+{
+    uint8_t os_bank_indicator = sc_read_os_bank_indicator();
+
+    puts("os_bank_indicator = ");
+    print_hex(os_bank_indicator);
+    puts("\n");
+
+    if (os_bank_indicator == 0xff)
+        puts("Will use ros0\n");
+    else
+        puts("Will use ros1\n");
+
+    uint64_t coreOSStartAddress = (os_bank_indicator == 0xff) ? 0x2401F0C0000 : 0x2401F7C0000;
+
+    return CoreOS_FindFileEntry(coreOSStartAddress, fileName, outFileAddress, outFileSize);
+}
+
 struct ElfHeader_s
 {
     uint8_t e_ident[16];  /* ELF identification */
@@ -2218,10 +2237,289 @@ FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void *destAddress, uint64
     *destSize = xxx;
 }
 
-// todo DecryptLv2Self
+#pragma GCC push_options
+#pragma GCC optimize("O0")
 
+FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf)
+{
+    puts("DecryptLv2Self()\n");
 
+    puts("decryptBuf = ");
+    print_hex((uint64_t)decryptBuf);
+    puts("\n");
 
+    uint8_t *dest = (uint8_t *)inDest;
+    const uint8_t *src = (const uint8_t *)inSrc;
+
+    uint64_t curSrcOffset = 0;
+
+    struct SceHeader_s sceHeader;
+    memcpy(&sceHeader, &src[curSrcOffset], sizeof(struct SceHeader_s));
+
+    if ((sceHeader.magic) != 0x53434500)
+    {
+        puts("SCE magic check failed!, ");
+        print_hex(sceHeader.magic);
+        puts("\n");
+
+        dead_beep();
+        return;
+    }
+
+    puts("sceHeader:\n");
+
+    puts("ext_header_size = ");
+    print_hex(sceHeader.ext_header_size);
+    puts("\n");
+
+    puts("file_offset = ");
+    print_hex(sceHeader.file_offset);
+    puts("\n");
+
+    puts("file_size = ");
+    print_hex(sceHeader.file_size);
+    puts("\n");
+
+    // erk=0CAF212B6FA53C0D A7E2C575ADF61DBE 68F34A33433B1B89 1ABF5C4251406A03
+    // riv=9B79374722AD888E B6A35A2DF25A8B3E
+
+    puts("1\n");
+
+    uint64_t meta_key[4];
+    meta_key[0] = (0x0CAF212B6FA53C0D);
+    meta_key[1] = (0xA7E2C575ADF61DBE);
+    meta_key[2] = (0x68F34A33433B1B89);
+    meta_key[3] = (0x1ABF5C4251406A03);
+
+    uint64_t meta_iv[2];
+    meta_iv[0] = (0x9B79374722AD888E);
+    meta_iv[1] = (0xB6A35A2DF25A8B3E);
+
+    puts("2\n");
+
+    WORD meta_aes_key[60];
+    aes_key_setup((const uint8_t *)meta_key, meta_aes_key, 256);
+
+    puts("3\n");
+
+    curSrcOffset = 0x200;
+
+    struct SceMetaInfo_s metaInfo;
+    aes_decrypt_cbc(
+
+        &src[curSrcOffset],
+        sizeof(struct SceMetaInfo_s),
+
+        (uint8_t *)&metaInfo,
+
+        meta_aes_key,
+        256,
+
+        (const uint8_t *)meta_iv);
+
+    puts("4\n");
+
+    curSrcOffset += sizeof(struct SceMetaInfo_s);
+
+    puts("metaInfo:\n");
+
+    puts("metaInfo.key[0] = ");
+    print_hex(metaInfo.key[0]);
+    puts("\n");
+
+    puts("metaInfo.key[1] = ");
+    print_hex(metaInfo.key[1]);
+    puts("\n");
+
+    puts("metaInfo.iv[0] = ");
+    print_hex(metaInfo.iv[0]);
+    puts("\n");
+
+    puts("metaInfo.iv[1] = ");
+    print_hex(metaInfo.iv[1]);
+    puts("\n");
+
+    WORD meta_header_key[60];
+    aes_key_setup((const uint8_t *)metaInfo.key, meta_header_key, 128);
+
+    uint64_t metasSize = (sceHeader.file_offset) - sizeof(struct SceHeader_s) + (sceHeader.ext_header_size) + sizeof(struct SceMetaInfo_s);
+
+    puts("metasSize = ");
+    print_decimal(metasSize);
+    puts("\n");
+
+    uint8_t metasBuf[4096];
+
+    aes_decrypt_ctr(
+
+        &src[curSrcOffset],
+        metasSize,
+
+        metasBuf,
+
+        meta_header_key,
+        128,
+
+        (const uint8_t *)metaInfo.iv
+
+    );
+
+    struct SceMetaHeader_s *metaHeader = (struct SceMetaHeader_s *)&metasBuf[0];
+
+    puts("metaHeader:\n");
+
+    puts("section_entry_num = ");
+    print_decimal(metaHeader->section_entry_num);
+    puts("\n");
+
+    puts("key_entry_num = ");
+    print_decimal(metaHeader->key_entry_num);
+    puts("\n");
+
+    struct SceMetaSectionHeader_s *metaSectionHeaders = (struct SceMetaSectionHeader_s *)&metasBuf[sizeof(struct SceMetaHeader_s)];
+
+    for (uint32_t i = 0; i < (metaHeader->section_entry_num); ++i)
+    {
+        struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
+
+        puts("section_headers[");
+        print_decimal(i);
+        puts("]:\n");
+
+        puts("segment_id = ");
+        print_decimal(h->segment_id);
+
+        puts(", segment_offset = ");
+        print_hex(h->segment_offset);
+
+        puts(", segment_size = ");
+        print_hex(h->segment_size);
+
+        puts(", enc_algorithm = ");
+        print_decimal(h->enc_algorithm);
+
+        puts(", key_idx = ");
+        print_decimal(h->key_idx);
+
+        puts(", iv_idx = ");
+        print_decimal(h->iv_idx);
+
+        puts("\n");
+    }
+
+    struct SceMetaKey_s *metaKeys = (struct SceMetaKey_s *)&metasBuf[sizeof(struct SceMetaHeader_s) + ((metaHeader->section_entry_num) * sizeof(struct SceMetaSectionHeader_s))];
+
+    for (uint32_t i = 0; i < (metaHeader->key_entry_num); ++i)
+    {
+        struct SceMetaKey_s *k = &metaKeys[i];
+
+        puts("keys[");
+        print_decimal(i);
+        puts("]: ");
+
+        puts("key[0] = ");
+        print_hex(k->key[0]);
+
+        puts(", key[1] = ");
+        print_hex(k->key[1]);
+
+        puts("\n");
+    }
+
+    struct ElfHeader_s *elfHeader = (struct ElfHeader_s *)&src[0x90];
+
+    memcpy(dest, elfHeader, sizeof(struct ElfHeader_s));
+    memcpy(dest + (elfHeader->e_phoff), &src[0x90 + (elfHeader->e_phoff)], (elfHeader->e_phentsize) * (elfHeader->e_phnum));
+
+    struct ElfPhdr_s *elfPhdrs = (struct ElfPhdr_s *)(dest + (elfHeader->e_phoff));
+
+    for (uint16_t i = 0; i < (elfHeader->e_phnum); ++i)
+    {
+        struct ElfPhdr_s *phdr = &elfPhdrs[i];
+
+        puts("decrypting phdr ");
+        print_decimal(i);
+        puts("...\n");
+
+        struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
+
+        struct SceMetaKey_s *key = &metaKeys[(h->key_idx)];
+        struct SceMetaKey_s *iv = &metaKeys[(h->iv_idx)];
+
+        puts("segment_offset = ");
+        print_hex(h->segment_offset);
+        puts(", segment_size = ");
+        print_hex(h->segment_size);
+
+        puts(", p_offset = ");
+        print_hex(h->segment_offset);
+
+        uint64_t in_addr = (uint64_t)&src[(h->segment_offset)];
+        uint64_t out_addr = (uint64_t)dest + phdr->p_offset;
+
+        puts(", in_addr = ");
+        print_hex(in_addr);
+
+        puts(", out_addr = ");
+        print_hex(out_addr);
+
+        puts("\n");
+
+        memcpy(decryptBuf, (const void*)in_addr, h->segment_size);
+
+        WORD aes_key[60];
+        aes_key_setup((const uint8_t *)key->key, aes_key, 128);
+
+        aes_decrypt_ctr(
+
+            (const uint8_t *)decryptBuf,
+            h->segment_size,
+
+            (uint8_t *)decryptBuf,
+
+            aes_key,
+            128,
+
+            (const uint8_t *)iv->key
+
+        );
+
+        if (h->comp_algorithm == 2)
+        {
+            puts("decompressing...\n");
+
+            uint32_t sz = phdr->p_filesz;
+
+            int32_t res = tinf_zlib_uncompress(
+                (void*)out_addr, &sz, 
+                decryptBuf, (uint32_t)h->segment_size
+            );
+
+            if ((res != TINF_OK) || (sz != phdr->p_filesz))
+            {
+                puts("Decompress failed!");
+
+                puts(", sz = ");
+                print_decimal(sz);
+
+                puts(", p_filesz = ");
+                print_decimal(phdr->p_filesz);
+
+                puts("\n");
+
+                dead();
+            }
+        }
+        else
+            memcpy((void*)out_addr, decryptBuf, h->segment_size);
+    }
+
+    puts("DecryptLv2Self() done.\n");
+}
+
+#include "Spu.c"
+
+#pragma GCC pop_options
 
 #include "Stage1.c"
 #include "Stage2.c"

@@ -13,15 +13,19 @@ SECTIONS
     entry5 : { *(entry5) }
 
     . = 0x2401F031600;
+    entry6 : { *(entry6) }
+
+    . = 0x2401F031800;
     .toc : { *(.toc) }
 
-    . = 0x2401F031610;
+    . = 0x2401F031810;
     bcode : { *(bcode) }
 
     main1 : { *(main1) }
     main2 : { *(main2) }
     main3 : { *(main3) }
     main5 : { *(main5) }
+    main6 : { *(main6) }
 
     code : { *(code) }
 

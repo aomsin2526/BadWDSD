@@ -171,7 +171,7 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id)
     }
 
     // SPU_NPC[0:29] = entry (LS)
-    SPU_PS_Write32(spu_id, 0x04034, elfHdr->e_entry);
+    SPU_PS_Write32(spu_id, 0x04034, elfHdr->e_entry | 0x1);
 
     eieio();
 

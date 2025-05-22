@@ -163,7 +163,7 @@ FUNC_DEF void Stage3()
             puts("\n");
 
             {
-                puts("Installing hvcall peek(34)\n");
+                puts("Installing hvcall peek64(34)\n");
 
                 uint64_t code_addr = 0x130;
                 uint64_t *code = (uint64_t *)code_addr;
@@ -174,7 +174,7 @@ FUNC_DEF void Stage3()
             }
 
             {
-                puts("Installing hvcall poke(35)\n");
+                puts("Installing hvcall poke64(35)\n");
 
                 uint64_t code_addr = 0x140;
                 uint64_t *code = (uint64_t *)code_addr;
@@ -192,14 +192,38 @@ FUNC_DEF void Stage3()
                 uint64_t *code = (uint64_t *)code_addr;
 
                 code[0] = 0x3821FFF07C0802A6;
-                code[1] = 0xF80100007D2903A6;
+                code[1] = 0xF80100003821FF80;
 
-                code[2] = 0x4E800421E8010000;
-                code[3] = 0x7C0803A638210010;
+                code[2] = 0x7D2903A64E800421;
+                code[3] = 0x38210080E8010000;
 
-                code[4] = 0x4E80002000000000;
+                code[4] = 0x7C0803A638210010;
+                code[5] = 0x4E80002000000000;
 
                 *((uint64_t *)(hvcallTable + (36 * 8))) = code_addr;
+            }
+
+            {
+                puts("Installing hvcall peek32(37)\n");
+
+                uint64_t code_addr = 0x180;
+                uint64_t *code = (uint64_t *)code_addr;
+
+                code[0] = 0x806300004E800020;
+
+                *((uint64_t *)(hvcallTable + (37 * 8))) = code_addr;
+            }
+
+            {
+                puts("Installing hvcall poke32(38)\n");
+
+                uint64_t code_addr = 0x190;
+                uint64_t *code = (uint64_t *)code_addr;
+
+                code[0] = 0x9083000038600000;
+                code[1] = 0x4E80002000000000;
+
+                *((uint64_t *)(hvcallTable + (38 * 8))) = code_addr;
             }
         }
         else
@@ -471,7 +495,7 @@ FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal)
 }
 
 #pragma GCC push_options
-#pragma GCC optimize("O0")
+//#pragma GCC optimize("O0")
 
 #if 0
 
@@ -668,8 +692,58 @@ FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
 
 #pragma GCC pop_options
 
+FUNC_DEF void Stage3_Debug()
+{
+    uint64_t* isActive = (uint64_t*)0x228;
+    
+    if (*isActive == 0)
+        return;
+
+    puts("Stage3 debug!!!\n");
+
+    uint32_t status = SPU_PS_Read32(4, 0x04024);
+    puts("status = ");
+    print_hex(status);
+
+    uint32_t npc = SPU_PS_Read32(4, 0x04034);
+    puts(", npc = ");
+    print_hex(npc);
+
+    uint64_t lslr = SPU_P2_Read64(4, 0x04058);
+    puts(", lslr = ");
+    print_hex(lslr);
+
+    uint32_t mbox = SPU_PS_Read32(4, 0x04004);
+    puts(", mbox = ");
+    print_hex(mbox);
+
+    {
+        uint64_t x = SPU_LS_Read64(4, 0x37300);
+        puts(", 0x37300 = ");
+        print_hex(x);
+    }
+
+    {
+        uint64_t x = SPU_LS_Read64(4, 0x39000);
+        puts(", 0x39000 = ");
+        print_hex(x);
+    }
+
+    puts("\n");
+
+    {
+        uint64_t x = SPU_LS_Read64(4, 0x12C00);
+        puts("0x12C00 = ");
+        print_hex(x);
+    }
+
+    puts("\n");
+}
+
 #pragma GCC push_options
 #pragma GCC optimize("O0")
+
+FUNC_DECL void Stage4();
 
 __attribute__((section("main3"))) void stage3_main()
 {
@@ -774,20 +848,34 @@ __attribute__((section("main3"))) void stage3_main()
     asm volatile("li 4, 0");
 
 #if 1
+    // Call stage4
+    if (r5_2 == 0x21)
+    {
+        Stage4();
+        return;
+    }
+#endif
 
+#if 1
     // auth lv2
     if (r5_2 == 0x30)
     {
-        intr_disable();
-
         sc_puts_init();
 
         // r6 = laid
         Stage3_AuthLv2(r6_2);
-
-        intr_enable();
     }
+#endif
 
+#if 1
+    // debug
+    if (r5_2 == 0x32)
+    {
+        sc_puts_init();
+        Stage3_Debug();
+
+        return;
+    }
 #endif
 
     if ((r5_2 != 0x0) && (r5_2 != 0x30) && (r5_2 != 0x31))
@@ -798,12 +886,8 @@ __attribute__((section("main3"))) void stage3_main()
     if (*alreadyDone == 0x69)
         return;
 
-    intr_disable();
-
     sc_puts_init();
     Stage3();
-
-    intr_enable();
 
     *alreadyDone = 0x69;
 }
@@ -907,7 +991,7 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
 
     // set stage_rtoc
     stage_rtoc = stage_entry_ra;
-    stage_rtoc += 0x400; // .toc
+    stage_rtoc += 0x600; // .toc
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc
@@ -925,8 +1009,14 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
     // sync
     asm volatile("sync");
 
+    // push stack
+    asm volatile("addi 1, 1, -128");
+
     // jump to stage3_main
     asm volatile("bl stage3_main");
+
+    // pop stack
+    asm volatile("addi 1, 1, 128");
 
     // set r1 to lv1_sp
     asm volatile("mr 1, %0" ::"r"(lv1_sp) :);

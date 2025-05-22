@@ -2,7 +2,7 @@
 // STAGE5_LOG_ENABLED
 
 #pragma GCC push_options
-#pragma GCC optimize("O0")
+//#pragma GCC optimize("O0")
 
 FUNC_DEF void Stage5()
 {
@@ -149,7 +149,7 @@ __attribute__((noreturn, section("entry5"))) void stage5_entry()
     // set interrupt_depth to 0
     interrupt_depth = 0;
 
-    // set is_lv1 to 0x9666
+    // set is_lv1 to 0x9666 (stage5)
     is_lv1 = 0x9666;
 
     // set stage_zero to 0
@@ -157,7 +157,7 @@ __attribute__((noreturn, section("entry5"))) void stage5_entry()
 
     // set stage_rtoc
     stage_rtoc = stage_entry_ra;
-    stage_rtoc += 0x200; // .toc
+    stage_rtoc += 0x400; // .toc
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc
@@ -175,8 +175,14 @@ __attribute__((noreturn, section("entry5"))) void stage5_entry()
     // sync
     asm volatile("sync");
 
+    // push stack
+    asm volatile("addi 1, 1, -128");
+
     // jump to stage5_main
     asm volatile("bl stage5_main");
+
+    // pop stack
+    asm volatile("addi 1, 1, 128");
 
     // set r1 to lv1_sp
     asm volatile("mr 1, %0" ::"r"(lv1_sp) :);
@@ -234,6 +240,13 @@ __attribute__((noreturn, section("entry5"))) void stage5_entry()
     // sync
     asm volatile("sync");
 
+    // push stack
+    asm volatile("addi 1, 1, -16");
+
+    // store original lr to stack
+    asm volatile("mflr 0");
+    asm volatile("std 0, 0(1)");
+
     // continue...
 
     asm volatile("ld 9, -0x30f8(2)");
@@ -249,8 +262,40 @@ __attribute__((noreturn, section("entry5"))) void stage5_entry()
     asm volatile("sldi 11, 11, 8");
     asm volatile("addi 11, 11, 0x88");
 
+    // push stack
+    asm volatile("addi 1, 1, -128");
+
+    //
+    asm volatile("mtctr 11");
+    asm volatile("bctrl");
+    //
+
+    // pop stack
+    asm volatile("addi 1, 1, 128");
+
+    // restore original lr from stack
+    asm volatile("ld 0, 0(1)");
+    asm volatile("mtlr 0");
+
+    // pop stack
+    asm volatile("addi 1, 1, 16");
+
+#if 0
+
+    // call stage6 (0x2401F031600)
+    asm volatile("lis 11, 0x240");
+    asm volatile("ori 11, 11, 0x1F03");
+    asm volatile("sldi 11, 11, 16");
+    asm volatile("ori 11, 11, 0x1600");
+
     asm volatile("mtctr 11");
     asm volatile("bctr");
+
+#else
+
+    asm volatile("blr");
+
+#endif
 
     __builtin_unreachable();
 }

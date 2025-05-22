@@ -239,7 +239,7 @@ __attribute__((noreturn, section("entry2"))) void stage2_entry()
 
     // set stage_rtoc
     stage_rtoc = stage_entry_ra;
-    stage_rtoc += 0x500; // .toc
+    stage_rtoc += 0x700; // .toc
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc
@@ -259,6 +259,9 @@ __attribute__((noreturn, section("entry2"))) void stage2_entry()
 
     // sync
     asm volatile("sync");
+
+    // push stack
+    asm volatile("addi 1, 1, -128");
 
     // jump to stage_main
     asm volatile("b stage2_main");

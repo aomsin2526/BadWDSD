@@ -1,7 +1,7 @@
 #define SC_PUTS_BUFFER_ENABLED 1
 #define SC_LV1_LOGGING_ENABLED 1
 
-#define STAGE5_LOG_ENABLED 1
+//#define STAGE5_LOG_ENABLED 1
 
 #pragma GCC optimize("align-functions=8")
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -737,8 +737,8 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
         dead();
     }
 
-    if (IsLv1())
-        intr_disable();
+    //if (IsLv1())
+        //intr_disable();
 
     // 0x24000000000
     uint64_t sb_base_addr = 0x24;
@@ -952,8 +952,8 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
         }
     }
 
-    if (IsLv1())
-        intr_enable();
+    //if (IsLv1())
+        //intr_enable();
 }
 
 FUNC_DEF void sc_triple_beep()
@@ -2253,7 +2253,7 @@ FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void *destAddress, uint64
 }
 
 #pragma GCC push_options
-#pragma GCC optimize("O0")
+//#pragma GCC optimize("O0")
 
 FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf)
 {
@@ -2317,7 +2317,18 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf)
 
     puts("3\n");
 
-    curSrcOffset = 0x200;
+    //curSrcOffset = 0x200;
+
+    for (uint64_t i = 0; i < 0x1000; i += 0x10)
+    {
+        uint32_t* v = (uint32_t*)(&src[i]);
+
+        if (*v == 0x627CB180)
+        {
+            curSrcOffset = (i + 0x30);
+            break;
+        }
+    }
 
     struct SceMetaInfo_s metaInfo;
     aes_decrypt_cbc(
@@ -2539,7 +2550,9 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf)
 #include "Stage1.c"
 #include "Stage2.c"
 #include "Stage3.c"
+#include "Stage4.c"
 #include "Stage5.c"
+//#include "Stage6.c"
 
 #pragma GCC push_options
 #pragma GCC optimize("O0")
@@ -2550,6 +2563,7 @@ void stage_link_entry()
     asm volatile("bl stage2_entry");
     asm volatile("bl stage3_entry");
     asm volatile("bl stage5_entry");
+    //asm volatile("bl stage6_entry");
 }
 
 #pragma GCC pop_options

@@ -25,5 +25,8 @@ $CC $FLAGS -T Stage3ja.ld Stage3ja.S -o Stage3ja.bin -Wl,--oformat=binary || exi
 $CC $FLAGS -T Stage3jz.ld Stage3jz.S -o Stage3jz.elf || exit 1
 $CC $FLAGS -T Stage3jz.ld Stage3jz.S -o Stage3jz.bin -Wl,--oformat=binary || exit 1
 
+$CC $FLAGS -T Stage4j.ld Stage4j.c -o Stage4j.elf || exit 1
+$CC $FLAGS -T Stage4j.ld Stage4j.c -o Stage4j.bin -Wl,--oformat=binary || exit 1
+
 $CC $FLAGS -T Stage5j.ld Stage5j.S -o Stage5j.elf || exit 1
 $CC $FLAGS -T Stage5j.ld Stage5j.S -o Stage5j.bin -Wl,--oformat=binary || exit 1

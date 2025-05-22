@@ -1,6 +1,6 @@
 typedef unsigned int uint32_t;
 
-void entry(uint32_t skip, uint32_t* buf, uint32_t len)
+uint32_t entry(uint32_t skip, uint32_t* buf, uint32_t len)
 {
     // skip always 0
     // F5 04 FD 92 0D FD 54 B7 38 FC 88 95
@@ -8,4 +8,6 @@ void entry(uint32_t skip, uint32_t* buf, uint32_t len)
 
     for (uint32_t i = 0; i < len; ++i)
         buf[i] = data[i];
+
+    return 0;
 }

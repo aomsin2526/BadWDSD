@@ -14,3 +14,9 @@ $CC $FLAGS -T ld.ld patch_get_version_and_hash.c -o patch_get_version_and_hash.b
 
 $CC $FLAGS -T ld.ld patch_fsm.S -o patch_fsm.elf || exit 1
 $CC $FLAGS -T ld.ld patch_fsm.S -o patch_fsm.bin -Wl,--oformat=binary || exit 1
+
+$CC $FLAGS -T ld.ld lv1_exec.S -o lv1_exec.elf || exit 1
+$CC $FLAGS -T ld.ld lv1_exec.S -o lv1_exec.bin -Wl,--oformat=binary || exit 1
+
+$CC $FLAGS -T ld.ld generic.S -o generic.elf || exit 1
+$CC $FLAGS -T ld.ld generic.S -o generic.bin -Wl,--oformat=binary || exit 1

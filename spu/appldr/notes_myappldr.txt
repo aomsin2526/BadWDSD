@@ -1,0 +1,19 @@
+// <memAddr> <fileAddr>
+
+// bypass check_sdk_version
+0x16a18(0x3f18) = 00 20 00 00 (lnop)
+
+// replace read_key_ring with read_keyring.bin
+0x289D0(0x15ed0)
+
+// replace decrypt_eid with decrypt_eid.bin
+0x15368(0x2868)
+
+// keyring at 0x39000
+0xF504FD920DFD54B7 0x38FC889500000000
+
+// idps at 0x39010
+0x0000000100830006 0x1004C09929B6048F
+
+// targetID at 0x39020 (uint64_t)
+0x83

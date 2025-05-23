@@ -29,8 +29,14 @@ our_lv1_exec_do:
 	mflr %r0
 	std %r0, 0(%r1)
 
+	// push
+	addi %r1, %r1, -32
+
 	mtctr %r9
 	bctrl
+
+	// pop
+	addi %r1, %r1, 32
 
 	ld %r0, 0(%r1)
 	mtlr %r0

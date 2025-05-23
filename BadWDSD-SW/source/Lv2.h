@@ -41,6 +41,9 @@ extern int32_t lv2_dbg_get_console_type(uint64_t* out_type);
 
 extern int32_t lv2_sm_shutdown(uint16_t op, const void* lpar_parameter, uint64_t parameter_size);
 
+extern int32_t lv2_um_read_eeprom(uint32_t offset, uint8_t* outValue);
+extern int32_t lv2_um_write_eeprom(uint32_t offset, uint8_t inValue);
+
 extern void lv2_shutdown();
 
 extern void lv2_reboot_soft();

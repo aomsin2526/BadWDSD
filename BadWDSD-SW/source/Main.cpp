@@ -1517,15 +1517,50 @@ void PatchMoreLv1()
 		lv1_write(0x0AC594, 8, &newval);
 	}
 
+	// UM EEPROM
+
 	{
-		PrintLog("Patching Update Manager EEPROM write access\n");
+		{
+			PrintLog("Patching Update Manager EEPROM Read\n");
 
-		uint64_t old;
-		lv1_read(0x0FEBD4, 8, &old);
-		old &= 0x00000000FFFFFFFFULL;
+			uint64_t patches = 0x6000000038000001;
+			lv1_write(0xFC4DC, 8, &patches);
+		}
 
-		uint64_t newval = 0x3800000000000000ULL | old;
-		lv1_write(0x0FEBD4, 8, &newval);
+		{
+			PrintLog("Patching Update Manager EEPROM Write\n");
+
+			uint64_t patches = 0x6000000038000001;
+			lv1_write(0xFEA38, 8, &patches);
+		}
+	}
+
+	{
+		PrintLog("Patching Dispatch Manager\n");
+
+		{
+			uint32_t newval = 0x60000000;
+			lv1_write(0x16FA64, 4, &newval);
+		}
+
+		{
+			uint32_t newval = 0x38600001;
+			lv1_write(0x16FA88, 4, &newval);
+		}
+
+		{
+			uint8_t newval[12] = {0x3b, 0xe0, 0x00, 0x01, 0x9b, 0xe1, 0x00, 0x70, 0x38, 0x60, 0x00, 0x00};
+			lv1_write(0x16FB00, 12, newval);
+		}
+	}
+
+	{
+		PrintLog("Patching service auth\n");
+		
+		{
+			uint64_t newval = 0x2f80000048000050;
+			lv1_write(0x16FB64, 8, &newval);
+		}
 	}
 
 	// Repo nodes
@@ -1594,79 +1629,6 @@ void PatchMoreLv1()
 
 			lv1_write(0x2E5550, 28, patches);
 		}
-	}
-
-	{
-		PrintLog("Patching lv1_set_dabr\n");
-
-		uint64_t old;
-		lv1_read(0x2EB550, 8, &old);
-		old &= 0x00000000FFFFFFFFULL;
-
-		uint64_t newval = 0x3800000F00000000ULL | old;
-		lv1_write(0x2EB550, 8, &newval);
-	}
-
-	{
-		PrintLog("Patching Dispatch Manager\n");
-
-		{
-			uint64_t old;
-			lv1_read(0x16FA64, 8, &old);
-			old &= 0x00000000FFFFFFFFULL;
-
-			uint64_t newval = 0x6000000000000000ULL | old;
-			lv1_write(0x16FA64, 8, &newval);
-		}
-
-		{
-			uint64_t old;
-			lv1_read(0x16FA88, 8, &old);
-			old &= 0x00000000FFFFFFFFULL;
-
-			uint64_t newval = 0x3860000100000000ULL | old;
-			lv1_write(0x16FA88, 8, &newval);
-		}
-
-		{
-			uint64_t old;
-			lv1_read(0x16FB00, 8, &old);
-			old &= 0x00000000FFFFFFFFULL;
-
-			uint64_t newval = 0x3BE0000100000000ULL | old;
-			lv1_write(0x16FB00, 8, &newval);
-		}
-
-		{
-			uint64_t old;
-			lv1_read(0x16FB08, 8, &old);
-			old &= 0x00000000FFFFFFFFULL;
-
-			uint64_t newval = 0x3860000000000000ULL | old;
-			lv1_write(0x16FB08, 8, &newval);
-		}
-	}
-
-	{
-		PrintLog("Patching MFC_SR1\n");
-
-		uint64_t old;
-		lv1_read(0x2F9EB8, 8, &old);
-		old &= 0x00000000FFFFFFFFULL;
-
-		uint64_t newval = 0x3920FFFF00000000ULL | old;
-		lv1_write(0x2F9EB8, 8, &newval);
-	}
-
-	{
-		PrintLog("Patching ACL\n");
-
-		uint64_t patches[2];
-
-		patches[0] = 0x386000012F830000ULL;
-		patches[1] = 0x419E001438000001ULL;
-
-		lv1_write(0x25C504, 16, patches);
 	}
 
 	{
@@ -2014,6 +1976,36 @@ void Sputest()
 	}
 }
 
+uint8_t get_bank_indicator()
+{
+	uint8_t value = 0x99;
+
+	int32_t res = lv2_um_read_eeprom(0x48c24, &value);
+
+	if (res != 0)
+	{
+		PrintLog("lv2_um_read_eeprom failed!, res = %d\n", res);
+
+		abort();
+		return 0x99;
+	}
+
+	return value;
+}
+
+void set_bank_indicator(uint8_t value)
+{
+	int32_t res = lv2_um_write_eeprom(0x48c24, value);
+
+	if (res != 0)
+	{
+		PrintLog("lv2_um_write_eeprom failed!, res = %d\n", res);
+
+		abort();
+		return;
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	lv2_beep_triple();
@@ -2072,102 +2064,13 @@ int main(int argc, char *argv[])
 	WaitInMs(500);
 
 	{
-#if 0
-
-		bool doGlitcherTest = IsFileExist("/dev_hdd0/BadHTAB_doGlitcherTest.txt");
-
-		bool doSkipStage1 = IsFileExist("/dev_hdd0/BadHTAB_doSkipStage1.txt");
-
-		bool doStage1_CFW = IsFileExist("/dev_hdd0/BadHTAB_doStage1_CFW.txt");
-
-		bool doSkipStage2 = IsFileExist("/dev_hdd0/BadHTAB_doSkipStage2.txt");
-
-		bool doSkipPatchMoreLv1 = IsFileExist("/dev_hdd0/BadHTAB_doSkipPatchMoreLv1.txt");
-
-		bool doDumpLv1 = IsFileExist("/dev_hdd0/BadHTAB_doDumpLv1.txt");
-		bool doDumpLv1_240M = IsFileExist("/dev_hdd0/BadHTAB_doDumpLv1_240M.txt");
-
-		bool doLoadLv2Kernel_Self = IsFileExist("/dev_hdd0/BadHTAB_doLoadLv2Kernel_Self.txt");
-		bool doLoadLv2Kernel_Fself = IsFileExist("/dev_hdd0/BadHTAB_doLoadLv2Kernel_Fself.txt");
-
-		bool doOtherOS = IsFileExist("/dev_hdd0/BadHTAB_doOtherOS.txt");
-
-		if (doGlitcherTest)
-		{
-			GlitcherTest();
-		}
-		else
-		{
-			if (!doSkipStage1)
-			{
-				if (doStage1_CFW)
-					Stage1_CFW();
-				else
-					Stage1_v2();
-			}
-
-			if (!doSkipStage2)
-				Stage2_Hvcall();
-
-			if (doSkipStage2)
-			{
-				if (!IsExploited())
-				{
-					PrintLog("Should exploited at this point!\n");
-
-					abort();
-					return 0;
-				}
-
-				InstallOurHvcall();
-			}
-
-			PrintLog("lv1_peek/poke now available.\n");
-
-			if (!doSkipStage2)
-				PatchHvcall114();
-
-			if (!IsExploited())
-			{
-				PrintLog("Should exploited at this point!\n");
-
-				abort();
-				return 0;
-			}
-
-			PrintLog("lv1_peek/poke_114 now available.\n");
-
-			if (!doSkipPatchMoreLv1)
-				PatchMoreLv1();
-
-			if (doDumpLv1)
-				DumpLv1();
-
-			if (doDumpLv1_240M)
-				DumpLv1_240M();
-
-			if (doLoadLv2Kernel_Self)
-				LoadLv2Kernel("lv2_kernel.self", LoadLv2KernelType_e::Self);
-
-			if (doLoadLv2Kernel_Fself)
-				LoadLv2Kernel("lv2_kernel.fself", LoadLv2KernelType_e::Fself);
-
-			if (doOtherOS)
-				LoadLv2Kernel("dtbImage.ps3.fself", LoadLv2KernelType_e::OtherOS_Fself);
-
-			//apply_rsx_clock(100, 450);
-
-			PrintLog("timebase = %lu\n", sysGetTimebaseFrequency());
-
-			//BadWDSD_Stage1_Bin_Test();
-			//BadWDSD_Stage1_Bin_Flash_Test(true);
-			//BadWDSD_Stage1_Bin_Flash_Test(false);
-
-			//BadWDSD_Write_ros0();
-		}
-#endif
-
 #if 1 
+
+		if (IsExploited())
+		{
+			InstallOurHvcall();
+			PatchMoreLv1();
+		}
 
 		bool doLoadLv2Kernel_Fself = IsFileExist("/dev_hdd0/BadWDSD_doLoadLv2Kernel_Fself.txt");
 		bool doLoadLv2Kernel_ZFself = IsFileExist("/dev_hdd0/BadWDSD_doLoadLv2Kernel_ZFself.txt");
@@ -2190,12 +2093,64 @@ int main(int argc, char *argv[])
 		bool doSkipRosCompare = IsFileExist("/dev_hdd0/BadWDSD_doSkipRosCompare.txt");
 		bool doFlashRos1 = IsFileExist("/dev_hdd0/BadWDSD_doFlashRos1.txt");
 
-		BadWDSD_Write_Stagex();
-		BadWDSD_Write_ros(!doSkipRosCompare, doFlashRos1);
+		bool doLegacyInstall = IsFileExist("/dev_hdd0/BadWDSD_doLegacyInstall.txt");
+		doLegacyInstall = true;
+
+		if (!doLegacyInstall)
+		{
+			// 0x80010505 :(
+
+			PrintLog("Installing Stagex.bin...\n");
+			BadWDSD_Write_Stagex();
+			PrintLog("Stagex.bin installed.\n");
+
+			PrintLog("Installing CoreOS.bin...\n");
+
+			if (!IsExploited())
+			{
+				PrintLog("Should exploited at this point!\n");
+				PrintLog("Install modchip first!\n");
+
+				abort();
+				return 0;
+			}
+
+			uint8_t bank_indicator = get_bank_indicator();
+			PrintLog("bank_indicator = 0x%x\n", (uint32_t)bank_indicator);
+
+			if (bank_indicator != 0x00)
+			{
+				PrintLog("Please reinstall firmware ONCE again then try again.\n");
+
+				abort();
+				return 0;
+			}
+
+			BadWDSD_Write_ros(false, false);
+
+			set_bank_indicator(0xff);
+			bank_indicator = get_bank_indicator();
+			PrintLog("bank_indicator = 0x%x\n", (uint32_t)bank_indicator);
+
+			if (bank_indicator != 0xff)
+			{
+				PrintLog("Bank switch failed!\n");
+
+				abort();
+				return 0;
+			}
+
+			PrintLog("CoreOS.bin installed.\n");
+		}
+		else
+		{
+			PrintLog("Legacy install\n");
+
+			BadWDSD_Write_Stagex();
+			BadWDSD_Write_ros(!doSkipRosCompare, doFlashRos1);
+		}
 
 #endif
-
-		//Sputest();
 	}
 
 	PrintLog("Bye!\n");

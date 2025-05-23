@@ -173,7 +173,7 @@ void InstallOurHvcall()
 	{
 		uint64_t offset = ra;
 
-		// 34 = peek
+		// 34 = peek64
 
 		{
 			lv1_write_114(table_addr + (34 * 8), 8, &offset);
@@ -185,7 +185,7 @@ void InstallOurHvcall()
 			offset += 8;
 		}
 
-		// 35 = poke
+		// 35 = poke64
 
 		{
 			lv1_write_114(table_addr + (35 * 8), 8, &offset);
@@ -331,6 +331,9 @@ void UninstallOurHvcall()
 		lv1_write_114(_our_hvcall_table_addr + (34 * 8), 8, &invalid_handler_addr);
 		lv1_write_114(_our_hvcall_table_addr + (35 * 8), 8, &invalid_handler_addr);
 		lv1_write_114(_our_hvcall_table_addr + (36 * 8), 8, &invalid_handler_addr);
+
+		lv1_write_114(_our_hvcall_table_addr + (37 * 8), 8, &invalid_handler_addr);
+		lv1_write_114(_our_hvcall_table_addr + (38 * 8), 8, &invalid_handler_addr);
 	}
 
 	int32_t res = lv1_release_memory(_our_hvcall_lpar_addr);

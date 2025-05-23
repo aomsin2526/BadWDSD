@@ -1,6 +1,6 @@
 #include "Include.h"
 
-void LoadLv2Kernel(const char* fileName, uint32_t type)
+void LoadLv2Kernel(const char *fileName, uint32_t type)
 {
 	PrintLog("LoadLv2Kernel(), fileName = %s\n", fileName);
 
@@ -84,6 +84,61 @@ void LoadLv2Kernel(const char* fileName, uint32_t type)
 		uint8_t v = 0x1B; // 128M
 		lv1_write(initial_lpar_size_offset, 1, &v);
 	}
+
+	{
+		// install our patch
+
+		bool auth_lv2_offset_found = false;
+		uint64_t auth_lv2_offset;
+
+		{
+			for (uint64_t i = 0; i < (16 * 1024 * 1024); i += 4)
+			{
+				uint64_t v[3];
+				lv1_read(i, 24, v);
+
+				if ((v[0] == 0xF821FF517C0802A6) && (v[1] == 0xFB610088FB810090) && (v[2] == 0xFBC100A07C7C1B78))
+				{
+					auth_lv2_offset_found = true;
+					auth_lv2_offset = i;
+
+					break;
+				}
+			}
+		}
+
+		if (!auth_lv2_offset_found)
+		{
+			PrintLog("auth_lv2_offset not found!\n");
+		}
+		else
+		{
+			PrintLog("auth_lv2_offset = 0x%lx\n", auth_lv2_offset);
+
+			// max function size = 420
+
+			if (type == LoadLv2KernelType_e::Fself || type == LoadLv2KernelType_e::OtherOS_Fself)
+			{
+				PrintLog("Writing our fself loader patch...\n");
+
+				if (our_lv1_auth_lv2_hook_fself_do_size > 420)
+				{
+					PrintLog("function size too big!\n");
+
+					abort();
+					return;
+				}
+
+				PrintLog("Patch size = %lu\n", our_lv1_auth_lv2_hook_fself_do_size);
+
+				lv1_write(auth_lv2_offset,
+						  our_lv1_auth_lv2_hook_fself_do_size,
+						  (void *)our_lv1_auth_lv2_hook_fself_do);
+			}
+		}
+	}
+
+	UninstallOurHvcall();
 
 	WaitInMs(1000);
 	lv2_beep_triple();

@@ -366,6 +366,7 @@ void Sc_Init()
             // Sc_Rx: # addr=00001211 num=01 val=03:B1
             // Sc_Rx: OK 00000000:3A
 
+            if (!banksel)
             {
                 sprintf(cmdCtx.cmd, "w 1224 %s\r\n", banksel ? "ff" : "00");
                 sprintf(cmdCtx.expectedResponse, "OK 00000000");
@@ -393,6 +394,7 @@ void Sc_Init()
             // Sc_Rx: [mullion]$ w 48c24 00
             // Sc_Rx: w complete!
 
+            if (!banksel)
             {
                 sprintf(cmdCtx.cmd, "w 48c24 %s\r\n", banksel ? "ff" : "00");
                 sprintf(cmdCtx.expectedResponse, "w complete!");

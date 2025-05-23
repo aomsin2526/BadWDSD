@@ -319,6 +319,20 @@ int32_t lv2_sm_shutdown(uint16_t op, const void* lpar_parameter, uint64_t parame
 	return_to_user_prog(int32_t);
 }
 
+int32_t lv2_um_read_eeprom(uint32_t offset, uint8_t* outValue)
+{
+	lv2syscall3(863, 0x600B, (uint64_t)offset, (uint64_t)outValue);
+
+	return_to_user_prog(int32_t);
+}
+
+int32_t lv2_um_write_eeprom(uint32_t offset, uint8_t inValue)
+{
+	lv2syscall3(863, 0x600C, (uint64_t)offset, (uint64_t)inValue);
+
+	return_to_user_prog(int32_t);
+}
+
 void lv2_shutdown()
 {
 	lv2_sm_shutdown(0x100, NULL, 0);

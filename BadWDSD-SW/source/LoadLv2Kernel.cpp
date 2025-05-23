@@ -138,6 +138,41 @@ void LoadLv2Kernel(const char *fileName, uint32_t type)
 		}
 	}
 
+	{
+		bool mmap_size_offset_found = false;
+		uint64_t mmap_size_offset;
+
+		// 7C 7C 1B 78 7F C3 F3 78 7F 86 E3 78
+
+		for (uint64_t i = 0; i < (16 * 1024 * 1024); i += 4)
+		{
+			uint32_t v[3];
+			lv1_read(i, 12, v);
+
+			if ((v[0] == 0x7C7C1B78) && (v[1] == 0x7FC3F378) && (v[2] == 0x7F86E378))
+			{
+				mmap_size_offset_found = true;
+				mmap_size_offset = i;
+
+				break;
+			}
+		}
+
+		if (!mmap_size_offset_found)
+		{
+			PrintLog("mmap_size_offset not found!, Abort!()\n");
+
+			abort();
+			return;
+		}
+
+		PrintLog("mmap_size_offset = 0x%lx\n", mmap_size_offset);
+
+		//uint32_t v = 0x3B831000;
+		uint32_t v = 0x3B837000;
+		lv1_write(mmap_size_offset, 4, &v);
+	}
+
 	UninstallOurHvcall();
 
 	WaitInMs(1000);

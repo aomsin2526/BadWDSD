@@ -344,8 +344,6 @@ FUNC_DEF void Stage3()
 
 #if 1
 
-        // UM EEPROM
-
         {
             {
                 puts("Patching Update Manager EEPROM Read\n");
@@ -362,6 +360,34 @@ FUNC_DEF void Stage3()
             }
         }
 
+        {
+            puts("Patching Dispatch Manager\n");
+
+            {
+                uint32_t newval = 0x60000000;
+                lv1_write(0x16FA64, 4, &newval);
+            }
+
+            {
+                uint32_t newval = 0x38600001;
+                lv1_write(0x16FA88, 4, &newval);
+            }
+
+            {
+                uint8_t newval[12] = {0x3b, 0xe0, 0x00, 0x01, 0x9b, 0xe1, 0x00, 0x70, 0x38, 0x60, 0x00, 0x00};
+                lv1_write(0x16FB00, 12, newval);
+            }
+        }
+
+        {
+            puts("Patching service auth\n");
+
+            {
+                uint64_t newval = 0x2f80000048000050;
+                lv1_write(0x16FB64, 8, &newval);
+            }
+        }
+
 #endif
 
     }
@@ -369,13 +395,13 @@ FUNC_DEF void Stage3()
     {
         puts("Patching lv2_kernel.self LPAR initial size\n");
 
-        const char* searchData = "/flh/os/lv2_kernel.self";
+        const char *searchData = "/flh/os/lv2_kernel.self";
         uint64_t searchDataSize = strlen(searchData) + 1;
 
         {
             for (uint64_t i = 0; i < 0x200000; i += 4)
             {
-                if (memcmp((void*)i, searchData, searchDataSize))
+                if (memcmp((void *)i, searchData, searchDataSize))
                     continue;
 
                 puts("addr = ");
@@ -384,7 +410,7 @@ FUNC_DEF void Stage3()
 
                 for (uint64_t i2 = 0; i2 < 0x200; i2 += 1)
                 {
-                    uint8_t* vv = (uint8_t*)(i + i2);
+                    uint8_t *vv = (uint8_t *)(i + i2);
 
                     if (*vv != 0x18)
                         continue;
@@ -495,7 +521,7 @@ FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal)
 }
 
 #pragma GCC push_options
-//#pragma GCC optimize("O0")
+// #pragma GCC optimize("O0")
 
 #if 0
 
@@ -683,8 +709,8 @@ FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
             eieio();
         }
 
-        //RegenLv2AreaHash(6);
-        //eieio();
+        // RegenLv2AreaHash(6);
+        // eieio();
     }
 
     puts("Stage3_AuthLv2() done.\n");
@@ -694,8 +720,8 @@ FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
 
 FUNC_DEF void Stage3_Debug()
 {
-    uint64_t* isActive = (uint64_t*)0x228;
-    
+    uint64_t *isActive = (uint64_t *)0x228;
+
     if (*isActive == 0)
         return;
 

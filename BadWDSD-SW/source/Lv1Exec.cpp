@@ -325,7 +325,7 @@ void UninstallOurHvcall()
 
 	{
 		uint64_t invalid_handler_addr;
-		lv1_read_114(_our_hvcall_table_addr + (37 * 8), 8, &invalid_handler_addr);
+		lv1_read_114(_our_hvcall_table_addr + (22 * 8), 8, &invalid_handler_addr);
 		PrintLog("invalid_handler_addr = 0x%lx\n", invalid_handler_addr);
 
 		lv1_write_114(_our_hvcall_table_addr + (34 * 8), 8, &invalid_handler_addr);

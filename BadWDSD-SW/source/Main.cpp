@@ -2094,7 +2094,7 @@ int main(int argc, char *argv[])
 		bool doFlashRos1 = IsFileExist("/dev_hdd0/BadWDSD_doFlashRos1.txt");
 
 		bool doLegacyInstall = IsFileExist("/dev_hdd0/BadWDSD_doLegacyInstall.txt");
-		doLegacyInstall = true;
+		//doLegacyInstall = true;
 
 		if (!doLegacyInstall)
 		{

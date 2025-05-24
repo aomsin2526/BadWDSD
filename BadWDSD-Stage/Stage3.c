@@ -360,6 +360,10 @@ FUNC_DEF void Stage3()
             }
         }
 
+#if 0
+
+        // broke stuff, only patch when needed
+
         {
             puts("Patching Dispatch Manager\n");
 
@@ -387,6 +391,8 @@ FUNC_DEF void Stage3()
                 lv1_write(0x16FB64, 8, &newval);
             }
         }
+
+#endif
 
 #endif
 

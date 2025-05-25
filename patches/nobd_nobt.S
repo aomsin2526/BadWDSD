@@ -1,5 +1,4 @@
 .global patches
 
 patches:
-    li %r3, 0
-    blr
+    cmpw 7, %r0, %r0

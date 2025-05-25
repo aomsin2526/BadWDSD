@@ -2072,11 +2072,16 @@ int main(int argc, char *argv[])
 			PatchMoreLv1();
 		}
 
+		bool doLoadLv2Kernel_Self = IsFileExist("/dev_hdd0/BadWDSD_doLoadLv2Kernel_Self.txt");
+
 		bool doLoadLv2Kernel_Fself = IsFileExist("/dev_hdd0/BadWDSD_doLoadLv2Kernel_Fself.txt");
 		bool doLoadLv2Kernel_ZFself = IsFileExist("/dev_hdd0/BadWDSD_doLoadLv2Kernel_ZFself.txt");
 
 		bool doOtherOS_Fself = IsFileExist("/dev_hdd0/BadWDSD_doOtherOS_Fself.txt");
 		bool doOtherOS_ZFself = IsFileExist("/dev_hdd0/BadWDSD_doOtherOS_ZFself.txt");
+
+		if (doLoadLv2Kernel_Self)
+			LoadLv2Kernel("lv2_kernel.self", LoadLv2KernelType_e::Self);
 
 		if (doLoadLv2Kernel_Fself)
 			LoadLv2Kernel("lv2_kernel.fself", LoadLv2KernelType_e::Fself);

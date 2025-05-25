@@ -115,11 +115,11 @@ void InstallOurHvcall()
 
 	int32_t res;
 
-	if (IsOurHvcallInstalled())
-	{
-		PrintLog("our hvcall already installed, skip\n");
-		return;
-	}
+	//if (IsOurHvcallInstalled())
+	//{
+	//	PrintLog("our hvcall already installed, skip\n");
+	//	return;
+	//}
 
 	bool table_addr_found = false;
 	uint64_t table_addr = 0;

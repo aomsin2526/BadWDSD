@@ -20,3 +20,6 @@ $CC $FLAGS -T ld.ld lv1_exec.S -o lv1_exec.bin -Wl,--oformat=binary || exit 1
 
 $CC $FLAGS -T ld.ld generic.S -o generic.elf || exit 1
 $CC $FLAGS -T ld.ld generic.S -o generic.bin -Wl,--oformat=binary || exit 1
+
+$CC $FLAGS -T ld.ld nobd_nobt.S -o nobd_nobt.elf || exit 1
+$CC $FLAGS -T ld.ld nobd_nobt.S -o nobd_nobt.bin -Wl,--oformat=binary || exit 1

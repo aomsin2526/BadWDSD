@@ -8,7 +8,7 @@ If it hit address 0x100 (Reset vector), when PPU core starts our code will get e
 
 I avoid calling this modchip a "glitch" because XDR ram itself is working perfectly as intended. Every command we send to it is valid. WDSD register are for initialization purpose. But we "abuse" it to do benefit thing for us.
 
-This modchip replace and unrelated to previous **BadHTAB** exploit. While both are exploiting XDR ram. Method it uses is completely different.
+This modchip replace and unrelated to previous [BadHTAB](https://github.com/aomsin2526/BadHTAB) exploit. While both are exploiting XDR ram. Method it uses is completely different.
 
 This modchip then allow full access to lv1 hypervisor and ability to run new variant of persistence CFW called **qCFW**. Unlock many features of CFW that HEN can't do.
 It can also used to recover console such as exit FSM, or updating consoles with dead BD/BT module. Downgrading also possible.

@@ -15,7 +15,7 @@ It can also used to recover console such as exit FSM, or updating consoles with 
 
 With proper solder and wiring, this modchip is very stable and should get you to XMB within 30 secs.
 
-This exploit contain two major components:
+This exploit contain three major components:
   * **BadWDSD** - Hardware modchip. Raspberry Pi Pico (RP2040) based. It handles WDSD register writing part. 32 bytes long jump code (Stage0.S) to address **0x2401F031000** will be pushed to memory by it.
   * **Stagex.bin** - Main software payload of this modchip. It will be stored at address **0x31000 (NOR flash) / 0x2401F031000 (MMIO)**
   * **BadWDSD-SW** - Software utilites, was used for Stagex.bin/CoreOS.bin installation (now legacy). Now only used to boot OtherOS.

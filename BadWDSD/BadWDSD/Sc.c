@@ -44,6 +44,29 @@ void Sc_RxFn()
             sync();
         }
 
+        bool reset = false;
+
+        if ((get_time_in_ms() - scContext.lastScTxTimeInMs) > 1000)
+        {
+
+#if SC_IS_SW
+            if (strstr(scContext.rxBuf, "OK 00000000:3A"))
+#else
+            if (strstr(scContext.rxBuf, "[mullion]$"))
+#endif
+                reset = true;
+
+        }
+
+        if (reset)
+            watchdog_reboot(0, 0, 0);
+
+        if (strstr(scContext.rxBuf, "[mullion]$ "))
+        {
+            scContext.rxBufLen = 0;
+            scContext.rxBuf[scContext.rxBufLen] = 0;
+        }
+
         if (ch == '\n' || (scContext.rxBufLen >= 1023))
         {
             {
@@ -133,6 +156,8 @@ void Sc_Init()
     scContext.success = false;
 
     scContext.sendCommandCtx = NULL;
+
+    scContext.lastScTxTimeInMs = 0;
 
     Uart_Init(scContext.uartId, SC_UART_BAUD, true, SC_UART_RX_PIN_ID, true, SC_UART_TX_PIN_ID, NULL);
 
@@ -354,6 +379,8 @@ void Sc_Init()
             }
         }
 
+        busy_wait_ms(100);
+
         PrintLog("SC Auth success!\n");
 
         {
@@ -506,6 +533,8 @@ void Sc_Putc(char c)
     }
 
     Uart_Putc(scContext.uartId, c);
+
+    scContext.lastScTxTimeInMs = get_time_in_ms();
 }
 
 void Sc_Puts(const char *buf)

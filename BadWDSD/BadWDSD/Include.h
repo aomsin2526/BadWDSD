@@ -310,6 +310,8 @@ struct ScContext_s
     volatile bool success;
 
     volatile struct Sc_SendCommandContext_s* sendCommandCtx;
+
+    volatile uint64_t lastScTxTimeInMs;
 };
 
 extern volatile bool scIsInited;

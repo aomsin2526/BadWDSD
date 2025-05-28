@@ -93,7 +93,7 @@ void Zelf_Gen(const char* inFilePath, const char* outFilePath)
         return;
     }
 
-    int32_t cmp_static = compress(compressedData, &compressedDataSize, inData, inFileSize);
+    int32_t cmp_static = mz_compress2(compressedData, &compressedDataSize, inData, inFileSize, MZ_BEST_COMPRESSION);
 
     if (cmp_static != Z_OK)
     {

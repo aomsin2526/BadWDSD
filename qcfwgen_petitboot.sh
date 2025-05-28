@@ -76,20 +76,20 @@ cp $ROOT_DIR/BadWDSD-Stage/Stage4j.bin temp/Stage4j.bin || exit 1
 cp $ROOT_DIR/BadWDSD-Stage/Stage5j.bin temp/Stage5j.bin || exit 1
 
 cp $ROOT_DIR/tools/coreos_tools/coreos_tools temp/coreos_tools || exit 1
-cp $ROOT_DIR/tools/lv0gen/lv0gen temp/lv0gen || exit 1
+#cp $ROOT_DIR/tools/lv0gen/lv0gen temp/lv0gen || exit 1
 cp $ROOT_DIR/tools/lv1gen/lv1gen temp/lv1gen || exit 1
-cp $ROOT_DIR/tools/zgen/zgen temp/zgen || exit 1
+#cp $ROOT_DIR/tools/zgen/zgen temp/zgen || exit 1
 
 echo Extracting inros.bin...
 mkdir inros
 
 temp/coreos_tools extract_coreos inros.bin inros || exit 1
 
-echo Install stage2j to lv0.elf...
-temp/lv0gen lv0gen lv0.elf lv0.stage2j.elf temp/Stage2j.bin || exit 1
+#echo Install stage2j to lv0.elf...
+#temp/lv0gen lv0gen lv0.elf lv0.stage2j.elf temp/Stage2j.bin || exit 1
 
-echo Generate lv0.stage2j.zelf...
-temp/zgen zelf_gen lv0.stage2j.elf lv0.stage2j.zelf || exit 1
+#echo Generate lv0.stage2j.zelf...
+#temp/zgen zelf_gen lv0.stage2j.elf lv0.stage2j.zelf || exit 1
 
 echo Install stage3j/3ja/4j/5j to lv1.elf...
 temp/lv1gen lv1gen_4j lv1.elf lv1.stage3j3ja4j5j.elf temp/Stage3j.bin temp/Stage3ja.bin temp/Stage4j.bin temp/Stage5j.bin || exit 1
@@ -115,8 +115,14 @@ rm outros/eurus_fw.bin
 echo Deleting lv2_kernel.self...
 rm outros/lv2_kernel.self
 
-echo Copying lv0.stage2j.zelf to outros/lv0.zelf...
-cp -a lv0.stage2j.zelf outros/lv0.zelf || exit 1
+echo Deleting me_iso_for_ps2emu.self...
+rm outros/me_iso_for_ps2emu.self
+
+echo Deleting sv_iso_for_ps2emu.self...
+rm outros/sv_iso_for_ps2emu.self
+
+#echo Copying lv0.stage2j.zelf to outros/lv0.zelf...
+#cp -a lv0.stage2j.zelf outros/lv0.zelf || exit 1
 
 echo Copying lv1.diff to outros/lv1.diff...
 cp -a lv1.diff outros/lv1.diff || exit 1

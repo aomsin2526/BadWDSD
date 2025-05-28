@@ -336,7 +336,7 @@ void create_coreos(const char *inDir, const char *rosPath)
 
         if (curOffset > 0x700000)
         {
-            printf("result ros too big!\n");
+            printf("result ros too big! (%u bytes too big)\n", (uint32_t)(curOffset - 0x700000));
 
             abort();
             return;

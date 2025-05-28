@@ -36,22 +36,16 @@ uint64_t endswap64(uint64_t v)
 	return __bswap_64(v);
 }
 
-int main(int argc, char **argv)
+void bin_to_elf(const char* inFilePath, const char* outFilePath)
 {
-	if (argc != 3 || strlen(argv[1]) == 0 || strlen(argv[2]) == 0)
-	{
-		printf("args: <dtbImage.ps3.bin> <dtbImage.ps3.elf>\n");
-		return 0;
-	}
-
-	FILE *inFile = fopen(argv[1], "rb");
+	FILE *inFile = fopen(inFilePath, "rb");
 
 	if (!inFile)
 	{
 		printf("input file not found!\n");
 
 		abort();
-		return 0;
+		return;
 	}
 
 	size_t inFile_Size = get_file_size(inFile);
@@ -66,14 +60,14 @@ int main(int argc, char **argv)
 
 	fclose(inFile);
 
-	FILE *outFile = fopen(argv[2], "wb");
+	FILE *outFile = fopen(outFilePath, "wb");
 
 	if (!outFile)
 	{
 		printf("cant open output file!\n");
 		
 		abort();
-		return 0;
+		return;
 	}
 
 	// magic
@@ -298,6 +292,144 @@ int main(int argc, char **argv)
 	fclose(outFile);
 
 	free(inFileBuf);
+}
 
+void replace_initramfs(const char* inFilePath, const char* outFilePath, const char* initramfsPath)
+{
+	// inFile size must be 9772164
+
+	// initramfs max size = 4307335
+	// offset = 0x428000
+
+	printf("replace_initramfs()\n");
+
+	printf("inFilePath = %s\n", inFilePath);
+	printf("outFilePath = %s\n", outFilePath);
+
+	printf("initramfsPath = %s\n", initramfsPath);
+
+	//
+
+	FILE* inFile = fopen(inFilePath, "rb");
+
+	if (inFile == NULL)
+	{
+		printf("inFile open fail!\n");
+
+		abort();
+		return;
+	}
+
+	size_t inFileSize = get_file_size(inFile);
+	printf("inFileSize = %lu\n", inFileSize);
+
+	if (inFileSize != 9772164)
+	{
+		printf("bad inFile size!\n");
+
+		abort();
+		return;
+	}
+
+	uint8_t* inData = (uint8_t*)malloc(inFileSize);
+
+	if (inData == NULL)
+	{
+		printf("inData alloc fail!\n");
+
+		abort();
+		return;
+	}
+
+	fread(inData, 1, inFileSize, inFile);
+	fclose(inFile);
+
+	//
+
+	FILE* initramfsFile = fopen(initramfsPath, "rb");
+
+	if (initramfsFile == NULL)
+	{
+		printf("initramfsFile open fail!\n");
+
+		abort();
+		return;
+	}
+
+	size_t initramfsFileSize = get_file_size(initramfsFile);
+	printf("initramfsFileSize = %lu\n", initramfsFileSize);
+
+	if (initramfsFileSize > 4307335)
+	{
+		printf("bad initramfs size!\n");
+
+		abort();
+		return;
+	}
+
+	uint8_t* initramfsData = (uint8_t*)malloc(initramfsFileSize);
+
+	if (initramfsData == NULL)
+	{
+		printf("initramfsData alloc fail!\n");
+
+		abort();
+		return;
+	}
+
+	fread(initramfsData, 1, initramfsFileSize, initramfsFile);
+	fclose(initramfsFile);
+
+	//
+
+	uint8_t* outData = (uint8_t*)malloc(inFileSize);
+
+	if (outData == NULL)
+	{
+		printf("outData alloc fail!\n");
+
+		abort();
+		return;
+	}
+
+	memcpy(outData, inData, inFileSize);
+	memset(outData + 0x428000, 0, 4307335);
+	memcpy(outData + 0x428000, initramfsData, initramfsFileSize);
+
+	//
+
+	FILE* outFile = fopen(outFilePath, "wb");
+
+	if (outFile == NULL)
+	{
+		printf("outFile open fail!\n");
+
+		abort();
+		return;
+	}
+
+	fwrite(outData, 1, inFileSize, outFile);
+	fclose(outFile);
+
+	//
+
+	free(outData);
+
+	free(initramfsData);
+	free(inData);
+}
+
+int main(int argc, char **argv)
+{
+	if (argc == 3)
+		bin_to_elf(argv[1], argv[2]);
+	else if (argc == 5 && !strcmp(argv[1], "replace_initramfs"))
+		replace_initramfs(argv[2], argv[3], argv[4]);
+	else
+	{
+		printf("args: <dtbImage.ps3.bin> <dtbImage.ps3.elf>\n");
+		printf("args: replace_initramfs <inFile> <outFile> <initramfs>\n");
+	}
+	
 	return 0;
 }

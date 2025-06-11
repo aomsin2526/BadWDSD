@@ -445,6 +445,19 @@ void Sc_Init()
 
 #endif
 
+            if (!banksel)
+            {
+                Led_SetBlinkIntervalInMs(100);
+                Led_SetStatus(LED_STATUS_BLINK);
+
+                while (1)
+                {
+                    busy_wait_ms(1000);
+
+                    Sc_Puts("shutdown\r\n");
+                }
+            }
+
             if (recovery)
             {
                 Sc_Puts("bringup\r\n");

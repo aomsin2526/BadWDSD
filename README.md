@@ -4,7 +4,7 @@
 
 This is a **hardware modchip** for Sony Playstation 3. By abusing a "feature" called **WDSD** serial register inside XDR ram. We can override what data to be written to memory through serial pin (32 bytes max). But not where and when.
 So if we do it while first boot loader (bootldr/lv0ldr) is decrypting lv0 (second boot loader) and writing decrypted data to memory. In reality, our code will be written to memory instead.
-If it hit address 0x100 (Reset vector), when PPU core starts our code will get executed instead. Gaining custom code execution very early on.
+If it hit address **0x100 (Reset vector)**, when PPU core starts our code will get executed instead. Gaining custom code execution very early on.
 
 It is patchable by Sony with new hardware by simply read and check the data after write. But it is too late for them now since ps3 is no longer made.
 

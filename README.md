@@ -15,7 +15,7 @@ This modchip replace and unrelated to previous [BadHTAB](https://github.com/aoms
 This modchip then allow full access to lv1 hypervisor and ability to run new variant of persistence CFW called **qCFW**. Unlock many features of CFW that HEN can't do.
 It can also used to recover console such as exit FSM, or updating consoles with dead BD/BT module. Downgrading also possible.
 
-With proper solder and wiring, this modchip is very stable and should get you to XMB within 30 secs.
+With proper solder and wiring, this modchip is very stable **(100% success rate)** and should get you to XMB within 30 secs.
 
 This exploit contain three major components:
   * **BadWDSD** - Hardware modchip. Raspberry Pi Pico (RP2040) based. It handles WDSD register writing part. 32 bytes long jump code (Stage0.S) to address **0x2401F031000** will be pushed to memory by it.

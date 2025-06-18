@@ -1,12 +1,8 @@
-extern uint64_t _our_hvcall_table_addr;
-extern uint64_t _our_hvcall_lpar_addr;
-
 extern uint64_t FindHvcallTable();
 
 extern bool IsOurHvcallInstalled();
 
 extern void InstallOurHvcall();
-extern void UninstallOurHvcall();
 
 struct CallLv1Exec_Context_s
 {

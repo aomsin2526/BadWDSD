@@ -1,8 +1,5 @@
 #include "Include.h"
 
-uint64_t _our_hvcall_table_addr;
-uint64_t _our_hvcall_lpar_addr;
-
 uint64_t FindHvcallTable()
 {
 	PrintLog("FindHvcallTable()\n");
@@ -115,11 +112,11 @@ void InstallOurHvcall()
 
 	int32_t res;
 
-	//if (IsOurHvcallInstalled())
-	//{
-	//	PrintLog("our hvcall already installed, skip\n");
-	//	return;
-	//}
+	if (IsOurHvcallInstalled())
+	{
+		PrintLog("our hvcall already installed, skip\n");
+		return;
+	}
 
 	bool table_addr_found = false;
 	uint64_t table_addr = 0;
@@ -144,159 +141,68 @@ void InstallOurHvcall()
 	}
 
 	PrintLog("table_addr = 0x%lx\n", table_addr);
-	_our_hvcall_table_addr = table_addr;
-
-	uint64_t lpar_addr = 0;
-	uint64_t muid;
-
-	res = lv1_allocate_memory(SIZE_4KB, EXP_4KB, 0, 0, &lpar_addr, &muid);
-
-	if (res != 0)
-	{
-		PrintLog("lv1_allocate_memory failed!, res = %d\n", res);
-
-		abort();
-		return;
-	}
-
-	PrintLog("lpar_addr = 0x%lx\n", lpar_addr);
-	_our_hvcall_lpar_addr = lpar_addr;
-
-	uint64_t ra = htab_ra_from_lpar(lpar_addr);
-	PrintLog("ra = 0x%lx\n", ra);
-
-	// uint64_t ea = 0x8000000016000000ul;
-	// map_lpar_to_lv2_ea(lpar_addr, ea, SIZE_4KB, false, true);
-
-	PrintLog("Writing our code and to lv1 memory and hvcall table...\n");
 
 	{
-		uint64_t offset = ra;
-
-		// 34 = peek64
-
 		{
-			lv1_write_114(table_addr + (34 * 8), 8, &offset);
+			PrintLog("Installing hvcall peek64(34)\n");
 
-			// E8 63 00 00 4E 80 00 20
+			uint64_t code_addr = 0x130;
+			lv1_poke_114(code_addr + 0, 0xE86300004E800020);
 
-			uint64_t val = 0xE86300004E800020;
-			lv1_write_114(offset, 8, &val);
-			offset += 8;
+			lv1_poke_114(table_addr + (34 * 8), code_addr);
 		}
 
-		// 35 = poke64
-
 		{
-			lv1_write_114(table_addr + (35 * 8), 8, &offset);
+			PrintLog("Installing hvcall poke64(35)\n");
 
-			{
-				// F8 83 00 00 38 60 00 00
+			uint64_t code_addr = 0x140;
 
-				uint64_t val = 0xF883000038600000;
-				lv1_write_114(offset, 8, &val);
-				offset += 8;
-			}
+			lv1_poke_114(code_addr + 0, 0xF883000038600000);
+			lv1_poke_114(code_addr + 8, 0x4E80002000000000);
 
-			{
-				// 4E 80 00 20
-
-				uint32_t val = 0x4E800020;
-				lv1_write_114(offset, 4, &val);
-				offset += 4;
-			}
+			lv1_poke_114(table_addr + (35 * 8), code_addr);
 		}
 
-#if 0
-
-		// 36 = exec
-
 		{
-			lv1_write_114(table_addr + (36 * 8), 8, &offset);
+			PrintLog("Installing hvcall exec(36)\n");
 
-			{
-				// 38 21 FF F0 7C 08 02 A6
+			uint64_t code_addr = 0x150;
 
-				uint64_t val = 0x3821FFF07C0802A6;
-				lv1_write_114(offset, 8, &val);
-				offset += 8;
-			}
+			lv1_poke_114(code_addr + 0, 0x3821FFF07C0802A6);
+			lv1_poke_114(code_addr + 8, 0xF80100003821FF80);
 
-			{
-				// F8 01 00 00 7D 29 03 A6
+			lv1_poke_114(code_addr + 16, 0x7D2903A64E800421);
+			lv1_poke_114(code_addr + 24, 0x38210080E8010000);
 
-				uint64_t val = 0xF80100007D2903A6;
-				lv1_write_114(offset, 8, &val);
-				offset += 8;
-			}
+			lv1_poke_114(code_addr + 32, 0x7C0803A638210010);
+			lv1_poke_114(code_addr + 40, 0x4E80002000000000);
 
-			{
-				// 4E 80 04 21 E8 01 00 00
-
-				uint64_t val = 0x4E800421E8010000;
-				lv1_write_114(offset, 8, &val);
-				offset += 8;
-			}
-
-			{
-				// 7C 08 03 A6 38 21 00 10
-
-				uint64_t val = 0x7C0803A638210010;
-				lv1_write_114(offset, 8, &val);
-				offset += 8;
-			}
-
-			{
-				// 4E 80 00 20
-
-				uint32_t val = 0x4E800020;
-				lv1_write_114(offset, 4, &val);
-				offset += 4;
-			}
+			lv1_poke_114(table_addr + (36 * 8), code_addr);
 		}
 
-#else
+#if 1
 
-		lv1_write_114(table_addr + (36 * 8), 8, &offset);
+		{
+			PrintLog("Installing hvcall peek32(37)\n");
 
-		lv1_write_114(offset, our_lv1_exec_do_size, (void *)our_lv1_exec_do);
-		offset += our_lv1_exec_do_size;
+			uint64_t code_addr = 0x180;
+			lv1_poke_114(code_addr + 0, 0x806300004E800020);
+
+			lv1_poke_114(table_addr + (37 * 8), code_addr);
+		}
+
+		{
+			PrintLog("Installing hvcall poke32(38)\n");
+
+			uint64_t code_addr = 0x190;
+
+			lv1_poke_114(code_addr + 0, 0x9083000038600000);
+			lv1_poke_114(code_addr + 8, 0x4E80002000000000);
+
+			lv1_poke_114(table_addr + (38 * 8), code_addr);
+		}
 
 #endif
-
-		// 37 = peek32
-
-		{
-			lv1_write_114(table_addr + (37 * 8), 8, &offset);
-
-			// 80 63 00 00 4E 80 00 20
-
-			uint64_t val = 0x806300004E800020;
-			lv1_write_114(offset, 8, &val);
-			offset += 8;
-		}
-
-		// 38 = poke32
-
-		{
-			lv1_write_114(table_addr + (38 * 8), 8, &offset);
-
-			{
-				// 90 83 00 00 38 60 00 00
-
-				uint64_t val = 0x9083000038600000;
-				lv1_write_114(offset, 8, &val);
-				offset += 8;
-			}
-
-			{
-				// 4E 80 00 20
-
-				uint32_t val = 0x4E800020;
-				lv1_write_114(offset, 4, &val);
-				offset += 4;
-			}
-		}
 	}
 
 	PrintLog("write done.\n");
@@ -314,39 +220,6 @@ void InstallOurHvcall()
 	lv1_test_puts();
 
 	PrintLog("InstallOurHvcall() done.\n");
-}
-
-void UninstallOurHvcall()
-{
-	PrintLog("UninstallOurHvcall()\n");
-
-	PrintLog("our_hvcall_table_addr = 0x%lx\n", _our_hvcall_table_addr);
-	PrintLog("our_hvcall_lpar_addr = 0x%lx\n", _our_hvcall_lpar_addr);
-
-	{
-		uint64_t invalid_handler_addr;
-		lv1_read_114(_our_hvcall_table_addr + (22 * 8), 8, &invalid_handler_addr);
-		PrintLog("invalid_handler_addr = 0x%lx\n", invalid_handler_addr);
-
-		lv1_write_114(_our_hvcall_table_addr + (34 * 8), 8, &invalid_handler_addr);
-		lv1_write_114(_our_hvcall_table_addr + (35 * 8), 8, &invalid_handler_addr);
-		lv1_write_114(_our_hvcall_table_addr + (36 * 8), 8, &invalid_handler_addr);
-
-		lv1_write_114(_our_hvcall_table_addr + (37 * 8), 8, &invalid_handler_addr);
-		lv1_write_114(_our_hvcall_table_addr + (38 * 8), 8, &invalid_handler_addr);
-	}
-
-	int32_t res = lv1_release_memory(_our_hvcall_lpar_addr);
-
-	if (res != 0)
-	{
-		PrintLog("lv1_release_memory failed!, res = %d\n", res);
-
-		abort();
-		return;
-	}
-
-	PrintLog("UninstallOurHvcall() done.\n");
 }
 
 void CallLv1Exec(CallLv1Exec_Context_s *ctx)

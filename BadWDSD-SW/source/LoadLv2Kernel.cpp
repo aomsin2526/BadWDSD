@@ -173,8 +173,6 @@ void LoadLv2Kernel(const char *fileName, uint32_t type)
 		lv1_write(mmap_size_offset, 4, &v);
 	}
 
-	UninstallOurHvcall();
-
 	WaitInMs(1000);
 	lv2_beep_triple();
 

@@ -65,7 +65,7 @@ It's not at its peak yet at current state, but it is powerful and stable enough 
 
 # qCFW (Petitboot)
 
-Special variant of qCFW, In this version, lv2 kernel will be replaced with Petitboot bootloader.
+Special variant of qCFW. In this version, lv2 kernel will be replaced with Petitboot bootloader.
 
 
 So you will be always boot into petitboot right after power on. It is for those who wants to use the console as permanent OtherOS machine. No internal HDD required even on NOR.

@@ -41,7 +41,8 @@ This is pretty much **HEN + lv1 peek/poke**. It is very safe since it doesn't mo
 **Supports firmware 4.70 or later**
 
 You only need **Stagex.bin** to run this mode, since Stagex.bin stay even after firmware update, you only need to install it once.
-You can take any Stagex.bin from qCFW releases.
+
+You can take Stagex.bin from any qCFW releases.
 
 # qCFW Mode
 

@@ -62,3 +62,13 @@ It's not at its peak yet at current state, but it is powerful and stable enough 
   * If you turn on your console through PS button on your controller, it won't sync until you power cycle the controller by holding PS button until it turn off, then press it to turn on again. This is caused by load Cobra from USB.
 
 **Stagex.bin and CoreOS.bin** will be released in pair. **So ensure that you install both of them and they're matched!**
+
+# qCFW (Petitboot)
+
+Special variant of qCFW, In this version, lv2 kernel will be replaced with Petitboot bootloader.
+
+
+So you will be always boot into petitboot right after power on. It is for those who wants to use the console as permanent OtherOS machine. No internal HDD required even on NOR.
+
+
+To go back to OFW, use **BANKSEL** pin.

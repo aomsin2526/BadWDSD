@@ -58,7 +58,7 @@ It's not at its peak yet at current state, but it is powerful and stable enough 
 **Quirks:**
   * Cobra must be active at all times no matter what, if you lost it by some reason, it can be loaded from USB.
   * PS1 Emu can't be modified
-  * VSH modules (self/sprx) at **/dev_flash/vsh/module/** can't be modified, Don't modify these files or you will brick
+  * **VSH modules (self/sprx) at /dev_flash/vsh/module/** can't be modified, Don't modify these files or you will brick
   * If you turn on your console through PS button on your controller, it won't sync until you power cycle the controller by holding PS button until it turn off, then press it to turn on again. This is caused by load Cobra from USB.
 
-**Stagex.bin and CoreOS.bin** will be released in pair. So ensure that you install both of them and they're matched!
+**Stagex.bin and CoreOS.bin** will be released in pair. **So ensure that you install both of them and they're matched!**

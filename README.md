@@ -46,7 +46,7 @@ You can take Stagex.bin from any qCFW releases.
 
 # qCFW Mode
 
-You can't install any existing CFW or any custom PUP, so new variant of CFW must be made. This variant will be called qCFW (quasi-CFW). It is persistence, stable and much more powerful than HEN/OFW Mode.
+You can't install any existing CFW or any custom PUP, so new variant of CFW must be made. This variant will be called **qCFW (quasi-CFW)**. It is persistence, stable and much more powerful than HEN/OFW Mode.
 It use fork of Cobra called [Cobra-qCFW](https://github.com/aomsin2526/Cobra-PS3-qCFW). Vanilla Cobra won't work here! Installation method also different.
 
 Once installed, modchip must be active at all times until you reinstall OFW again.

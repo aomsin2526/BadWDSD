@@ -29,3 +29,30 @@ All 2500/3000 Slim.
 4000 Superslim with **NOR** flash.
 
 **4000 Superslim with eMMC flash (12GB) is NOT supported.**
+
+# Operation Modes
+
+This modchip supports two operation modes: **OFW** and **qCFW**
+
+# OFW Mode
+
+This is pretty much **HEN + lv1 peek/poke**. It is very safe since it doesn't modify any files. So you can just disable modchip and console will work just like before. But feature will be more limited than qCFW. And you will still need HEN to be useful. This mode is required to install qCFW so everyone must start here. You can downgrade/exit FSM/Overclock/OtherOS under this mode.
+
+**Supports firmware 4.70 or later**
+
+# qCFW Mode
+
+You can't install any existing CFW or any custom PUP, so new variant of CFW must be made. This variant will be called qCFW (quasi-CFW). It is persistence, stable and much more powerful than HEN/OFW Mode.
+It use fork of Cobra called [Cobra-qCFW](https://github.com/aomsin2526/Cobra-PS3-qCFW). Vanilla Cobra won't work here! Installation method also different.
+
+Once installed, modchip must be active at all times until you reinstall OFW again.
+
+At its peak, it should be capable of everything CFW can except one thing: **Dump eid_root_key**.
+
+It's not at its peak yet at current state, but it is powerful and stable enough for daily uses.
+
+**Quirks:**
+  * Cobra must be active at all times no matter what, if you lost it by some reason, it can be loaded from USB.
+  * PS1 Emu can't be modified
+  * VSH modules (self/sprx) at **/dev_flash/vsh/module/** can't be modified, Don't modify these files or you will brick
+  * If you turn on your console through PS button on your controller, it won't sync until you power cycle the controller by holding PS button until it turn off, then press it to turn on again. This is caused by load Cobra from USB.

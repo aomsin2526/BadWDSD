@@ -30,9 +30,9 @@ All 2500/3000 Slim.
 
 **4000 Superslim with eMMC flash (12GB) is NOT supported.**
 
-# Operation Modes
+# Operation Mode
 
-This modchip supports two operation modes: **OFW** and **qCFW**
+This modchip supports two operation mode: **OFW** and **qCFW**
 
 # OFW Mode
 

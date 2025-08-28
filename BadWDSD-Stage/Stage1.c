@@ -1,4 +1,4 @@
-#define ENTRY_WAIT_IN_MS 1000
+#define ENTRY_WAIT_IN_MS 100 // 1000
 #define HW_INIT_ENABLED 1
 
 FUNC_DEF void Stage1()
@@ -12,6 +12,8 @@ FUNC_DEF void Stage1()
     puts(")\n");
 
     sc_triple_beep();
+
+    HW_Init_SPU();
 
     // Memtest();
     // PatternTest_x16();
@@ -88,8 +90,8 @@ FUNC_DEF void Stage1()
 
                     memset((void*)lv0FileAddress, 0, lv0FileSize);
 
-                    WaitInMs(1500);
-                    sc_triple_beep();
+                    //WaitInMs(1500);
+                    //sc_triple_beep();
 
                     DecryptLv0Self((void*)lv0FileAddress, (const void*)lv0SelfFileAddress);
 

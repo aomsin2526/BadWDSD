@@ -22,8 +22,8 @@ typedef unsigned short uint16_t;
 typedef int int32_t;
 typedef unsigned int uint32_t;
 
-typedef long int64_t;
-typedef unsigned long uint64_t;
+typedef long long int64_t;
+typedef unsigned long long uint64_t;
 
 typedef uint64_t size_t;
 
@@ -1780,6 +1780,8 @@ FUNC_DEF uint8_t CoreOS_FindFileEntry_CurrentBank(const char *fileName, uint64_t
 {
     uint8_t os_bank_indicator = sc_read_os_bank_indicator();
 
+#if 0
+
     puts("os_bank_indicator = ");
     print_hex(os_bank_indicator);
     puts("\n");
@@ -1788,6 +1790,8 @@ FUNC_DEF uint8_t CoreOS_FindFileEntry_CurrentBank(const char *fileName, uint64_t
         puts("Will use ros0\n");
     else
         puts("Will use ros1\n");
+
+#endif
 
     uint64_t coreOSStartAddress = (os_bank_indicator == 0xff) ? 0x2401F0C0000 : 0x2401F7C0000;
 
@@ -1917,6 +1921,9 @@ FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset, uint8
     eieio();
 }
 
+#include "Spu.c"
+#include "SpuAux.c"
+
 struct SceHeader_s
 {
     uint32_t magic;
@@ -1990,24 +1997,24 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
         return;
     }
 
-    puts("sceHeader:\n");
+    //puts("sceHeader:\n");
 
-    puts("ext_header_size = ");
-    print_hex(sceHeader.ext_header_size);
-    puts("\n");
+    //puts("ext_header_size = ");
+    //print_hex(sceHeader.ext_header_size);
+    //puts("\n");
 
-    puts("file_offset = ");
-    print_hex(sceHeader.file_offset);
-    puts("\n");
+    //puts("file_offset = ");
+    //print_hex(sceHeader.file_offset);
+    //puts("\n");
 
-    puts("file_size = ");
-    print_hex(sceHeader.file_size);
-    puts("\n");
+    //puts("file_size = ");
+    //print_hex(sceHeader.file_size);
+    //puts("\n");
 
     // erk=CA7A24EC38BDB45B 98CCD7D363EA2AF0 C326E65081E0630C B9AB2D215865878A
     // riv=F9205F46F6021697 E670F13DFA726212
 
-    puts("1\n");
+    //puts("1\n");
 
     uint64_t meta_key[4];
     meta_key[0] = (0xCA7A24EC38BDB45B);
@@ -2019,12 +2026,12 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
     meta_iv[0] = (0xF9205F46F6021697);
     meta_iv[1] = (0xE670F13DFA726212);
 
-    puts("2\n");
+    //puts("2\n");
 
     WORD meta_aes_key[60];
     aes_key_setup((const uint8_t *)meta_key, meta_aes_key, 256);
 
-    puts("3\n");
+    //puts("3\n");
 
     curSrcOffset = 0x200;
 
@@ -2041,36 +2048,36 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
 
         (const uint8_t *)meta_iv);
 
-    puts("4\n");
+    //puts("4\n");
 
     curSrcOffset += sizeof(struct SceMetaInfo_s);
 
-    puts("metaInfo:\n");
+    //puts("metaInfo:\n");
 
-    puts("metaInfo.key[0] = ");
-    print_hex(metaInfo.key[0]);
-    puts("\n");
+    //puts("metaInfo.key[0] = ");
+    //print_hex(metaInfo.key[0]);
+    //puts("\n");
 
-    puts("metaInfo.key[1] = ");
-    print_hex(metaInfo.key[1]);
-    puts("\n");
+    //puts("metaInfo.key[1] = ");
+    //print_hex(metaInfo.key[1]);
+    //puts("\n");
 
-    puts("metaInfo.iv[0] = ");
-    print_hex(metaInfo.iv[0]);
-    puts("\n");
+    //puts("metaInfo.iv[0] = ");
+    //print_hex(metaInfo.iv[0]);
+    //puts("\n");
 
-    puts("metaInfo.iv[1] = ");
-    print_hex(metaInfo.iv[1]);
-    puts("\n");
+    //puts("metaInfo.iv[1] = ");
+    //print_hex(metaInfo.iv[1]);
+    //puts("\n");
 
     WORD meta_header_key[60];
     aes_key_setup((const uint8_t *)metaInfo.key, meta_header_key, 128);
 
     uint64_t metasSize = (sceHeader.file_offset) - sizeof(struct SceHeader_s) + (sceHeader.ext_header_size) + sizeof(struct SceMetaInfo_s);
 
-    puts("metasSize = ");
-    print_decimal(metasSize);
-    puts("\n");
+    //puts("metasSize = ");
+    //print_decimal(metasSize);
+    //puts("\n");
 
     uint8_t metasBuf[16384];
 
@@ -2090,17 +2097,19 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
 
     struct SceMetaHeader_s *metaHeader = (struct SceMetaHeader_s *)&metasBuf[0];
 
-    puts("metaHeader:\n");
+    //puts("metaHeader:\n");
 
-    puts("section_entry_num = ");
-    print_decimal(metaHeader->section_entry_num);
-    puts("\n");
+    //puts("section_entry_num = ");
+    //print_decimal(metaHeader->section_entry_num);
+    //puts("\n");
 
-    puts("key_entry_num = ");
-    print_decimal(metaHeader->key_entry_num);
-    puts("\n");
+    //puts("key_entry_num = ");
+    //print_decimal(metaHeader->key_entry_num);
+    //puts("\n");
 
     struct SceMetaSectionHeader_s *metaSectionHeaders = (struct SceMetaSectionHeader_s *)&metasBuf[sizeof(struct SceMetaHeader_s)];
+
+#if 0
 
     for (uint32_t i = 0; i < (metaHeader->section_entry_num); ++i)
     {
@@ -2131,7 +2140,11 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
         puts("\n");
     }
 
+#endif
+
     struct SceMetaKey_s *metaKeys = (struct SceMetaKey_s *)&metasBuf[sizeof(struct SceMetaHeader_s) + ((metaHeader->section_entry_num) * sizeof(struct SceMetaSectionHeader_s))];
+
+#if 0
 
     for (uint32_t i = 0; i < (metaHeader->key_entry_num); ++i)
     {
@@ -2150,12 +2163,17 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
         puts("\n");
     }
 
+#endif
+
     struct ElfHeader_s *elfHeader = (struct ElfHeader_s *)&src[0x90];
 
     memcpy(dest, elfHeader, sizeof(struct ElfHeader_s));
     memcpy(dest + (elfHeader->e_phoff), &src[0x90 + (elfHeader->e_phoff)], (elfHeader->e_phentsize) * (elfHeader->e_phnum));
 
     struct ElfPhdr_s *elfPhdrs = (struct ElfPhdr_s *)(dest + (elfHeader->e_phoff));
+
+    uint64_t spu_id = 0;
+    SpuAux_Init(spu_id);
 
     for (uint16_t i = 0; i < (elfHeader->e_phnum); ++i)
     {
@@ -2189,37 +2207,40 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc)
 
         puts("\n");
 
-#if 0
+        if (1)
+        {
+            spu_aes128_decrypt_ctr(
+                (const uint8_t *)in_addr,
+                (h->segment_size),
 
-        // tinyAES
+                (uint8_t *)out_addr,
 
-        struct AES_ctx aes_key_ctx;
-        AES_init_ctx_iv(&aes_key_ctx, (const uint8_t *)key->key, (const uint8_t *)iv->key);
+                (const uint8_t *)key->key,
+                (const uint8_t *)iv->key
+            );
+        }
+        else
+        {
+            WORD aes_key[60];
+            aes_key_setup((const uint8_t *)key->key, aes_key, 128);
 
-        memcpy((void*)out_addr, (const void*)in_addr, (h->segment_size));
-        AES_CTR_xcrypt_buffer(&aes_key_ctx, (uint8_t *)out_addr, (h->segment_size));
+            aes_decrypt_ctr(
 
-#else
+                (const uint8_t *)in_addr,
+                (h->segment_size),
 
-        WORD aes_key[60];
-        aes_key_setup((const uint8_t *)key->key, aes_key, 128);
+                (uint8_t *)out_addr,
 
-        aes_decrypt_ctr(
+                aes_key,
+                128,
 
-            (uint8_t *)in_addr,
-            (h->segment_size),
+                (const uint8_t *)iv->key
 
-            (uint8_t *)out_addr,
-
-            aes_key,
-            128,
-
-            (const uint8_t *)iv->key
-
-        );
-
-#endif
+            );
+        }
     }
+
+    SpuAux_Uninit(spu_id);
 
     puts("DecryptLv0Self() done.\n");
 }
@@ -2593,8 +2614,6 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf)
 
     puts("DecryptLv2Self() done.\n");
 }
-
-#include "Spu.c"
 
 #pragma GCC pop_options
 

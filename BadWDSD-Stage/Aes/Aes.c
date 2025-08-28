@@ -366,6 +366,72 @@ void aes_decrypt_ctr(const BYTE in[], size_t in_len, BYTE out[], const WORD key[
 	aes_encrypt_ctr(in, in_len, out, key, keysize, iv);
 }
 
+struct aes_decrypt_ctr_stream_context_s
+{
+	WORD key[60];
+	int keysize;
+
+	BYTE iv_buf[AES_BLOCK_SIZE];
+
+	size_t idx;
+	size_t len;
+
+	size_t last_block_length;
+
+	size_t len_left;
+};
+
+void aes_decrypt_ctr_stream_init(struct aes_decrypt_ctr_stream_context_s* ctx, size_t len, const WORD key[], int keysize, const BYTE iv[])
+{
+	memcpy(ctx->key, key, sizeof(WORD) * 60);
+	ctx->keysize = keysize;
+
+	memcpy(ctx->iv_buf, iv, AES_BLOCK_SIZE);
+
+	ctx->idx = 0;
+	ctx->len = len;
+
+	ctx->last_block_length = (len - AES_BLOCK_SIZE);
+
+	ctx->len_left = len;
+}
+
+void aes_decrypt_ctr_stream(struct aes_decrypt_ctr_stream_context_s* ctx, BYTE inout[], size_t inout_len)
+{
+	BYTE out_buf[AES_BLOCK_SIZE];
+
+	size_t old_ctx_idx = ctx->idx;
+
+	size_t idx = 0;
+
+	if (ctx->len_left > AES_BLOCK_SIZE)
+	{
+		while (1)
+		{
+			aes_encrypt(ctx->iv_buf, out_buf, ctx->key, ctx->keysize);
+			xor_buf(out_buf, &inout[idx], AES_BLOCK_SIZE);
+			increment_iv(ctx->iv_buf, AES_BLOCK_SIZE);
+
+			idx += AES_BLOCK_SIZE;
+			ctx->idx += AES_BLOCK_SIZE;
+
+			if (idx == inout_len)
+				break;
+
+			if (ctx->idx >= ctx->last_block_length)
+				break;
+		}
+
+		ctx->len_left -= idx;
+	}
+
+	if ((old_ctx_idx + inout_len) == ctx->len)
+	{
+		aes_encrypt(ctx->iv_buf, out_buf, ctx->key, ctx->keysize);
+		xor_buf(out_buf, &inout[idx], (ctx->len - ctx->idx));
+	}
+}
+
 #if 0
 
 /*******************

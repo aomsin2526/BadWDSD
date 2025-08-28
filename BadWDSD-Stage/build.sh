@@ -30,3 +30,10 @@ $CC $FLAGS -T Stage4j.ld Stage4j.c -o Stage4j.bin -Wl,--oformat=binary || exit 1
 
 $CC $FLAGS -T Stage5j.ld Stage5j.S -o Stage5j.elf || exit 1
 $CC $FLAGS -T Stage5j.ld Stage5j.S -o Stage5j.bin -Wl,--oformat=binary || exit 1
+
+cd Aux || exit 1
+./build.sh || exit 1
+
+cd .. || exit 1
+rm Stagex_aux.bin
+cp Aux/Stagex_aux.bin Stagex_aux.bin || exit 1

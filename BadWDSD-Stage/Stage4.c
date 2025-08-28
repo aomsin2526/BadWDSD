@@ -120,6 +120,18 @@ FUNC_DEF void Stage4()
         }
     }
 
+    if (0)
+    {
+        puts("Enabling Load Cobra from USB...\n");
+
+        volatile uint8_t* enableLoadCobraFromUSB = (volatile uint8_t*)(loadme_addr + 0x30);
+        *enableLoadCobraFromUSB = 1;
+        eieio();
+
+        sc_triple_beep();
+        WaitInMs(1200);
+    }
+
     puts("Stage4 done.\n");
 
     eieio();

@@ -1,0 +1,20 @@
+Stagex_spu memory mapping:
+
+0x0 - 0xFFF = params, ppu/spu comm:
+0x100 = Stagex_spu_params_s
+0x200 = Stagex_spu_job_params_s
+0xF00 = uint64_t job start (written by ppu, cleared by spu)
+0xF08 = uint64_t job done (written by spu, cleared by ppu)
+0xF10 = uint64_t spu ready (written by spu)
+
+0x1000 - 0x1FFFF = codes
+0x20000 - 0x2FFFF = temp mem
+0x30000 - 0x3CF00 = sp
+0x3D000 - 0x3F000 = temp mem 2
+
+stop code:
+1 = start exited
+2 = dma bad params
+3 = bad job type
+4 = bad Stagex_spu_job_aes128_decrypt_ctr params
+99 = main exited

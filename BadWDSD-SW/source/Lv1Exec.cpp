@@ -110,7 +110,7 @@ void InstallOurHvcall()
 {
 	PrintLog("InstallOurHvcall()\n");
 
-	int32_t res;
+	//int32_t res;
 
 	if (IsOurHvcallInstalled())
 	{

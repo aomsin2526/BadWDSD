@@ -1341,6 +1341,73 @@ void BadWDSD_Write_ros(bool compare, bool doFlashRos1)
 	PrintLog("BadWDSD_Write_ros() done.\n");
 }
 
+void BadWDSD_Write_Stagex_aux()
+{
+	PrintLog("BadWDSD_Write_Stagex_aux()\n");
+
+	if (!FlashIsNor())
+	{
+		PrintLog("Flash is not nor!!!\n");
+
+		abort();
+		return;
+	}
+
+	FILE *f = NULL;
+
+	if (f == NULL)
+	{
+		PrintLog("Loading /app_home/Stagex_aux.bin\n");
+
+		f = fopen("/app_home/Stagex_aux.bin", "rb");
+
+		if (f == NULL)
+			PrintLog("Not found\n");
+	}
+
+	if (f == NULL)
+	{
+		PrintLog("Loading /dev_hdd0/Stagex_aux.bin\n");
+
+		f = fopen("/dev_hdd0/Stagex_aux.bin", "rb");
+
+		if (f == NULL)
+			PrintLog("Not found\n");
+	}
+
+	if (f == NULL)
+	{
+		PrintLog("Stagex_aux.bin not found!\n");
+
+		abort();
+		return;
+	}
+
+	size_t size = GetFileSize(f);
+	PrintLog("size = %lu\n", size);
+
+	void *code = malloc(size);
+	fread(code, 1, size, f);
+
+	fclose(f);
+
+	PrintLog("code = 0x%lx\n", (uint64_t)code);
+
+	if (size > (96 * 1024))
+	{
+		PrintLog("size is too big!!!\n");
+
+		abort();
+		return;
+	}
+
+	PrintLog("Writing to flash...\n");
+	NorWrite(0xF21000, code, size);
+
+	free(code);
+	PrintLog("BadWDSD_Write_Stagex_aux() done,\n");
+}
+
 void Sputest()
 {
 	PrintLog("Sputest()\n");
@@ -1556,6 +1623,10 @@ int main(int argc, char *argv[])
 		{
 			// 0x80010505 :(
 
+			PrintLog("Installing Stagex_aux.bin...\n");
+			BadWDSD_Write_Stagex_aux();
+			PrintLog("Stagex_aux.bin installed.\n");
+
 			PrintLog("Installing Stagex.bin...\n");
 			BadWDSD_Write_Stagex();
 			PrintLog("Stagex.bin installed.\n");
@@ -1602,6 +1673,7 @@ int main(int argc, char *argv[])
 		{
 			PrintLog("Legacy install\n");
 
+			BadWDSD_Write_Stagex_aux();
 			BadWDSD_Write_Stagex();
 			BadWDSD_Write_ros(!doSkipRosCompare, doFlashRos1);
 		}

@@ -39,7 +39,8 @@ FUNC_DEF uint64_t SpuAux_Init(uint64_t spu_id)
     //print_decimal(spu_id);
     //puts("\n");
 
-    SpuAux_Uninit(spu_id, 0x21);
+    uint64_t spu_old_mfc_sr1 = SPU_P1_Read64(spu_id, 0x0);
+    SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
 
     //static const uint32_t SPU_STATUS_RUN_MASK = (1 << 0);
     static const uint32_t SPU_STATUS_ISOLATED_MASK = (1 << 7);
@@ -63,8 +64,6 @@ FUNC_DEF uint64_t SpuAux_Init(uint64_t spu_id)
     }
 
     //
-
-    uint64_t spu_old_mfc_sr1 = SPU_P1_Read64(spu_id, 0x0);
 
     SPU_P1_Write64(spu_id, 0x0, 0x21);
     eieio();

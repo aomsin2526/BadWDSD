@@ -12,7 +12,7 @@
 # lv1.elf.orig (OFW)
 # lv1.elf (OFW or patched)
 
-# dtbImage.ps3.zfself
+# dtbImage.ps3.bin
 
 if [[ $# -eq 0 ]] ; then
     echo 'missing args'
@@ -41,6 +41,9 @@ cd $ROOT_DIR/tools/lv1gen || exit 1
 ./build.sh || exit 1
 
 cd $ROOT_DIR/tools/zgen || exit 1
+./build.sh || exit 1
+
+cd $ROOT_DIR/tools/dtbImage_ps3_bin_to_elf || exit 1
 ./build.sh || exit 1
 
 cd $ROOT_DIR || exit 1
@@ -78,7 +81,8 @@ cp $ROOT_DIR/BadWDSD-Stage/Stage5j.bin temp/Stage5j.bin || exit 1
 cp $ROOT_DIR/tools/coreos_tools/coreos_tools temp/coreos_tools || exit 1
 #cp $ROOT_DIR/tools/lv0gen/lv0gen temp/lv0gen || exit 1
 cp $ROOT_DIR/tools/lv1gen/lv1gen temp/lv1gen || exit 1
-#cp $ROOT_DIR/tools/zgen/zgen temp/zgen || exit 1
+cp $ROOT_DIR/tools/zgen/zgen temp/zgen || exit 1
+cp $ROOT_DIR/tools/dtbImage_ps3_bin_to_elf/dtbImage_ps3_bin_to_elf temp/dtbImage_ps3_bin_to_elf || exit 1
 
 echo Extracting inros.bin...
 mkdir inros
@@ -126,6 +130,18 @@ rm outros/sv_iso_for_ps2emu.self
 
 echo Copying lv1.diff to outros/lv1.diff...
 cp -a lv1.diff outros/lv1.diff || exit 1
+
+echo Generate dtbImage.ps3.elf
+temp/dtbImage_ps3_bin_to_elf dtbImage.ps3.bin dtbImage.ps3.elf || exit 1
+
+echo Generate dtbImage.ps3.zelf
+temp/zgen zelf_gen dtbImage.ps3.elf dtbImage.ps3.zelf || exit 1
+
+echo Generate dtbImage.ps3.zzelf
+temp/dtbImage_ps3_bin_to_elf dtbImage.ps3.zelf dtbImage.ps3.zzelf || exit 1
+
+echo Generate dtbImage.ps3.zfzelf using this command: make_fself -u dtbImage.ps3.zzelf dtbImage.ps3.zfself
+read -p "then press ENTER to continue"
 
 echo Copying dtbImage.ps3.zfself to outros/lv2_kernel.self...
 cp -a dtbImage.ps3.zfself outros/lv2_kernel.self || exit 1

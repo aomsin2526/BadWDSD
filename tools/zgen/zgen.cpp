@@ -30,13 +30,15 @@ uint64_t endswap64(uint64_t v)
     return __bswap_64(v);
 }
 
-struct Zelf_Header_s
+struct Zelf2_Header_s
 {
 public:
     uint64_t magic;
 
     uint64_t original_size;
     uint64_t compressed_size;
+
+    uint64_t padding;
 };
 
 void Zelf_Gen(const char* inFilePath, const char* outFilePath)
@@ -106,14 +108,16 @@ void Zelf_Gen(const char* inFilePath, const char* outFilePath)
     printf("compressedDataSize = %lu\n", compressedDataSize);
 
     {
-        Zelf_Header_s hdr;
+        Zelf2_Header_s hdr;
 
-        hdr.magic = endswap64(0x5A454C465A454C46);
+        hdr.magic = endswap64(0x5A454C465A454C32); // ZELF2
 
         hdr.original_size = endswap64(inFileSize);
         hdr.compressed_size = endswap64(compressedDataSize);
 
-        fwrite(&hdr, 1, sizeof(Zelf_Header_s), outFile);
+        hdr.padding = 0;
+
+        fwrite(&hdr, 1, sizeof(Zelf2_Header_s), outFile);
     }
 
     fwrite(compressedData, 1, compressedDataSize, outFile);

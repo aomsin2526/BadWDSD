@@ -57,88 +57,20 @@ FUNC_DEF void Stage4()
 
     *((uint64_t *)loadme_addr) = 0;
 
-    {
-        struct SceHeader_s *sceHeader = (struct SceHeader_s *)0xC000000;
+    struct Stagex_Context_s* ctx = GetStagexContext();
 
-        if (sceHeader->magic != 0x53434500)
+    uint64_t srcAddr = 0xC000000;
+
+    if (ctx->stage3_ignoreSrc)
+    {
+        if (!CoreOS_FindFileEntry_CurrentBank("lv2_kernel.self", &srcAddr, NULL))
         {
-            lv1_puts("sce_magic check failed!\n");
+            lv1_puts("lv2_kernel.self not found!\n");
             dead_beep();
         }
-
-        if (sceHeader->attribute != 0x8000)
-        {
-            lv1_puts("SELF detected\n");
-
-            //FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf)
-            DecryptLv2Self((void*)0xB000000, (const void*)0xC000000, (void*)0xA000000, 1);
-
-            lv1_puts("Loading elf...\n");
-
-            memset((void *)loadme_addr, 0, (16 * 1024 * 1024));
-            LoadElf(0xB000000, loadme_addr, 1);
-        }
-        else
-        {
-            uint64_t file_offset = *((uint64_t *)0xC000010);
-
-            lv1_puts("file_offset = ");
-            lv1_print_hex(file_offset);
-
-            uint64_t real_file_size = *((uint64_t *)0xC000018);
-
-            lv1_puts(", real_file_size = ");
-            lv1_print_hex(real_file_size);
-
-            uint64_t real_file_data = (0xC000000 + file_offset);
-
-            lv1_puts(", real_file_data = ");
-            lv1_print_hex(real_file_data);
-
-            uint64_t file_size = real_file_size;
-            file_size -= 0x10000;
-
-            lv1_puts(", file_size = ");
-            lv1_print_hex(file_size);
-
-            uint64_t file_data = real_file_data;
-            file_data += 0x10000;
-
-            lv1_puts(", file_data = ");
-            lv1_print_hex(file_data);
-
-            lv1_puts("\n");
-
-            uint64_t zelf_magic = *((uint64_t *)file_data);
-
-            if ((zelf_magic == 0x5A454C465A454C46) || (zelf_magic == 0x5A454C465A454C32))
-            {
-                lv1_puts("ZELF/ZELF2 detected\n");
-
-                uint64_t sz = (16 * 1024 * 1024);
-                ZelfDecompress(file_data, (void *)0xB000000, &sz, 1);
-
-                lv1_puts("Loading elf...\n");
-
-                memset((void *)loadme_addr, 0, (16 * 1024 * 1024));
-                LoadElf(0xB000000, loadme_addr, 1);
-            }
-            else
-            {
-                lv1_puts("ZELF not detected, assume RAW\n");
-
-                memset((void *)loadme_addr, 0, (16 * 1024 * 1024));
-                memcpy((void *)loadme_addr, (void *)file_data, file_size);
-            }
-        }
     }
 
-    {
-        uint8_t qcfw_lite_flag = get_qcfw_lite_flag();
-
-        if (qcfw_lite_flag == 0x1)
-            EnableLoadCobraFromUSB(loadme_addr);
-    }
+    LoadLv2(srcAddr, loadme_addr);
 
     lv1_puts("Stage4 done.\n");
 

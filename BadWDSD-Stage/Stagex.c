@@ -133,14 +133,18 @@ register uint64_t interrupt_depth asm("r26");
 struct Stagex_Context_s
 {
     uint64_t cached_myappldrElfAddress;
+    uint64_t cached_mylv2ldrElfAddress;
     uint64_t cached_mymetldrElfAddress;
     
+    uint64_t stage3_ignoreSrc;
+
     uint8_t cached_os_bank_indicator;
     uint8_t cached_qcfw_lite_flag;
 
     uint8_t stage3_alreadyDone;
 
     uint8_t stage6_isAppldr;
+    uint8_t stage6_isLv2ldr;
 };
 
 FUNC_DEF struct Stagex_Context_s* GetStagexContext()
@@ -1200,7 +1204,7 @@ FUNC_DEF void sc_puts(const char *str)
 #endif
 }
 
-FUNC_DEF uint8_t sc_read_os_bank_indicator()
+FUNC_DEF uint8_t sc_read_eeprom8(uint8_t block_id, uint8_t offset)
 {
     struct sc_packet_s pkt;
 
@@ -1210,8 +1214,8 @@ FUNC_DEF uint8_t sc_read_os_bank_indicator()
     pkt.payload_size = 4;
     pkt.data[0] = 0x20;
 
-    pkt.data[1] = 0x2;  // block id (0x48C00)
-    pkt.data[2] = 0x24; // offset (0x48C24)
+    pkt.data[1] = block_id;  // block id
+    pkt.data[2] = offset; // offset
     pkt.data[3] = 0x1;  // size
 
     struct sc_packet_s outpkt;
@@ -1223,35 +1227,38 @@ FUNC_DEF uint8_t sc_read_os_bank_indicator()
     return outpkt.data[4];
 }
 
-FUNC_DEF uint8_t get_os_bank_indicator()
+FUNC_DEF void sc_write_eeprom8(uint8_t block_id, uint8_t offset, uint8_t value)
 {
-    if (!IsLv1())
-        return sc_read_os_bank_indicator();
+    struct sc_packet_s pkt;
 
-    return GetStagexContext()->cached_os_bank_indicator;
+    pkt.service_id = 0x14;
+    pkt.communication_tag = 1;
+
+    pkt.payload_size = 5;
+    pkt.data[0] = 0x10;
+
+    pkt.data[1] = block_id;  // block id
+    pkt.data[2] = offset; // offset
+    pkt.data[3] = 0x1;  // size
+
+    pkt.data[4] = value; // value
+
+    struct sc_packet_s outpkt;
+    sc_send_packet(&pkt, &outpkt);
+}
+
+FUNC_DEF uint8_t sc_read_os_bank_indicator()
+{
+    // block id (0x48C00)
+    // offset (0x48C24)
+    return sc_read_eeprom8(0x2, 0x24);
 }
 
 FUNC_DEF uint8_t sc_read_qcfw_lite_flag()
 {
-    struct sc_packet_s pkt;
-
-    pkt.service_id = 0x14;
-    pkt.communication_tag = 1;
-
-    pkt.payload_size = 4;
-    pkt.data[0] = 0x20;
-
-    pkt.data[1] = 0x20;  // block id (0x3000)
-    pkt.data[2] = 0x0; // offset (0x3000)
-    pkt.data[3] = 0x1;  // size
-
-    struct sc_packet_s outpkt;
-    sc_send_packet(&pkt, &outpkt);
-
-    if (outpkt.payload_size != 5)
-        dead();
-
-    return outpkt.data[4];
+    // block id (0x3000)
+    // offset (0x3000)
+    return sc_read_eeprom8(0x20, 0x0);
 }
 
 FUNC_DEF uint8_t get_qcfw_lite_flag()
@@ -1260,6 +1267,27 @@ FUNC_DEF uint8_t get_qcfw_lite_flag()
         return sc_read_qcfw_lite_flag();
 
     return GetStagexContext()->cached_qcfw_lite_flag;
+}
+
+FUNC_DEF uint8_t sc_read_shadow_os_bank_indicator()
+{
+    // block id (0x3000)
+    // offset (0x3001)
+    return sc_read_eeprom8(0x20, 0x1);
+}
+
+FUNC_DEF void sc_write_shadow_os_bank_indicator(uint8_t val)
+{
+    // block id (0x3000)
+    // offset (0x3001)
+    sc_write_eeprom8(0x20, 0x1, val);
+}
+
+FUNC_DEF uint8_t sc_read_qcfw_enable()
+{
+    // block id (0x3000)
+    // offset (0x3002)
+    return sc_read_eeprom8(0x20, 0x2);
 }
 
 FUNC_DEF void real_puts(const char *str)
@@ -1897,18 +1925,6 @@ FUNC_DEF uint8_t CoreOS_FindFileEntry_Bank(uint8_t os_bank_indicator, const char
     return CoreOS_FindFileEntry(coreOSStartAddress, fileName, outFileAddress, outFileSize);
 }
 
-FUNC_DEF uint8_t CoreOS_FindFileEntry_CurrentBank(const char *fileName, uint64_t *outFileAddress, uint64_t *outFileSize)
-{
-    uint8_t os_bank_indicator = get_os_bank_indicator();
-
-    return CoreOS_FindFileEntry_Bank(os_bank_indicator, fileName, outFileAddress, outFileSize);
-}
-
-FUNC_DEF uint8_t CoreOS_FindFileEntry_Aux(const char *fileName, uint64_t *outFileAddress, uint64_t *outFileSize)
-{
-    return CoreOS_FindFileEntry(0x2401FF21000, fileName, outFileAddress, outFileSize);
-}
-
 FUNC_DEF uint16_t CoreOS_Bank_GetFWVersion(uint8_t os_bank_indicator)
 {
     uint64_t addr;
@@ -1928,14 +1944,61 @@ FUNC_DEF uint16_t CoreOS_Bank_GetFWVersion(uint8_t os_bank_indicator)
     return ver;
 }
 
-FUNC_DEF uint16_t CoreOS_CurrentBank_GetFWVersion()
-{
-    return CoreOS_Bank_GetFWVersion(get_os_bank_indicator());
-}
-
 FUNC_DEF uint8_t CoreOS_Bank_IsqCFW(uint8_t os_bank_indicator)
 {
     return CoreOS_FindFileEntry_Bank(os_bank_indicator, "qcfw", NULL, NULL);
+}
+
+FUNC_DEF uint8_t calc_os_bank_indicator()
+{
+#if 0
+
+    uint8_t real_os_bank_indicator = sc_read_os_bank_indicator();
+    uint8_t qcfw_enable = sc_read_qcfw_enable();
+
+    if (qcfw_enable != 0x1)
+        return real_os_bank_indicator;
+
+    uint8_t other_os_bank_indicator = (real_os_bank_indicator == 0xff) ? 0x0 : 0xff;
+
+    uint8_t real_bank_is_qcfw = CoreOS_Bank_IsqCFW(real_os_bank_indicator);
+    uint8_t other_bank_is_qcfw = CoreOS_Bank_IsqCFW(other_os_bank_indicator);
+
+    if (!real_bank_is_qcfw && other_bank_is_qcfw)
+        return other_os_bank_indicator;
+
+    return real_os_bank_indicator;
+
+#else
+
+    return sc_read_os_bank_indicator();
+
+#endif
+}
+
+FUNC_DEF uint8_t get_os_bank_indicator()
+{
+    if (!IsLv1())
+        return calc_os_bank_indicator();
+
+    return GetStagexContext()->cached_os_bank_indicator;
+}
+
+FUNC_DEF uint8_t CoreOS_FindFileEntry_CurrentBank(const char *fileName, uint64_t *outFileAddress, uint64_t *outFileSize)
+{
+    uint8_t os_bank_indicator = get_os_bank_indicator();
+
+    return CoreOS_FindFileEntry_Bank(os_bank_indicator, fileName, outFileAddress, outFileSize);
+}
+
+FUNC_DEF uint8_t CoreOS_FindFileEntry_Aux(const char *fileName, uint64_t *outFileAddress, uint64_t *outFileSize)
+{
+    return CoreOS_FindFileEntry(0x2401FF21000, fileName, outFileAddress, outFileSize);
+}
+
+FUNC_DEF uint16_t CoreOS_CurrentBank_GetFWVersion()
+{
+    return CoreOS_Bank_GetFWVersion(get_os_bank_indicator());
 }
 
 FUNC_DEF uint8_t CoreOS_CurrentBank_IsqCFW()

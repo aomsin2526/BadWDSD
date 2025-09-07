@@ -93,7 +93,7 @@ void Sc_RxFn()
                 }
             }
 
-            if (scContext.rxBufLen >= 2)
+            if (scContext.rxBufLen >= 2 && !strstr(scContext.rxBuf, "#!:4"))
             {
                 PrintLog("Sc_Rx: ");
 
@@ -107,6 +107,7 @@ void Sc_RxFn()
             }
 
             scContext.rxBufLen = 0;
+            scContext.rxBuf[scContext.rxBufLen] = 0;
         }
     }
 }

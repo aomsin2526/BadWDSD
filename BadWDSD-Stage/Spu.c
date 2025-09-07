@@ -1,3 +1,6 @@
+static const uint32_t SPU_STATUS_RUN_MASK = (1 << 0);
+static const uint32_t SPU_STATUS_ISOLATED_MASK = (1 << 7);
+
 FUNC_DEF uint64_t SPU_CalcMMIOAddress(uint64_t spu_id, uint64_t offset)
 {
     return 0x20000000000 + (0x80000 * spu_id) + offset;

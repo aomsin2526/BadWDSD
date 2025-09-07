@@ -33,7 +33,10 @@ mymetldr memory mapping:
 0x12C00 - 0x38FFF = ldr code/entry
 
 0x0 = erk
+0x30 = manu_sdk_version
 0x39000 = keyring
+0x39050 = idps (uint64_t[2])
+0x39060 = targetid (uint64_t)
 0x39100 = marker
 0x39400 = eid0
 

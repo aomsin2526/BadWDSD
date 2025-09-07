@@ -201,7 +201,7 @@ void lv1gen(bool is4j, const char *inFilePath, const char *outFilePath, const ch
     size_t stage5jFileSize = get_file_size(stage5jFile);
     printf("stage5jFileSize = %lu\n", stage5jFileSize);
 
-    if (stage5jFileSize != 16)
+    if (stage5jFileSize != 20)
     {
         printf("bad stage5j file size!\n");
 
@@ -356,15 +356,10 @@ void lv1gen(bool is4j, const char *inFilePath, const char *outFilePath, const ch
     {
         uint8_t searchData[] = { 0xE9, 0x22, 0xCF, 0x08, 0x7C, 0x80, 0x23, 0x78, 0x7C, 0xA6, 0x2B, 0x78 };
         
-        uint64_t replaceDataSize = sizeof(searchData) + stage5jFileSize;
-        uint8_t replaceData[replaceDataSize];
+        printf("Installing stage5j (appldr)...\n");
+        stage5jData[3] = 0x1;
 
-        memcpy(replaceData, searchData, sizeof(searchData));
-        memcpy(replaceData + sizeof(searchData), stage5jData, stage5jFileSize);
-
-        printf("Installing stage5j...\n");
-
-        if (!SearchAndReplace(outData, inFileSize, searchData, sizeof(searchData), replaceData, replaceDataSize))
+        if (!SearchAndReplace(outData, inFileSize, searchData, sizeof(searchData), stage5jData, stage5jFileSize))
         {
             printf("install failed!\n");
         
@@ -378,9 +373,28 @@ void lv1gen(bool is4j, const char *inFilePath, const char *outFilePath, const ch
 #if 1
 
     {
-        printf("Writing 0x2401F031600 to offset 0x10220\n");
+        uint8_t searchData[] = { 0xE9, 0x22, 0xCF, 0x08, 0x7C, 0x60, 0x1B, 0x78, 0x7C, 0x8B, 0x23, 0x78, 0x7C, 0xAA, 0x2B, 0x78, 0x7C, 0xC7, 0x33, 0x78 };
+        
+        printf("Installing stage5j (lv2ldr)...\n");
+        stage5jData[3] = 0x2;
 
-        *((uint64_t *)&outData[0x10220]) = endswap64(0x2401F031600);
+        if (!SearchAndReplace(outData, inFileSize, searchData, sizeof(searchData), stage5jData, stage5jFileSize))
+        {
+            printf("install failed!\n");
+        
+            abort();
+            return;
+        }
+    }
+
+#endif
+
+#if 1
+
+    {
+        printf("Writing 0x2401F031700 to offset 0x10220\n");
+
+        *((uint64_t *)&outData[0x10220]) = endswap64(0x2401F031700);
     }
 
 #endif
@@ -411,6 +425,44 @@ void lv1gen(bool is4j, const char *inFilePath, const char *outFilePath, const ch
         
         printf("Installing stage6j (__get_spu_status)...\n");
         stage6jData[3] = 2;
+
+        if (!SearchAndReplace(outData, inFileSize, searchData, sizeof(searchData), stage6jData, stage6jFileSize))
+        {
+            printf("install failed!\n");
+        
+            abort();
+            return;
+        }
+    }
+
+#endif
+
+#if 1
+
+    {
+        uint8_t searchData[] = { 0xE9, 0x22, 0xCF, 0x20, 0x78, 0x63, 0x9B, 0x24, 0x38, 0x00, 0x00, 0x02, 0xE9, 0x29, 0x00, 0x00, 0x3D, 0x29, 0x00, 0x04, 0x39, 0x29, 0x40, 0x1C, 0x7C, 0x03, 0x49, 0x2E };
+        
+        printf("Installing stage6j (request_exit_isolation)...\n");
+        stage6jData[3] = 3;
+
+        if (!SearchAndReplace(outData, inFileSize, searchData, sizeof(searchData), stage6jData, stage6jFileSize))
+        {
+            printf("install failed!\n");
+        
+            abort();
+            return;
+        }
+    }
+
+#endif
+
+#if 1
+
+    {
+        uint8_t searchData[] = { 0xE9, 0x43, 0x00, 0x00, 0xE9, 0x63, 0x00, 0x08, 0xE9, 0x2A, 0x00, 0x08, 0x3D, 0x29, 0x00, 0x04, 0x80, 0x09, 0x40, 0x24, 0x90, 0x0B, 0x00, 0x30, 0xE9, 0x2B, 0x0F, 0x10, 0x7C, 0x84, 0x4B, 0x78, 0xF8, 0x8B, 0x0F, 0x10 };
+        
+        printf("Installing stage6j (SPE_update_SPU_status_and_transition_notifier_in_shadow_reg_area)...\n");
+        stage6jData[3] = 4;
 
         if (!SearchAndReplace(outData, inFileSize, searchData, sizeof(searchData), stage6jData, stage6jFileSize))
         {

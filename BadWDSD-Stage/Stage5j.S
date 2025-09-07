@@ -33,9 +33,30 @@ seg002:00000000002B30CC                 b         sub_2B5088
 
 #endif
 
+#if 0
+
+seg002:00000000002B308C SPE_load_request_lv2ldr_2:              # CODE XREF: sub_316428+30C↓p
+seg002:00000000002B308C                 ld        r9, -0x30F8(r2)
+seg002:00000000002B3090                 mr        r0, r3
+seg002:00000000002B3094                 mr        r11, r4
+seg002:00000000002B3098                 mr        r10, r5
+seg002:00000000002B309C                 mr        r7, r6
+seg002:00000000002B30A0                 mr        r4, r0
+seg002:00000000002B30A4                 ld        r3, 0(r9)
+seg002:00000000002B30A8                 mr        r5, r11
+seg002:00000000002B30AC                 mr        r6, r10
+seg002:00000000002B30B0                 b         sub_2B4EA8
+seg002:00000000002B30B0 # End of function SPE_load_request_lv2ldr_2
+
+// E9 22 CF 08 7C 60 1B 78 7C 8B 23 78 7C AA 2B 78 7C C7 33 78
+
+#endif
+
 // 0x2401F031400
 
 stage_entry:
+    li %r10, 0x0 // 1 = appldr, 2 = lv2ldr
+
     li %r11, 0x210
     ld %r11, 0(%r11)
     mtctr %r11

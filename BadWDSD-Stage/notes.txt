@@ -8,7 +8,8 @@
 // 0x190 - 0x19f = lv1_poke32(38)
 
 // 0x210 - 0x217 = stage5j (0x2401F031400)
-// 0x220 - 0x227 = stage6j (0x2401F031600)
+// 0x220 - 0x227 = stage6j (0x2401F031700)
+// 0x230 - 0x237 = isDisableMyappldr (set to 1 by cobra)
 
 // 0x1000000 = lv2 (ofw)
 // 0x8000000 = lv2 (cfw) / otheros

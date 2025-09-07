@@ -16,7 +16,9 @@ typedef unsigned long uint64_t;
 
 typedef uint64_t size_t;
 
-#define SC() asm volatile("sync"); asm volatile("sc" ::"r"(r11), "r"(r3), "r"(r4), "r"(r5), "r"(r6), "r"(r7) :)
+#define SC()              \
+    asm volatile("sync"); \
+    asm volatile("sc" ::"r"(r11), "r"(r3), "r"(r4), "r"(r5), "r"(r6), "r"(r7) :)
 
 #define dead() \
     while (1)  \
@@ -59,140 +61,151 @@ __attribute__((noreturn)) void stage4j_entry()
     // store src
     asm volatile("std 5, 24(1)");
 
-    // r3 = 0
-    r3 = 0;
-
-    // copy src starts
+    // check isIgnoreSrc
 
     r11 = 0x10003;
 
     r4 = 0x6996;
-    r5 = 0x20;
+    r5 = 0x89;
 
-    r6 = 0x1111;
+    r6 = r3;
 
     SC();
 
-    // copy src to ra 0xC000000
-
+    if (r4 == 0x3333)
     {
-        // r0 = temp
-        // r3 = src
-        // r8 = curOffset
-        // r9 = left
-        // r10 = temp
-
-        // r3 = src
-        asm volatile("ld %0, 24(1)" :"=r"(r3)::); // example: 0xa0008000
-
-        // r8 = 0
-        asm volatile("li %0, 0" : "=r"(r8)::);
-        
-        // r9 = 0
-        asm volatile("li %0, 0" : "=r"(r9)::);
-
-        // r10 = file offset
-        asm volatile("ld %0, 0x10(%1)" :"=r"(r10):"r"(r3):);
-        
-        // r9 += file offset
-        asm volatile("add %0, %1, %2" :"=r"(r9):"r"(r9),"r"(r10):);
-
-        // r10 = file size
-        asm volatile("ld %0, 0x18(%1)" :"=r"(r10):"r"(r3):);
-        
-        // r9 += file size
-        asm volatile("add %0, %1, %2" :"=r"(r9):"r"(r9),"r"(r10):);
-
-        //
-        asm volatile("src_copy_loop:");
+        // copy src starts
 
         r11 = 0x10003;
 
         r4 = 0x6996;
+        r5 = 0x20;
 
-        r6 = 0xC000000;
-        r6 += r8;
-
-        r10 = r3;
-        r10 += r8;
-
-        if (r9 < 8)
-        {
-            r5 = 0x8; // poke8
-            asm volatile("lbz %0, 0(%1)" :"=r"(r7):"r"(r10):);
-            r10 = 1;
-        }
-        else
-        {
-            r5 = 0x2; // poke64
-            asm volatile("ld %0, 0(%1)" :"=r"(r7):"r"(r10):);
-            r10 = 8;
-        }
-
-        // store register to stack
-        asm volatile("std %0, 32(1)" ::"r"(r0):);
-        asm volatile("std %0, 40(1)" ::"r"(r8):);
-        asm volatile("std %0, 48(1)" ::"r"(r9):);
-        asm volatile("std %0, 56(1)" ::"r"(r10):);
-        asm volatile("std %0, 64(1)" ::"r"(r3):);
+        r6 = 0x1111;
 
         SC();
 
-        // restore register from stack
-        asm volatile("ld %0, 64(1)" :"=r"(r3)::);
-        asm volatile("ld %0, 56(1)" :"=r"(r10)::);
-        asm volatile("ld %0, 48(1)" :"=r"(r9)::);
-        asm volatile("ld %0, 40(1)" :"=r"(r8)::);
-        asm volatile("ld %0, 32(1)" :"=r"(r0)::);
+        // copy src to ra 0xC000000
 
-        // curOffset += r10
-        asm volatile("add %0, %1, %2" :"=r"(r8):"r"(r8),"r"(r10):);
+        {
+            // r0 = temp
+            // r3 = src
+            // r8 = curOffset
+            // r9 = left
+            // r10 = temp
 
-        // left -= r10
-        asm volatile("sub %0, %1, %2" :"=r"(r9):"r"(r9),"r"(r10):);
+            // r3 = src
+            asm volatile("ld %0, 24(1)" : "=r"(r3)::); // example: 0xa0008000
 
-        // break if left == 0
-        asm volatile("li %0, 0" :"=r"(r0)::);
-        asm volatile("cmp 0, 0, %0, %1" ::"r"(r9),"r"(r0):);
-        asm volatile("beq src_copy_done");
+            // r8 = 0
+            asm volatile("li %0, 0" : "=r"(r8)::);
 
-        asm volatile("b src_copy_loop");
+            // r9 = 0
+            asm volatile("li %0, 0" : "=r"(r9)::);
+
+            // r10 = file offset
+            asm volatile("ld %0, 0x10(%1)" : "=r"(r10) : "r"(r3) :);
+
+            // r9 += file offset
+            asm volatile("add %0, %1, %2" : "=r"(r9) : "r"(r9), "r"(r10) :);
+
+            // r10 = file size
+            asm volatile("ld %0, 0x18(%1)" : "=r"(r10) : "r"(r3) :);
+
+            // r9 += file size
+            asm volatile("add %0, %1, %2" : "=r"(r9) : "r"(r9), "r"(r10) :);
+
+            //
+            asm volatile("src_copy_loop:");
+
+            r11 = 0x10003;
+
+            r4 = 0x6996;
+
+            r6 = 0xC000000;
+            r6 += r8;
+
+            r10 = r3;
+            r10 += r8;
+
+            if (r9 < 8)
+            {
+                r5 = 0x8; // poke8
+                asm volatile("lbz %0, 0(%1)" : "=r"(r7) : "r"(r10) :);
+                r10 = 1;
+            }
+            else
+            {
+                r5 = 0x2; // poke64
+                asm volatile("ld %0, 0(%1)" : "=r"(r7) : "r"(r10) :);
+                r10 = 8;
+            }
+
+            // store register to stack
+            asm volatile("std %0, 32(1)" ::"r"(r0) :);
+            asm volatile("std %0, 40(1)" ::"r"(r8) :);
+            asm volatile("std %0, 48(1)" ::"r"(r9) :);
+            asm volatile("std %0, 56(1)" ::"r"(r10) :);
+            asm volatile("std %0, 64(1)" ::"r"(r3) :);
+
+            SC();
+
+            // restore register from stack
+            asm volatile("ld %0, 64(1)" : "=r"(r3)::);
+            asm volatile("ld %0, 56(1)" : "=r"(r10)::);
+            asm volatile("ld %0, 48(1)" : "=r"(r9)::);
+            asm volatile("ld %0, 40(1)" : "=r"(r8)::);
+            asm volatile("ld %0, 32(1)" : "=r"(r0)::);
+
+            // curOffset += r10
+            asm volatile("add %0, %1, %2" : "=r"(r8) : "r"(r8), "r"(r10) :);
+
+            // left -= r10
+            asm volatile("sub %0, %1, %2" : "=r"(r9) : "r"(r9), "r"(r10) :);
+
+            // break if left == 0
+            asm volatile("li %0, 0" : "=r"(r0)::);
+            asm volatile("cmp 0, 0, %0, %1" ::"r"(r9), "r"(r0) :);
+            asm volatile("beq src_copy_done");
+
+            asm volatile("b src_copy_loop");
+        }
+
+        asm volatile("src_copy_done:");
+
+        // copy src done
+
+        r11 = 0x10003;
+
+        r4 = 0x6996;
+        r5 = 0x20;
+
+        r6 = 0x2222;
+
+        SC();
     }
-
-    asm volatile("src_copy_done:");
-
-    // copy src done
-
-    r11 = 0x10003;
-
-    r4 = 0x6996;
-    r5 = 0x20;
-
-    r6 = 0x2222;
-
-    SC();
 
     // 4C4F4144 4D455858 58584C4F 41444D45
     // write loadme into dest
 
     {
         // r10 = dest
-        asm volatile("ld %0, 16(1)" :"=r"(r10)::);
+        asm volatile("ld %0, 16(1)" : "=r"(r10)::);
 
         r3 = 0x4C4F4144;
-        asm volatile("stw %0, 0(%1)" ::"r"(r3),"r"(r10):);
+        asm volatile("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
         r10 += 4;
 
         r3 = 0x4D455858;
-        asm volatile("stw %0, 0(%1)" ::"r"(r3),"r"(r10):);
+        asm volatile("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
         r10 += 4;
 
         r3 = 0x58584C4F;
-        asm volatile("stw %0, 0(%1)" ::"r"(r3),"r"(r10):);
+        asm volatile("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
         r10 += 4;
 
         r3 = 0x41444D45;
-        asm volatile("stw %0, 0(%1)" ::"r"(r3),"r"(r10):);
+        asm volatile("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
         r10 += 4;
     }
 

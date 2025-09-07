@@ -126,6 +126,9 @@ cp -a lv2_kernel.diff outros/lv2_kernel.diff || exit 1
 echo Copying myappldr.elf to outros/myappldr.elf...
 cp -a ../spu/myappldr/myappldr.elf outros/myappldr.elf || exit 1
 
+echo Copying mylv2ldr.elf to outros/mylv2ldr.elf...
+cp -a ../spu/mylv2ldr/mylv2ldr.elf outros/mylv2ldr.elf || exit 1
+
 echo Creating outros/qcfw
 echo "qcfw_lv2diff" > outros/qcfw
 

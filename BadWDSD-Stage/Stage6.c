@@ -3,7 +3,7 @@
 
 struct __attribute__((aligned(8))) mymetldr_context_s
 {
-    uint64_t myappldrElfAddress;
+    uint64_t myldrElfAddress;
 };
 
 FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
@@ -14,19 +14,55 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
     //lv1_print_decimal(spu_id);
     //lv1_puts("\n");
 
+    uint32_t status;
+
     struct Stagex_Context_s* ctx = GetStagexContext();
 
+    //
+
     uint64_t myappldrElfAddress = ctx->cached_myappldrElfAddress;
-    
-    if ((spu_id != 4) || !ctx->stage6_isAppldr || (myappldrElfAddress == 0))
+    uint64_t mylv2ldrElfAddress = ctx->cached_mylv2ldrElfAddress;
+
+    uint8_t ok = 0;
+    uint64_t myldrElfAddress = 0;
+
+    if (spu_id == 4)
     {
-        SPU_PS_Write32(spu_id, 0x0401C, 0x3);
+        if (ctx->stage6_isAppldr && (myappldrElfAddress != 0))
+        {
+            myldrElfAddress = myappldrElfAddress;
+            ok = 1;
+        }
+
+        if (ctx->stage6_isLv2ldr && (mylv2ldrElfAddress != 0))
+        {
+            myldrElfAddress = mylv2ldrElfAddress;
+            ok = 1;
+        }
 
         ctx->stage6_isAppldr = 0;
+        ctx->stage6_isLv2ldr = 0;
+    }
+
+    if (!ok)
+    {
+        SPU_PS_Write32(spu_id, 0x0401C, 0x3);
         return;
     }
 
-    ctx->stage6_isAppldr = 0;
+    //
+
+    {
+        struct ElfHeader32_s *elfHdr = (struct ElfHeader32_s *)myldrElfAddress;
+
+        if (*((uint32_t *)elfHdr->e_ident) != 0x7F454C46)
+        {
+            SPU_PS_Write32(spu_id, 0x0401C, 0x3);
+            return;
+        }
+    }
+
+    //
 
     uint64_t mymetldrElfAddress = ctx->cached_mymetldrElfAddress;
 
@@ -36,10 +72,7 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
         dead_beep();
     }
 
-    static const uint32_t SPU_STATUS_RUN_MASK = (1 << 0);
-    static const uint32_t SPU_STATUS_ISOLATED_MASK = (1 << 7);
-
-    uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
+    status = SPU_PS_Read32(spu_id, 0x04024);
     if ((status & SPU_STATUS_RUN_MASK) != 0)
     {
         // stop request
@@ -68,9 +101,22 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
     
     {
         struct mymetldr_context_s mctx;
-        mctx.myappldrElfAddress = myappldrElfAddress;
+        mctx.myldrElfAddress = myldrElfAddress;
 
         memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &mctx, sizeof(mctx));
+    }
+
+    {
+        // idps
+        const uint64_t* idps = (const uint64_t*)0x2401F02F070;
+
+        SPU_LS_Write64(spu_id, 0x39050, idps[0]);
+        SPU_LS_Write64(spu_id, 0x39058, idps[1]);
+
+        // tid
+        //const uint8_t* tid = (const uint8_t*)0x2401F02F075;
+        //SPU_LS_Write64(spu_id, 0x39060, *tid);
+        SPU_LS_Write64(spu_id, 0x39060, 0x82);
     }
 
     eieio();
@@ -85,11 +131,9 @@ FUNC_DEF uint32_t Stage6_GetSpuStatus(uint64_t spu_id)
     //lv1_print_decimal(spu_id);
     //lv1_puts("\n");
 
-    static const uint32_t SPU_STATUS_ISOLATED_MASK = (1 << 7);
-
     uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
 
-    if ((spu_id == 4) && (SPU_LS_Read64(spu_id, 0x39100) == 0x123456789))
+    if ((spu_id == 4) && ((status & SPU_STATUS_ISOLATED_MASK) == 0) && (SPU_LS_Read64(spu_id, 0x39100) == 0x123456789))
         status |= SPU_STATUS_ISOLATED_MASK;
 
 #if 0
@@ -102,6 +146,8 @@ FUNC_DEF uint32_t Stage6_GetSpuStatus(uint64_t spu_id)
     lv1_puts("npc = ");
     lv1_print_hex(npc);
     lv1_puts("\n");
+
+#if 0
 
     struct Stagex_spu_DMACmd_s dmaCmd;
     memcpy(&dmaCmd, (const void*)SPU_CalcMMIOAddress_LS(spu_id, 0x10), sizeof(dmaCmd));
@@ -124,12 +170,62 @@ FUNC_DEF uint32_t Stage6_GetSpuStatus(uint64_t spu_id)
 
 #endif
 
+#endif
+
     return status;
 }
 
-#pragma GCC pop_options
+FUNC_DEF void Stage6_RequestExitIsolation(uint64_t spu_id)
+{
+    //lv1_puts("Stage6_RequestExitIsolation()\n");
 
-__attribute__((section("main6"))) uint64_t stage6_main(uint64_t spu_id)
+    if (spu_id == 4)
+    {
+        uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
+
+        if (((status & SPU_STATUS_ISOLATED_MASK) == 0) && (SPU_LS_Read64(spu_id, 0x39100) == 0x123456789))
+        {
+            //lv1_puts("xxx\n");
+            SPU_LS_Write64(spu_id, 0x39100, 0x0);
+        }
+    }
+
+    SPU_PS_Write32(spu_id, 0x0401C, 0x2);
+}
+
+FUNC_DEF void Stage6_UpdateSPUStatusAndTransitionNotifierInShadowRegArea(uint64_t r3_2, uint64_t r4_2)
+{
+    uint64_t x = *(uint64_t*)r3_2;
+    uint64_t shadow_addr = *(uint64_t*)(r3_2 + 8);
+
+    uint64_t ls_start_addr = *(uint64_t*)(x + 8);
+    
+    uint64_t problem_state_addr = (ls_start_addr + 0x40000);
+    uint64_t spu_status_addr = (problem_state_addr + 0x4024);
+
+    uint32_t status = *((uint32_t*)spu_status_addr);
+
+    if (spu_status_addr == SPU_CalcMMIOAddress_PS(4, 0x4024))
+    {
+        if (((status & SPU_STATUS_ISOLATED_MASK) == 0) && (SPU_LS_Read64(4, 0x39100) == 0x123456789))
+        {
+            //lv1_puts("yyy\n");
+            status |= SPU_STATUS_ISOLATED_MASK;
+        }
+    }
+
+    //lv1_puts("status = ");
+    //lv1_print_hex(status);
+    //lv1_puts("\n");
+
+    *(uint32_t*)(shadow_addr + 0x30) = status;
+
+    uint64_t someval = *(uint64_t*)(shadow_addr + 0xf10);
+    someval |= r4_2;
+    *(uint64_t*)(shadow_addr + 0xf10) = someval;
+}
+
+__attribute__((section("main6"))) uint64_t stage6_main(uint64_t r3_2, uint64_t r4_2)
 {
     register uint64_t r10 asm("r10");
     uint64_t r10_2 = r10;
@@ -137,9 +233,13 @@ __attribute__((section("main6"))) uint64_t stage6_main(uint64_t spu_id)
     sc_puts_init();
 
     if (r10_2 == 1)
-        Stage6_IsoLoadRequest(spu_id);
+        Stage6_IsoLoadRequest(r3_2);
     else if (r10_2 == 2)
-        return Stage6_GetSpuStatus(spu_id);
+        return Stage6_GetSpuStatus(r3_2);
+    else if (r10_2 == 3)
+        Stage6_RequestExitIsolation(r3_2);
+    else if (r10_2 == 4)
+        Stage6_UpdateSPUStatusAndTransitionNotifierInShadowRegArea(r3_2, r4_2);
     else
     {
         lv1_puts("stage6_main bad r10!\n");
@@ -148,6 +248,8 @@ __attribute__((section("main6"))) uint64_t stage6_main(uint64_t spu_id)
 
     return 0;
 }
+
+#pragma GCC pop_options
 
 __attribute__((noreturn, section("entry6"))) void stage6_entry()
 {

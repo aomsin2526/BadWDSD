@@ -1,112 +1,3 @@
-FUNC_DEF uint64_t lv1_peek(uint64_t addr)
-{
-    return *((uint64_t *)addr);
-}
-
-FUNC_DEF void lv1_poke(uint64_t addr, uint64_t val)
-{
-    *((uint64_t *)addr) = val;
-}
-
-FUNC_DEF void lv1_read(uint64_t addr, uint64_t size, void *out_Buf)
-{
-    if (size == 0)
-        return;
-
-    uint64_t curOffset = 0;
-    uint64_t left = size;
-
-    uint64_t chunkSize = sizeof(uint64_t);
-
-    uint8_t *outBuf = (uint8_t *)out_Buf;
-
-    uint64_t zz = (addr % chunkSize);
-
-    if (zz != 0)
-    {
-        uint64_t readSize = (chunkSize - zz);
-
-        if (readSize > left)
-            readSize = left;
-
-        uint64_t a = (addr - zz);
-
-        uint64_t v = lv1_peek(a);
-        uint8_t *vx = (uint8_t *)&v;
-
-        memcpy(&outBuf[curOffset], &vx[zz], readSize);
-
-        curOffset += readSize;
-        left -= readSize;
-    }
-
-    while (1)
-    {
-        if (left == 0)
-            break;
-
-        uint64_t readSize = (left > chunkSize) ? chunkSize : left;
-
-        uint64_t v = lv1_peek(addr + curOffset);
-
-        memcpy(&outBuf[curOffset], &v, readSize);
-
-        curOffset += readSize;
-        left -= readSize;
-    }
-}
-
-FUNC_DEF void lv1_write(uint64_t addr, uint64_t size, const void *in_Buf)
-{
-    if (size == 0)
-        return;
-
-    uint64_t curOffset = 0;
-    uint64_t left = size;
-
-    uint64_t chunkSize = sizeof(uint64_t);
-
-    const uint8_t *inBuf = (const uint8_t *)in_Buf;
-
-    uint64_t zz = (addr % chunkSize);
-
-    if (zz != 0)
-    {
-        uint64_t writeSize = (chunkSize - zz);
-
-        if (writeSize > left)
-            writeSize = left;
-
-        uint64_t a = (addr - zz);
-
-        uint64_t v = lv1_peek(a);
-        uint8_t *vx = (uint8_t *)&v;
-
-        memcpy(&vx[zz], &inBuf[curOffset], writeSize);
-
-        lv1_poke(a, v);
-
-        curOffset += writeSize;
-        left -= writeSize;
-    }
-
-    while (1)
-    {
-        if (left == 0)
-            break;
-
-        uint64_t writeSize = (left > chunkSize) ? chunkSize : left;
-
-        uint64_t v = lv1_peek(addr + curOffset);
-        memcpy(&v, &inBuf[curOffset], writeSize);
-
-        lv1_poke(addr + curOffset, v);
-
-        curOffset += writeSize;
-        left -= writeSize;
-    }
-}
-
 FUNC_DEF uint64_t FindHvcallTable()
 {
     // if ((v[0] == 0x386000006463ffff) && (v[1] == 0x6063ffec4e800020))
@@ -235,20 +126,6 @@ FUNC_DEF void Stage3()
 
     {
         {
-            lv1_puts("Patching hvcall 114...\n");
-
-            {
-                uint64_t newval = 0x6000000048000028;
-                lv1_write(0x2DCF54, 8, &newval);
-            }
-
-            {
-                uint64_t newval = 0x014BFFFBFD7C601B;
-                lv1_write(0x2DD287, 8, &newval);
-            }
-        }
-
-        {
             lv1_puts("Patching lv1 182/183\n");
 
             uint64_t patches[4];
@@ -258,7 +135,7 @@ FUNC_DEF void Stage3()
             patches[2] = 0x38000000E8A30020ULL;
             patches[3] = 0xE8830018F8A40000ULL;
 
-            lv1_write(0x309E4C, 32, patches);
+            memcpy((void*)0x309E4C, patches, 32);
         }
 
 #if 1
@@ -269,11 +146,11 @@ FUNC_DEF void Stage3()
             lv1_puts("Patching HTAB write protection\n");
 
             uint64_t old;
-            lv1_read(0x0AC594, 8, &old);
+            memcpy(&old, (const void*)0x0AC594, 8);
             old &= 0x00000000FFFFFFFFULL;
 
             uint64_t newval = 0x3860000000000000ULL | old;
-            lv1_write(0x0AC594, 8, &newval);
+            memcpy((void*)0x0AC594, &newval, 8);
         }
 
         // Repo nodes
@@ -296,7 +173,7 @@ FUNC_DEF void Stage3()
 
                 patches[4] = 0xEBFE0018;
 
-                lv1_write(0x2E4E28, 20, patches);
+                memcpy((void*)0x2E4E28, patches, 20);
             }
 
             // poke_lv1(0x2E50AC +  0, 0xE81E0020E93E0028ULL);
@@ -318,7 +195,7 @@ FUNC_DEF void Stage3()
 
                 patches[6] = 0xEBFE0018;
 
-                lv1_write(0x2E50AC, 28, patches);
+                memcpy((void*)0x2E50AC, patches, 28);
             }
 
             // poke_lv1(0x2E5550 +  0, 0xE81E0020E93E0028ULL);
@@ -340,67 +217,15 @@ FUNC_DEF void Stage3()
 
                 patches[6] = 0xEBFE0018;
 
-                lv1_write(0x2E5550, 28, patches);
+                memcpy((void*)0x2E5550, patches, 28);
             }
         }
-
-#endif
-
-#if 0
-
-        {
-            {
-                puts("Patching Update Manager EEPROM Read\n");
-
-                uint64_t patches = 0x6000000038000001;
-                lv1_write(0xFC4DC, 8, &patches);
-            }
-
-            {
-                puts("Patching Update Manager EEPROM Write\n");
-
-                uint64_t patches = 0x6000000038000001;
-                lv1_write(0xFEA38, 8, &patches);
-            }
-        }
-
-#if 0
-
-        // broke stuff, only patch when needed
-
-        {
-            puts("Patching Dispatch Manager\n");
-
-            {
-                uint32_t newval = 0x60000000;
-                lv1_write(0x16FA64, 4, &newval);
-            }
-
-            {
-                uint32_t newval = 0x38600001;
-                lv1_write(0x16FA88, 4, &newval);
-            }
-
-            {
-                uint8_t newval[12] = {0x3b, 0xe0, 0x00, 0x01, 0x9b, 0xe1, 0x00, 0x70, 0x38, 0x60, 0x00, 0x00};
-                lv1_write(0x16FB00, 12, newval);
-            }
-        }
-
-        {
-            puts("Patching service auth\n");
-
-            {
-                uint64_t newval = 0x2f80000048000050;
-                lv1_write(0x16FB64, 8, &newval);
-            }
-        }
-
-#endif
 
 #endif
 
     }
+
+#if 1
 
     {
         lv1_puts("Patching lv2_kernel.self LPAR initial size\n");
@@ -409,33 +234,38 @@ FUNC_DEF void Stage3()
         uint64_t searchDataSize = strlen(searchData) + 1;
 
         {
-            for (uint64_t i = 0; i < 0x200000; i += 4)
+            uint64_t foundCount = 0;
+
+            // Sc_Rx: #!addr = 0x12eb08:9
+            // Sc_Rx: #!x = 0x107:7
+            // Sc_Rx: #!addr = 0x16b570:6
+            // Sc_Rx: #!x = 0x107:7
+
+            for (uint64_t i = 0x100000; i < 0x200000; i += 4)
             {
                 if (memcmp((void *)i, searchData, searchDataSize))
                     continue;
+
+                uint8_t *vv = (uint8_t *)(i + 0x107);
+
+                if (*vv != 0x18)
+                    continue;
+
+                *vv = 0x1B; // 128M
 
                 lv1_puts("addr = ");
                 lv1_print_hex(i);
                 lv1_puts("\n");
 
-                for (uint64_t i2 = 0; i2 < 0x200; i2 += 1)
-                {
-                    uint8_t *vv = (uint8_t *)(i + i2);
+                ++foundCount;
 
-                    if (*vv != 0x18)
-                        continue;
-
-                    lv1_puts("x = ");
-                    lv1_print_hex(i2); // 0x107
-                    lv1_puts("\n");
-
-                    *vv = 0x1B; // 128M
-                }
+                if (foundCount == 2)
+                    break;
             }
         }
     }
 
-    eieio();
+#endif
 
     lv1_puts("Stage3 done.\n");
 }
@@ -618,15 +448,142 @@ FUNC_DEF void EnableLoadCobraFromUSB(uint64_t lv2AreaAddr)
 {
     lv1_puts("Enabling Load Cobra from USB...\n");
 
-    volatile uint8_t* enableLoadCobraFromUSB = (volatile uint8_t*)(lv2AreaAddr + 0x30);
+    volatile uint8_t *enableLoadCobraFromUSB = (volatile uint8_t *)(lv2AreaAddr + 0x30);
     *enableLoadCobraFromUSB = 1;
     eieio();
 
     sc_triple_beep();
 }
 
+FUNC_DEF void LoadLv2(uint64_t srcAddr, uint64_t loadme_addr)
+{
+    lv1_puts("srcAddr = ");
+    lv1_print_hex(srcAddr);
+    lv1_puts("\n");
+
+    lv1_puts("loadme_addr = ");
+    lv1_print_hex(loadme_addr);
+    lv1_puts("\n");
+
+    {
+        struct SceHeader_s *sceHeader = (struct SceHeader_s *)srcAddr;
+
+        if (sceHeader->magic != 0x53434500)
+        {
+            lv1_puts("sce_magic check failed!\n");
+            dead_beep();
+        }
+
+        if (sceHeader->attribute != 0x8000)
+        {
+            lv1_puts("SELF detected\n");
+
+            //FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf)
+            DecryptLv2Self((void*)0xB000000, (const void*)srcAddr, (void*)0xA000000, 1);
+
+            lv1_puts("Loading elf...\n");
+
+            memset((void *)loadme_addr, 0, (16 * 1024 * 1024));
+            LoadElf(0xB000000, loadme_addr, 1);
+        }
+        else
+        {
+            uint64_t file_offset = *((uint64_t *)(srcAddr + 0x10));
+
+            lv1_puts("file_offset = ");
+            lv1_print_hex(file_offset);
+
+            uint64_t real_file_size = *((uint64_t *)(srcAddr + 0x18));
+
+            lv1_puts(", real_file_size = ");
+            lv1_print_hex(real_file_size);
+
+            uint64_t real_file_data = (srcAddr + file_offset);
+
+            lv1_puts(", real_file_data = ");
+            lv1_print_hex(real_file_data);
+
+            uint64_t file_size = real_file_size;
+            file_size -= 0x10000;
+
+            lv1_puts(", file_size = ");
+            lv1_print_hex(file_size);
+
+            uint64_t file_data = real_file_data;
+            file_data += 0x10000;
+
+            lv1_puts(", file_data = ");
+            lv1_print_hex(file_data);
+
+            lv1_puts("\n");
+
+            uint64_t zelf_magic = *((uint64_t *)file_data);
+
+            if ((zelf_magic == 0x5A454C465A454C46) || (zelf_magic == 0x5A454C465A454C32))
+            {
+                lv1_puts("ZELF/ZELF2 detected\n");
+
+                uint64_t sz = (16 * 1024 * 1024);
+                ZelfDecompress(file_data, (void *)0xB000000, &sz, 1);
+
+                lv1_puts("Loading elf...\n");
+
+                memset((void *)loadme_addr, 0, (16 * 1024 * 1024));
+                LoadElf(0xB000000, loadme_addr, 1);
+            }
+            else
+            {
+                lv1_puts("ZELF not detected, assume RAW\n");
+
+                memset((void *)loadme_addr, 0, (16 * 1024 * 1024));
+                memcpy((void *)loadme_addr, (void *)file_data, file_size);
+            }
+        }
+    }
+
+    {
+        uint8_t qcfw_lite_flag = get_qcfw_lite_flag();
+
+        if (qcfw_lite_flag == 0x1)
+            EnableLoadCobraFromUSB(loadme_addr);
+    }
+}
+
 #pragma GCC push_options
 // #pragma GCC optimize("O0")
+
+FUNC_DECL uint64_t Stage3_IsIgnoreSrc(uint64_t laid)
+{
+    lv1_puts("Stage3_IsIgnoreSrc()\n");
+
+    lv1_puts("laid = ");
+    lv1_print_hex(laid);
+    lv1_puts("\n");
+
+    if (laid != 0x1070000002000001)
+        return 0;
+
+    const char *searchData = "/flh/os/lv2_kernel.self";
+    uint64_t searchDataSize = strlen(searchData) + 1;
+
+    {
+        uint8_t found = 0;
+
+        for (uint64_t i = 0; i < 0x200000; i += 4)
+        {
+            if (memcmp((void *)i, searchData, searchDataSize))
+                continue;
+
+            found = 1;
+            break;
+        }
+
+        if (!found)
+            return 0;
+    }
+
+    return 0x3333;
+}
 
 FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
 {
@@ -639,30 +596,28 @@ FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
 
     if (laid == 0x1070000002000001)
     {
+        uint64_t lv2AreaAddrRa = 0x0;
+
+        if (!FindLv2(&lv2AreaAddrRa))
         {
-            uint64_t lv2AreaAddrRa = 0x0;
-
-            if (!FindLv2(&lv2AreaAddrRa))
-            {
-                lv1_puts("lv2 area not found!\n");
-                return;
-            }
-
-            lv1_puts("lv2AreaAddrRa = ");
-            lv1_print_hex(lv2AreaAddrRa);
-            lv1_puts("\n");
-
-            ApplyLv2Diff(lv2AreaAddrRa, 1, 0);
-
-            {
-                uint8_t qcfw_lite_flag = get_qcfw_lite_flag();
-
-                if (qcfw_lite_flag == 0x1)
-                    EnableLoadCobraFromUSB(lv2AreaAddrRa);
-            }
-
-            eieio();
+            lv1_puts("lv2 area not found!\n");
+            return;
         }
+
+        lv1_puts("lv2AreaAddrRa = ");
+        lv1_print_hex(lv2AreaAddrRa);
+        lv1_puts("\n");
+
+        ApplyLv2Diff(lv2AreaAddrRa, 1, 0);
+
+        {
+            uint8_t qcfw_lite_flag = get_qcfw_lite_flag();
+
+            if (qcfw_lite_flag == 0x1)
+                EnableLoadCobraFromUSB(lv2AreaAddrRa);
+        }
+
+        eieio();
     }
 
     lv1_puts("Stage3_AuthLv2() done.\n");
@@ -689,6 +644,15 @@ __attribute__((section("main3"))) void stage3_main()
     uint64_t r5_2 = r5;
     uint64_t r6_2 = r6;
     uint64_t r7_2 = r7;
+
+    if (r5_2 == 0x89)
+    {
+        struct Stagex_Context_s *ctx = GetStagexContext();
+        ctx->stage3_ignoreSrc = Stage3_IsIgnoreSrc(r6_2);
+
+        r4 = ctx->stage3_ignoreSrc;
+        return;
+    }
 
     // peekpoke64
     if (r5_2 == 0x1)
@@ -800,7 +764,7 @@ __attribute__((section("main3"))) void stage3_main()
     if ((r5_2 != 0x0) && (r5_2 != 0x30) && (r5_2 != 0x31))
         return;
 
-    struct Stagex_Context_s* ctx = GetStagexContext();
+    struct Stagex_Context_s *ctx = GetStagexContext();
 
     if (ctx->stage3_alreadyDone == 0x69)
         return;
@@ -910,7 +874,7 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
 
     // set stage_rtoc
     stage_rtoc = stage_entry_ra;
-    stage_rtoc += 0x600; // .toc
+    stage_rtoc += 0x700; // .toc
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc
@@ -958,7 +922,7 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
     asm volatile("ld 1, %0(1)" ::"i"(8 * 1) :);
     asm volatile("ld 2, %0(1)" ::"i"(8 * 2) :);
     asm volatile("ld 3, %0(1)" ::"i"(8 * 3) :);
-    asm volatile("ld 4, %0(1)" ::"i"(8 * 4) :);
+    // asm volatile("ld 4, %0(1)" ::"i"(8 * 4) :);
     asm volatile("ld 5, %0(1)" ::"i"(8 * 5) :);
     asm volatile("ld 6, %0(1)" ::"i"(8 * 6) :);
     asm volatile("ld 7, %0(1)" ::"i"(8 * 7) :);

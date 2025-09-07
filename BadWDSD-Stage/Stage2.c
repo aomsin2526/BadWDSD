@@ -302,8 +302,10 @@ FUNC_DEF void Stage2()
             //
 
             ctx->stage3_alreadyDone = 0;
+            ctx->stage3_ignoreSrc = 0;
 
             ctx->stage6_isAppldr = 0;
+            ctx->stage6_isLv2ldr = 0;
 
             //
 
@@ -313,6 +315,16 @@ FUNC_DEF void Stage2()
 
             puts("cached_myappldrElfAddress = ");
             print_hex(ctx->cached_myappldrElfAddress);
+            puts("\n");
+
+            //
+
+            ctx->cached_mylv2ldrElfAddress = 0;
+
+            CoreOS_FindFileEntry_Bank(os_bank_indicator, "mylv2ldr.elf", &ctx->cached_mylv2ldrElfAddress, NULL);
+ 
+            puts("cached_mylv2ldrElfAddress = ");
+            print_hex(ctx->cached_mylv2ldrElfAddress);
             puts("\n");
 
             //
@@ -367,7 +379,7 @@ __attribute__((noreturn, section("entry2"))) void stage2_entry()
 
     // set stage_rtoc
     stage_rtoc = stage_entry_ra;
-    stage_rtoc += 0x700; // .toc
+    stage_rtoc += 0x800; // .toc
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc

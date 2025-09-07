@@ -22,6 +22,19 @@ FUNC_DEF void Stage1()
 
     // puts("hello superslim :)\n");
 
+    uint8_t real_os_bank_indicator = sc_read_os_bank_indicator();
+    
+    puts("real_os_bank_indicator = ");
+    print_hex(real_os_bank_indicator);
+    puts("\n");
+
+    uint8_t shadow_os_bank_indicator = ((real_os_bank_indicator == 0xFF) ? 0x1 : 0x2); // ros0 or ros1
+    sc_write_shadow_os_bank_indicator(shadow_os_bank_indicator);
+
+    puts("shadow_os_bank_indicator = ");
+    print_hex(shadow_os_bank_indicator);
+    puts("\n");
+
     uint8_t os_bank_indicator = get_os_bank_indicator();
     
     puts("os_bank_indicator = ");
@@ -39,6 +52,14 @@ FUNC_DEF void Stage1()
     puts("isqCFW = ");
     print_decimal(isqCFW);
     puts("\n");
+
+    //
+
+    // block id (0x3000)
+    // offset (0x3001)
+    //sc_write_eeprom8(0x20, 0x1, 0x69);
+
+
 
     {
         uint64_t lv0FileAddress;
@@ -200,7 +221,7 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
 
     // set stage_rtoc
     stage_rtoc = stage_entry_ra;
-    stage_rtoc += 0x800; // .toc
+    stage_rtoc += 0x900; // .toc
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc

@@ -9,8 +9,6 @@ FUNC_DEF void SpuAux_Uninit(uint64_t spu_id, uint64_t spu_old_mfc_sr1)
     //print_decimal(spu_id);
     //puts("\n");
 
-    static const uint32_t SPU_STATUS_RUN_MASK = (1 << 0);
-
     uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
 
     if ((status & SPU_STATUS_RUN_MASK) != 0)

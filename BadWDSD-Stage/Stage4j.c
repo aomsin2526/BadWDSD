@@ -18,7 +18,7 @@ typedef uint64_t size_t;
 
 #define SC()              \
     asm volatile("sync"); \
-    asm volatile("sc" ::"r"(r11), "r"(r3), "r"(r4), "r"(r5), "r"(r6), "r"(r7) :)
+    asm volatile("sc" :"=r"(r3), "=r"(r4), "=r"(r5), "=r"(r6), "=r"(r7):"r"(r11), "r"(r3), "r"(r4), "r"(r5), "r"(r6), "r"(r7):)
 
 #define dead() \
     while (1)  \
@@ -72,7 +72,7 @@ __attribute__((noreturn)) void stage4j_entry()
 
     SC();
 
-    if (r4 == 0x3333)
+    if (r6 != 0x3333) // not working properly but whatever
     {
         // copy src starts
 

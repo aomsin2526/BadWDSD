@@ -3,35 +3,38 @@
 
 #include <stdint.h>
 #include <stddef.h>
+//#include <string.h>
 
 #pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 
-//typedef char int8_t;
-//typedef unsigned char uint8_t;
+// typedef char int8_t;
+// typedef unsigned char uint8_t;
 
-//typedef short int16_t;
-//typedef unsigned short uint16_t;
+// typedef short int16_t;
+// typedef unsigned short uint16_t;
 
-//typedef int int32_t;
-//typedef unsigned int uint32_t;
+// typedef int int32_t;
+// typedef unsigned int uint32_t;
 
-//typedef long long int64_t;
-//typedef unsigned long long uint64_t;
+// typedef long long int64_t;
+// typedef unsigned long long uint64_t;
 
-//typedef uint32_t size_t;
+// typedef uint32_t size_t;
 
-//typedef uint32_t uintptr_t;
+// typedef uint32_t uintptr_t;
 
-//#define NULL 0
+// #define NULL 0
 
 #define sync() asm volatile("sync")
-#define stop(...) asm volatile("stop %0" ::"i"(__VA_ARGS__):)
+#define stop(...) asm volatile("stop %0" ::"i"(__VA_ARGS__) :)
 
 uint8_t IsPow2(uint64_t x)
 {
     return ((x & (x - 1)) == 0) ? 1 : 0;
 }
+
+#if 1
 
 void memset(void *buf, uint8_t v, uint32_t count)
 {
@@ -115,6 +118,54 @@ uint8_t memcmp(const void *p1, const void *p2, uint32_t count)
     return 0;
 }
 
+uint8_t memcmp32(const void *p1, const void *p2, uint32_t count)
+{
+    const uint32_t *pp1 = (const uint32_t *)p1;
+    const uint32_t *pp2 = (const uint32_t *)p2;
+
+    for (uint32_t i = 0; i < (count / 4); ++i)
+    {
+        if (pp1[i] != pp2[i])
+            return 1;
+    }
+
+    return 0;
+}
+
+uint64_t strlen(const char *str)
+{
+    uint64_t len = 0;
+
+    while (1)
+    {
+        if (str[len] == 0)
+            break;
+
+        ++len;
+    }
+
+    return len;
+}
+
+uint8_t strcmp(const char *str1, const char *str2)
+{
+    uint64_t str1_len = strlen(str1);
+    uint64_t str2_len = strlen(str2);
+
+    if (str1_len != str2_len)
+        return 1;
+
+    for (uint64_t i = 0; i < str2_len; ++i)
+    {
+        if (str1[i] != str2[i])
+            return 1;
+    }
+
+    return 0;
+}
+
+#endif
+
 struct __attribute__((aligned(8))) DMACmd_s
 {
     uint32_t ls;
@@ -131,17 +182,21 @@ void DMAWait()
 
     //
     spu_writech(MFC_WrTagUpdate, 0);
-    while (spu_readchcnt(MFC_WrTagUpdate) == 0) {}
+    while (spu_readchcnt(MFC_WrTagUpdate) == 0)
+    {
+    }
     spu_readch(MFC_RdTagStat);
 
     //
     spu_writech(MFC_WrTagMask, DMA_TAG_MASK);
 
     //
-    while (spu_mfcstat(MFC_TAG_UPDATE_IMMEDIATE) != DMA_TAG_MASK) {}
+    while (spu_mfcstat(MFC_TAG_UPDATE_IMMEDIATE) != DMA_TAG_MASK)
+    {
+    }
 }
 
-void SubmitDMACmd(struct DMACmd_s* cmd)
+void SubmitDMACmd(struct DMACmd_s *cmd)
 {
 #if 0
 
@@ -183,15 +238,15 @@ void SubmitDMACmd(struct DMACmd_s* cmd)
 
     spu_writech(MFC_TagID, 0);
 
-    //sync();
+    // sync();
 
     spu_writech(MFC_Cmd, (uint32_t)cmd->cmd); // upper 16 bits is classid, must be 0
-    //sync();
+    // sync();
 
-    //DMAWait();
+    // DMAWait();
 }
 
-void DMARead(void* ls, uint64_t ea, uint32_t size)
+void DMARead(void *ls, uint64_t ea, uint32_t size)
 {
     if (size == 0)
         return;
@@ -204,26 +259,43 @@ void DMARead(void* ls, uint64_t ea, uint32_t size)
     uint64_t cur_ea = ea;
 
     uint8_t force1 = ((ea & 0xf) != 0);
+    uint8_t unalign = ((cur_ls & 0xf) != (ea & 0xf));
+
+    uint8_t *tmpBuf = (uint8_t *)0x3FFF0;
 
     while (1)
     {
         uint32_t chunkSize = (left > maxChunkSize) ? maxChunkSize : left;
 
-        if (!force1 && (chunkSize >= 16))
-            chunkSize -= (chunkSize % 16);
-        else
+        struct DMACmd_s cmd;
+        cmd.cmd = MFC_GET_CMD;
+
+        if (unalign)
+        {
             chunkSize = 1;
 
-        {
-            struct DMACmd_s cmd;
+            uint32_t off = (cur_ea & 0xf);
 
-            cmd.ls = cur_ls;
+            cmd.ls = (uint32_t)&tmpBuf[off];
             cmd.ea = cur_ea;
 
             cmd.size = chunkSize;
+            SubmitDMACmd(&cmd);
+            DMAWait();
 
-            cmd.cmd = MFC_GET_CMD;
+            *((uint8_t *)cur_ls) = tmpBuf[off];
+        }
+        else
+        {
+            cmd.ls = cur_ls;
+            cmd.ea = cur_ea;
 
+            if (!force1 && (chunkSize >= 16))
+                chunkSize -= (chunkSize % 16);
+            else
+                chunkSize = 1;
+
+            cmd.size = chunkSize;
             SubmitDMACmd(&cmd);
         }
 
@@ -236,14 +308,15 @@ void DMARead(void* ls, uint64_t ea, uint32_t size)
             break;
     }
 
-    DMAWait();
+    if (!unalign)
+        DMAWait();
 }
 
-void DMAWrite(const void* ls, uint64_t ea, uint32_t size)
+void DMAWrite(const void *ls, uint64_t ea, uint32_t size)
 {
     if (size == 0)
         return;
-    
+
     static const uint32_t maxChunkSize = (16 * 1024);
 
     uint32_t left = size;
@@ -252,26 +325,42 @@ void DMAWrite(const void* ls, uint64_t ea, uint32_t size)
     uint64_t cur_ea = ea;
 
     uint8_t force1 = ((ea & 0xf) != 0);
+    uint8_t unalign = ((cur_ls & 0xf) != (ea & 0xf));
+
+    uint8_t *tmpBuf = (uint8_t *)0x3FFF0;
 
     while (1)
     {
         uint32_t chunkSize = (left > maxChunkSize) ? maxChunkSize : left;
 
-        if (!force1 && (chunkSize >= 16))
-            chunkSize -= (chunkSize % 16);
-        else
+        struct DMACmd_s cmd;
+        cmd.cmd = MFC_PUT_CMD;
+
+        if (unalign)
+        {
             chunkSize = 1;
 
-        {
-            struct DMACmd_s cmd;
+            uint32_t off = (cur_ea & 0xf);
+            tmpBuf[off] = *((const uint8_t *)cur_ls);
 
-            cmd.ls = cur_ls;
+            cmd.ls = (uint32_t)&tmpBuf[off];
             cmd.ea = cur_ea;
 
             cmd.size = chunkSize;
+            SubmitDMACmd(&cmd);
+            DMAWait();
+        }
+        else
+        {
+            cmd.ls = cur_ls;
+            cmd.ea = cur_ea;
 
-            cmd.cmd = MFC_PUT_CMD;
+            if (!force1 && (chunkSize >= 16))
+                chunkSize -= (chunkSize % 16);
+            else
+                chunkSize = 1;
 
+            cmd.size = chunkSize;
             SubmitDMACmd(&cmd);
         }
 
@@ -284,5 +373,6 @@ void DMAWrite(const void* ls, uint64_t ea, uint32_t size)
             break;
     }
 
-    DMAWait();
+    if (!unalign)
+        DMAWait();
 }

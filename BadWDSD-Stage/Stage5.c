@@ -2,7 +2,7 @@
 // STAGE5_LOG_ENABLED
 
 #pragma GCC push_options
-// #pragma GCC optimize("O0")
+#pragma GCC optimize("O0")
 
 FUNC_DEF void Stage5(uint64_t type)
 {
@@ -55,8 +55,6 @@ FUNC_DEF void Stage5(uint64_t type)
     //lv1_puts("Stage5 done.\n");
 }
 
-#pragma GCC pop_options
-
 __attribute__((section("main5"))) void stage5_main()
 {
     register uint64_t r10 asm("r10");
@@ -65,6 +63,8 @@ __attribute__((section("main5"))) void stage5_main()
     sc_puts_init();
     Stage5(r10_2);
 }
+
+#pragma GCC pop_options
 
 __attribute__((noreturn, section("entry5"))) void stage5_entry()
 {

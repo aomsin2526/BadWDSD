@@ -1,7 +1,10 @@
+Stagex_spu common memory mapping:
+0x10 = last DMACmd_s
+0x3FFF0 - 0x3FFFF = temp mem for dma
+
 Stagex_spu memory mapping:
 
 0x0 - 0xFFF = params, ppu/spu comm:
-0x10 = last DMACmd_s
 0x100 = Stagex_spu_context_s
 0x200 = Stagex_spu_job_context_s
 0xF00 = uint64_t job start (written by ppu, cleared by spu)
@@ -11,7 +14,6 @@ Stagex_spu memory mapping:
 0x1000 - 0xFFFF = codes
 0x10000 - 0x2FFFF = temp mem
 0x30000 - 0x3CF00 = sp
-0x3D000 - 0x3F000 = temp mem 2
 
 stop code:
 1 = start exited
@@ -19,6 +21,9 @@ stop code:
 3 = bad job type
 4 = bad Stagex_spu_job_aes128_decrypt_ctr params
 5 = bad Stagex_spu_job_zlib_decompress params or failed
+6 = Stagex_spu_job_stage3 failed
+7 = Stagex_spu_job_DecryptLv0Self failed
+8 = Stagex_spu_job_stage2 failed
 99 = main exited
 
 ///////////////////////////////////////////////
@@ -40,8 +45,7 @@ mymetldr memory mapping:
 0x39100 = marker
 0x39400 = eid0
 
-0x39A00 = tempBuf
-0x3A000 - 0x3FFFF = mymetldr codes
+0x3A000 - 0x3FEFF = mymetldr codes
 
 stop code:
 1 = start exited

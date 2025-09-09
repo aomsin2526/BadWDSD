@@ -1605,13 +1605,13 @@ int main(int argc, char *argv[])
 			LoadLv2Kernel("lv2_kernel.fself", LoadLv2KernelType_e::Fself);
 
 		if (doLoadLv2Kernel_ZFself)
-			LoadLv2Kernel("lv2_kernel.zfself", LoadLv2KernelType_e::Fself);
+			LoadLv2Kernel("lv2_kernel.zfself", LoadLv2KernelType_e::OtherOS_ZFself);
 
 		if (doOtherOS_Fself)
 			LoadLv2Kernel("dtbImage.ps3.fself", LoadLv2KernelType_e::OtherOS_Fself);
 
 		if (doOtherOS_ZFself)
-			LoadLv2Kernel("dtbImage.ps3.zfself", LoadLv2KernelType_e::OtherOS_Fself);
+			LoadLv2Kernel("dtbImage.ps3.zfself", LoadLv2KernelType_e::OtherOS_ZFself);
 
 		bool doSkipRosCompare = IsFileExist("/dev_hdd0/BadWDSD_doSkipRosCompare.txt");
 		bool doFlashRos1 = IsFileExist("/dev_hdd0/BadWDSD_doFlashRos1.txt");

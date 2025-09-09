@@ -1,5 +1,5 @@
 #pragma GCC push_options
-//#pragma GCC optimize("O0")
+#pragma GCC optimize("O0")
 
 struct __attribute__((aligned(8))) mymetldr_context_s
 {
@@ -147,7 +147,7 @@ FUNC_DEF uint32_t Stage6_GetSpuStatus(uint64_t spu_id)
     lv1_print_hex(npc);
     lv1_puts("\n");
 
-#if 0
+#if 1
 
     struct Stagex_spu_DMACmd_s dmaCmd;
     memcpy(&dmaCmd, (const void*)SPU_CalcMMIOAddress_LS(spu_id, 0x10), sizeof(dmaCmd));

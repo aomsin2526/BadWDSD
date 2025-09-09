@@ -3,6 +3,8 @@
 
 FUNC_DEF void Stage1()
 {
+    //
+
     real_sc_puts_init();
     sc_puts("BadWDSD Stage1 by Kafuu(aomsin2526)" " (Build Date: " __DATE__ " " __TIME__ ")\n");
 
@@ -128,10 +130,16 @@ FUNC_DEF void Stage1()
 
                     memset((void*)lv0FileAddress, 0, lv0FileSize);
 
-                    //WaitInMs(1500);
-                    //sc_triple_beep();
-
+#if STAGE0_DECRYPTLV0SELF_SPU_ENABLED
+                    {
+                        uint64_t spu_id = 0;
+                        uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id);
+                        SPU_DecryptLv0Self(spu_id, (void*)lv0FileAddress, (const void*)lv0SelfFileAddress);
+                        SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
+                    }
+#else
                     DecryptLv0Self((void*)lv0FileAddress, (const void*)lv0SelfFileAddress, 1);
+#endif
 
                     if ((fwVersion >= 470) || isqCFW)
                     {

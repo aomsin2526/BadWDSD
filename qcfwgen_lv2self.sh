@@ -14,6 +14,9 @@
 
 # lv2_kernel.self (OFW or patched)
 
+# lv2_kernel.elf.orig (OFW)
+# lv2_kernel.elf (OFW or patched)
+
 if [[ $# -eq 0 ]] ; then
     echo 'missing args'
     exit 1
@@ -38,6 +41,9 @@ cd $ROOT_DIR/tools/lv0gen || exit 1
 ./build.sh || exit 1
 
 cd $ROOT_DIR/tools/lv1gen || exit 1
+./build.sh || exit 1
+
+cd $ROOT_DIR/tools/lv2gen || exit 1
 ./build.sh || exit 1
 
 cd $ROOT_DIR/tools/zgen || exit 1
@@ -76,6 +82,7 @@ cp $ROOT_DIR/BadWDSD-Stage/Stage6j.bin temp/Stage6j.bin || exit 1
 cp $ROOT_DIR/tools/coreos_tools/coreos_tools temp/coreos_tools || exit 1
 cp $ROOT_DIR/tools/lv0gen/lv0gen temp/lv0gen || exit 1
 cp $ROOT_DIR/tools/lv1gen/lv1gen temp/lv1gen || exit 1
+cp $ROOT_DIR/tools/lv2gen/lv2gen temp/lv2gen || exit 1
 cp $ROOT_DIR/tools/zgen/zgen temp/zgen || exit 1
 
 echo Extracting inros.bin...
@@ -112,6 +119,12 @@ rm outros/lv2_kernel.self
 
 echo Copying lv1.diff to outros/lv1.diff...
 cp -a lv1.diff outros/lv1.diff || exit 1
+
+echo Generate lv2_kernel.diff
+temp/lv2gen lv2diff lv2_kernel.elf.orig lv2_kernel.elf lv2_kernel.diff || exit 1
+
+echo Generate lv2_kernel.zdiff
+temp/zgen zelf_gen lv2_kernel.diff lv2_kernel.zdiff || exit 1
 
 echo Copying lv2_kernel.self to outros/lv2_kernel.self...
 cp -a lv2_kernel.self outros/lv2_kernel.self || exit 1

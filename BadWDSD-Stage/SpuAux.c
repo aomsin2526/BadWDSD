@@ -108,7 +108,7 @@ struct __attribute__((aligned(8))) Stagex_spu_DMACmd_s
 
 struct __attribute__((aligned(8))) Stagex_spu_context_s
 {
-    uint32_t jobType; // 1 = aes128_decrypt_ctr
+    uint32_t jobType;
 };
 
 struct __attribute__((aligned(8))) Stagex_spu_job_aes128_decrypt_ctr_context_s
@@ -347,6 +347,117 @@ FUNC_DEF void spu_zlib_decompress(uint64_t spu_id, const void* inCompressedData,
     }
 
     puts("spu_zlib_decompress() done.\n");
+}
+
+FUNC_DEF void spu_stage3(uint64_t spu_id)
+{
+    puts("spu_stage3()\n");
+
+    // clear jobDone
+    SPU_LS_Write64(spu_id, 0xf08, 0);
+    eieio();
+
+    {
+        {
+            struct Stagex_spu_context_s context;
+            context.jobType = 3;
+
+            memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &context, sizeof(context));
+        }
+
+        eieio();
+    }
+
+    // set jobStart
+    SPU_LS_Write64(spu_id, 0xf00, 1);
+    eieio();
+
+    // wait for jobDone to be 1
+    while (SPU_LS_Read64(spu_id, 0xf08) != 1)
+    {
+
+    }
+
+    puts("spu_stage3() done.\n");
+}
+
+struct __attribute__((aligned(8))) Stagex_spu_job_DecryptLv0Self_context_s
+{
+    uint64_t inDestEa;
+    uint64_t inSrcEa;
+};
+
+FUNC_DEF void SPU_DecryptLv0Self(uint64_t spu_id, void* inDest, const void* inSrc)
+{
+    puts("SPU_DecryptLv0Self()\n");
+
+    // clear jobDone
+    SPU_LS_Write64(spu_id, 0xf08, 0);
+    eieio();
+
+    {
+        {
+            struct Stagex_spu_context_s context;
+            context.jobType = 4;
+
+            memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &context, sizeof(context));
+        }
+
+        {
+            struct Stagex_spu_job_DecryptLv0Self_context_s context;
+
+            context.inDestEa = (uint64_t)inDest;
+            context.inSrcEa = (uint64_t)inSrc;
+
+            memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x200), &context, sizeof(context));
+        }
+
+        eieio();
+    }
+
+    // set jobStart
+    SPU_LS_Write64(spu_id, 0xf00, 1);
+    eieio();
+
+    // wait for jobDone to be 1
+    while (SPU_LS_Read64(spu_id, 0xf08) != 1)
+    {
+
+    }
+
+    puts("SPU_DecryptLv0Self() done.\n");
+}
+
+FUNC_DEF void spu_stage2(uint64_t spu_id)
+{
+    puts("spu_stage2()\n");
+
+    // clear jobDone
+    SPU_LS_Write64(spu_id, 0xf08, 0);
+    eieio();
+
+    {
+        {
+            struct Stagex_spu_context_s context;
+            context.jobType = 5;
+
+            memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &context, sizeof(context));
+        }
+
+        eieio();
+    }
+
+    // set jobStart
+    SPU_LS_Write64(spu_id, 0xf00, 1);
+    eieio();
+
+    // wait for jobDone to be 1
+    while (SPU_LS_Read64(spu_id, 0xf08) != 1)
+    {
+
+    }
+
+    puts("spu_stage2() done.\n");
 }
 
 #pragma GCC pop_options

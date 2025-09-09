@@ -61,7 +61,7 @@ FUNC_DEF void Stage4()
 
     uint64_t srcAddr = 0xC000000;
 
-    if (ctx->stage3_ignoreSrc)
+    if (ctx->stage3_ignoreSrc == 0x3333) // src ignored
     {
         if (!CoreOS_FindFileEntry_CurrentBank("lv2_kernel.self", &srcAddr, NULL))
         {

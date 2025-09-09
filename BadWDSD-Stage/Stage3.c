@@ -45,86 +45,6 @@ FUNC_DEF void Stage3()
     lv1_puts(")\n");
 
     {
-        uint64_t hvcallTable = FindHvcallTable();
-
-        if (hvcallTable != 0)
-        {
-            lv1_puts("hvcallTable = ");
-            lv1_print_hex(hvcallTable);
-            lv1_puts("\n");
-
-            {
-                lv1_puts("Installing hvcall peek64(34)\n");
-
-                uint64_t code_addr = 0x130;
-                uint64_t *code = (uint64_t *)code_addr;
-
-                code[0] = 0xE86300004E800020;
-
-                *((uint64_t *)(hvcallTable + (34 * 8))) = code_addr;
-            }
-
-            {
-                lv1_puts("Installing hvcall poke64(35)\n");
-
-                uint64_t code_addr = 0x140;
-                uint64_t *code = (uint64_t *)code_addr;
-
-                code[0] = 0xF883000038600000;
-                code[1] = 0x4E80002000000000;
-
-                *((uint64_t *)(hvcallTable + (35 * 8))) = code_addr;
-            }
-
-            {
-                lv1_puts("Installing hvcall exec(36)\n");
-
-                uint64_t code_addr = 0x150;
-                uint64_t *code = (uint64_t *)code_addr;
-
-                code[0] = 0x3821FFF07C0802A6;
-                code[1] = 0xF80100003821FF80;
-
-                code[2] = 0x7D2903A64E800421;
-                code[3] = 0x38210080E8010000;
-
-                code[4] = 0x7C0803A638210010;
-                code[5] = 0x4E80002000000000;
-
-                *((uint64_t *)(hvcallTable + (36 * 8))) = code_addr;
-            }
-
-            {
-                lv1_puts("Installing hvcall peek32(37)\n");
-
-                uint64_t code_addr = 0x180;
-                uint64_t *code = (uint64_t *)code_addr;
-
-                code[0] = 0x806300004E800020;
-
-                *((uint64_t *)(hvcallTable + (37 * 8))) = code_addr;
-            }
-
-            {
-                lv1_puts("Installing hvcall poke32(38)\n");
-
-                uint64_t code_addr = 0x190;
-                uint64_t *code = (uint64_t *)code_addr;
-
-                code[0] = 0x9083000038600000;
-                code[1] = 0x4E80002000000000;
-
-                *((uint64_t *)(hvcallTable + (38 * 8))) = code_addr;
-            }
-        }
-        else
-        {
-            lv1_puts("hvcallTable not found!\n");
-            dead_beep();
-        }
-    }
-
-    {
         {
             lv1_puts("Patching lv1 182/183\n");
 
@@ -225,47 +145,15 @@ FUNC_DEF void Stage3()
 
     }
 
-#if 1
-
     {
-        lv1_puts("Patching lv2_kernel.self LPAR initial size\n");
-
-        const char *searchData = "/flh/os/lv2_kernel.self";
-        uint64_t searchDataSize = strlen(searchData) + 1;
-
-        {
-            uint64_t foundCount = 0;
-
-            // Sc_Rx: #!addr = 0x12eb08:9
-            // Sc_Rx: #!x = 0x107:7
-            // Sc_Rx: #!addr = 0x16b570:6
-            // Sc_Rx: #!x = 0x107:7
-
-            for (uint64_t i = 0x100000; i < 0x200000; i += 4)
-            {
-                if (memcmp((void *)i, searchData, searchDataSize))
-                    continue;
-
-                uint8_t *vv = (uint8_t *)(i + 0x107);
-
-                if (*vv != 0x18)
-                    continue;
-
-                *vv = 0x1B; // 128M
-
-                lv1_puts("addr = ");
-                lv1_print_hex(i);
-                lv1_puts("\n");
-
-                ++foundCount;
-
-                if (foundCount == 2)
-                    break;
-            }
-        }
+        uint64_t spu_id = 0;
+        uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id);
+        spu_stage3(spu_id);
+        SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
     }
 
-#endif
+    // qcfw marker
+    *((uint64_t*)0x240) = 0x11223344aabbccdd;
 
     eieio();
     lv1_puts("Stage3 done.\n");
@@ -562,7 +450,7 @@ FUNC_DECL uint64_t Stage3_IsIgnoreSrc(uint64_t laid)
     lv1_puts("\n");
 
     if (laid != 0x1070000002000001)
-        return 0;
+        return 0; // not ignore
 
     const char *searchData = "/flh/os/lv2_kernel.self";
     uint64_t searchDataSize = strlen(searchData) + 1;
@@ -579,11 +467,11 @@ FUNC_DECL uint64_t Stage3_IsIgnoreSrc(uint64_t laid)
             break;
         }
 
-        if (!found)
-            return 0;
+        if (found)
+            return 0x3333; // ignore
     }
 
-    return 0x3333;
+    return 0; // not ignore
 }
 
 FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
@@ -639,7 +527,7 @@ __attribute__((section("main3"))) void stage3_main()
     register uint64_t r7 asm("r7");
 
     // r5 = options
-    // peek: r6 = addr, r4 = outValue
+    // peek: r6 = addr, r6 = outValue
     // poke: r6 = addr, r7 = value
 
     uint64_t r5_2 = r5;
@@ -651,14 +539,15 @@ __attribute__((section("main3"))) void stage3_main()
         struct Stagex_Context_s *ctx = GetStagexContext();
         ctx->stage3_ignoreSrc = Stage3_IsIgnoreSrc(r6_2);
 
-        r4 = ctx->stage3_ignoreSrc;
+        r5 = ctx->stage3_ignoreSrc;
+        asm volatile("mr %0, %1" :"=r"(r6):"r"(r5):); // r6 = r5
         return;
     }
 
     // peekpoke64
     if (r5_2 == 0x1)
     {
-        asm volatile("ld %0, 0(%1)" : "=r"(r4) : "r"(r6) :);
+        asm volatile("ld %0, 0(%1)" : "=r"(r6) : "r"(r6) :);
         return;
     }
     else if (r5_2 == 0x2)
@@ -682,7 +571,7 @@ __attribute__((section("main3"))) void stage3_main()
     // peekpoke32
     if (r5_2 == 0x3)
     {
-        asm volatile("lwz %0, 0(%1)" : "=r"(r4) : "r"(r6) :);
+        asm volatile("lwz %0, 0(%1)" : "=r"(r6) : "r"(r6) :);
         return;
     }
     else if (r5_2 == 0x4)
@@ -706,7 +595,7 @@ __attribute__((section("main3"))) void stage3_main()
     // peekpoke8
     if (r5_2 == 0x7)
     {
-        asm volatile("lbz %0, 0(%1)" : "=r"(r4) : "r"(r6) :);
+        asm volatile("lbz %0, 0(%1)" : "=r"(r6) : "r"(r6) :);
         return;
     }
     else if (r5_2 == 0x8)
@@ -738,9 +627,6 @@ __attribute__((section("main3"))) void stage3_main()
 
         return;
     }
-
-    // r4 = 0
-    asm volatile("li 4, 0");
 
 #if 1
     // Call stage4
@@ -787,7 +673,7 @@ __attribute__((section("main3"))) void stage3_main()
 
 // out:
 // r3 = 0
-// r4 = return value
+// r6 = return value
 
 __attribute__((noreturn, section("entry3"))) void stage3_entry()
 {
@@ -923,9 +809,9 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
     asm volatile("ld 1, %0(1)" ::"i"(8 * 1) :);
     asm volatile("ld 2, %0(1)" ::"i"(8 * 2) :);
     asm volatile("ld 3, %0(1)" ::"i"(8 * 3) :);
-    // asm volatile("ld 4, %0(1)" ::"i"(8 * 4) :);
-    asm volatile("ld 5, %0(1)" ::"i"(8 * 5) :);
-    asm volatile("ld 6, %0(1)" ::"i"(8 * 6) :);
+    //asm volatile("ld 4, %0(1)" ::"i"(8 * 4) :);
+    //asm volatile("ld 5, %0(1)" ::"i"(8 * 5) :);
+    //asm volatile("ld 6, %0(1)" ::"i"(8 * 6) :);
     asm volatile("ld 7, %0(1)" ::"i"(8 * 7) :);
     asm volatile("ld 8, %0(1)" ::"i"(8 * 8) :);
     asm volatile("ld 9, %0(1)" ::"i"(8 * 9) :);

@@ -47,17 +47,17 @@ void LoadElfSpu(uint64_t elfFileAddress)
 
     for (uint16_t i = 0; i < elfHdr.e_phnum; ++i)
     {
-        struct ElfPhdr32_s *phdr = (struct ElfPhdr32_s *)(0x39A00 + (uint32_t)(curPhdrAddress & 0xf));
-        DMARead(phdr, curPhdrAddress, sizeof(struct ElfPhdr32_s));
+        struct ElfPhdr32_s phdr;
+        DMARead(&phdr, curPhdrAddress, sizeof(phdr));
 
         {
             {
-                uint32_t clearSize = (phdr->p_memsz - phdr->p_filesz);
-                memset((void *)(phdr->p_vaddr + phdr->p_filesz), 0, clearSize);
+                uint32_t clearSize = (phdr.p_memsz - phdr.p_filesz);
+                memset((void *)(phdr.p_vaddr + phdr.p_filesz), 0, clearSize);
             }
 
-            if (phdr->p_filesz > 0)
-                DMARead((void *)phdr->p_vaddr, (elfFileAddress + phdr->p_offset), phdr->p_filesz);
+            if (phdr.p_filesz > 0)
+                DMARead((void *)phdr.p_vaddr, (elfFileAddress + phdr.p_offset), phdr.p_filesz);
         }
 
         curPhdrAddress += elfHdr.e_phentsize;

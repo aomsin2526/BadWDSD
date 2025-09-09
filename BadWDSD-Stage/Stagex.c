@@ -6,6 +6,7 @@
 //#define STAGE5_LOG_ENABLED 1
 
 #define ZLIB_SPU_ONLY_ENABLED 1
+#define STAGE0_DECRYPTLV0SELF_SPU_ENABLED 1
 
 #pragma GCC optimize("align-functions=8")
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -2124,7 +2125,7 @@ FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset, uint8
             memset((void *)(loadAddress + phdr->p_filesz), 0, clearSize);
         }
             
-        memcpy((void *)(loadAddress), (void *)(elfFileAddress + phdr->p_offset), phdr->p_filesz);
+        memcpy((void *)(loadAddress), (const void *)(elfFileAddress + phdr->p_offset), phdr->p_filesz);
 
         ++phdr;
     }
@@ -2185,6 +2186,8 @@ struct SceMetaKey_s
 
 // can't compile as seperate files because of global registers
 #include "Aes/Aes.c"
+
+#if !STAGE0_DECRYPTLV0SELF_SPU_ENABLED
 
 FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc, uint8_t use_spu)
 {
@@ -2461,6 +2464,8 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc, uint8_t use_spu)
 
     puts("DecryptLv0Self() done.\n");
 }
+
+#endif
 
 #if !ZLIB_SPU_ONLY_ENABLED
 

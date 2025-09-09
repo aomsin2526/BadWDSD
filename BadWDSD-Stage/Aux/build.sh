@@ -4,7 +4,7 @@
 
 export SPU_CC=$PS3DEV/spu/bin/spu-gcc
 
-export SPU_FLAGS="-Wall -nostdlib -static -ffunction-sections -fdata-sections -Wl,--gc-sections -flto"
+export SPU_FLAGS="-Wall -static -nostdlib -ffunction-sections -fdata-sections -Wl,--gc-sections -flto"
 export SPU_STAGEX_FLAGS="-O2 -estart"
 export SPU_MYMETLDR_FLAGS="-Os -estart"
 

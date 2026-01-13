@@ -63,27 +63,25 @@ void Sc_RxFn()
 
         if (ch == '\n' || (scContext.rxBufLen >= 1023))
         {
+            volatile struct Sc_SendCommandContext_s *ctx = scContext.sendCommandCtx;
+            bool ctx_done = false;
+
+            if (ctx != NULL)
             {
-                volatile struct Sc_SendCommandContext_s *ctx = scContext.sendCommandCtx;
+                // PrintLog("rxBuf = %s", scContext.rxBuf);
+                // PrintLog("expectedResponse = %s", ctx->expectedResponse);
 
-                if (ctx != NULL)
+                if ((strlen(ctx->expectedResponse) == 0) || strstr(scContext.rxBuf, ctx->expectedResponse))
                 {
-                    // PrintLog("rxBuf = %s", scContext.rxBuf);
-                    // PrintLog("expectedResponse = %s", ctx->expectedResponse);
+                    // PrintLog("strstr ok!\n");
 
-                    if ((strlen(ctx->expectedResponse) == 0) || strstr(scContext.rxBuf, ctx->expectedResponse))
-                    {
-                        // PrintLog("strstr ok!\n");
+                    strcpy(ctx->response, scContext.rxBuf);
+                    ctx->responseLen = scContext.rxBufLen;
 
-                        strcpy(ctx->response, scContext.rxBuf);
-                        ctx->responseLen = scContext.rxBufLen;
+                    scContext.sendCommandCtx = NULL;
+                    sync();
 
-                        scContext.sendCommandCtx = NULL;
-                        sync();
-
-                        ctx->done = true;
-                        sync();
-                    }
+                    ctx_done = true;
                 }
             }
 
@@ -102,6 +100,12 @@ void Sc_RxFn()
 
             scContext.rxBufLen = 0;
             scContext.rxBuf[scContext.rxBufLen] = 0;
+
+            if (ctx_done)
+            {
+                ctx->done = true;
+                sync();
+            }
         }
     }
 }
@@ -156,7 +160,6 @@ void Sc_Init()
 
     {
         PrintLog("SC Auth...\n");
-        //busy_wait_ms(500);
 
         //
 
@@ -245,8 +248,8 @@ void Sc_Init()
 
                 Sc_SendCommand(&cmdCtx);
 
-                PrintLog("responseLen = %u\n", cmdCtx.responseLen);
-                PrintLog("response = %s", cmdCtx.response);
+                //PrintLog("responseLen = %u\n", cmdCtx.responseLen);
+                //PrintLog("response = %s", cmdCtx.response);
 
 #if SC_IS_SW
                 if (cmdCtx.responseLen != 144)
@@ -288,12 +291,12 @@ void Sc_Init()
                 uint8_t data[48];
                 aes_decrypt_cbc(&auth1r[16], 48, data, sc2tb_key_schedule, 128, (BYTE *)iv);
 
-                PrintLog("data = ");
+                //PrintLog("data = ");
 
-                for (uint32_t i = 0; i < 48; ++i)
-                    PrintLog("%02X", (uint32_t)data[i]);
+                //for (uint32_t i = 0; i < 48; ++i)
+                //    PrintLog("%02X", (uint32_t)data[i]);
 
-                PrintLog("\n");
+                //PrintLog("\n");
 
                 uint8_t new_data[48];
                 memset(new_data, 0, 48);
@@ -301,12 +304,12 @@ void Sc_Init()
                 memcpy(&new_data[0], &data[8], 8);
                 memcpy(&new_data[8], &data[0], 8);
 
-                PrintLog("new_data = ");
+                //PrintLog("new_data = ");
 
-                for (uint32_t i = 0; i < 48; ++i)
-                    PrintLog("%02X", (uint32_t)new_data[i]);
+                //for (uint32_t i = 0; i < 48; ++i)
+                //    PrintLog("%02X", (uint32_t)new_data[i]);
 
-                PrintLog("\n");
+                //PrintLog("\n");
 
                 uint8_t auth2r[64];
                 memset(auth2r, 0, 64);
@@ -316,12 +319,12 @@ void Sc_Init()
                 auth2r[0] = 0x10;
                 auth2r[1] = 0x01;
 
-                PrintLog("auth2r = ");
+                //PrintLog("auth2r = ");
 
-                for (uint32_t i = 0; i < 64; ++i)
-                    PrintLog("%02X", (uint32_t)auth2r[i]);
+                //for (uint32_t i = 0; i < 64; ++i)
+                //    PrintLog("%02X", (uint32_t)auth2r[i]);
 
-                PrintLog("\n");
+                //PrintLog("\n");
 
                 char auth2r_str[256];
 
@@ -367,8 +370,6 @@ void Sc_Init()
                 }
             }
         }
-
-        busy_wait_ms(100);
 
         PrintLog("SC Auth success!\n");
 

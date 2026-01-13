@@ -246,6 +246,8 @@ extern void Xdr_GenerateReadyWDSLData_x32(const uint8_t* inData, uint8_t* outWDS
 //
 
 extern void GPIO_FLOATTOLOW(uint32_t pinId);
+extern void GPIO_FLOATTOHIGH(uint32_t pinId);
+
 extern void GPIO_FLOAT(uint32_t pinId);
 
 extern void GPIO_FLOATTOLOW2(uint32_t pinId1, uint32_t pinId2);
@@ -382,8 +384,10 @@ extern void DebugUart_Puts(const char* buf);
 
 //
 
-#if !PICO_IS_ZERO
-static const uint32_t TRISTATE_PIN_ID = 21;
-#endif
+// useless pin for hooking tristate (for hw flasher) pin to it for convenience
+
+//#if !PICO_IS_ZERO
+//static const uint32_t TRISTATE_PIN_ID = 21;
+//#endif
 
 //

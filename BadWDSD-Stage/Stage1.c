@@ -10,7 +10,20 @@ FUNC_DEF void Stage1()
 
     sc_triple_beep();
 
-    HW_Init_SPU();
+#if 0
+
+    {
+        const volatile uint32_t* spu_avail = (const volatile uint32_t*)0x20000509C38;
+
+        puts("spu_avail = ");
+        print_hex(*spu_avail); // 0xef for [INFO]: SPU enable [0, 1, 2, 5, 6, 7] 11101111
+        puts("\n");
+    }
+
+#endif
+
+    uint64_t myspu_id = calc_myspu_id();
+    HW_Init_SPU(myspu_id);
 
     //
 
@@ -153,7 +166,7 @@ FUNC_DEF void Stage1()
 
 #if STAGE0_DECRYPTLV0SELF_SPU_ENABLED
                     {
-                        uint64_t spu_id = 0;
+                        uint64_t spu_id = myspu_id;
                         uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id);
                         SPU_DecryptLv0Self(spu_id, (void*)lv0FileAddress, (const void*)lv0SelfFileAddress);
                         SpuAux_Uninit(spu_id, spu_old_mfc_sr1);

@@ -209,20 +209,28 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet
         puts("LoadElfSpu() done.\n");
 }
 
-FUNC_DEF void HW_Init_SPU()
+FUNC_DEF void HW_Init_SPU(uint64_t myspu_id)
 {
     puts("HW_Init_SPU()\n");
+
+    puts("myspu_id = ");
+    print_hex(myspu_id);
+    puts("\n");
 
     {
         uint64_t mfc_sr1_value = 0x21;
 
-        SPU_P1_Write64(0, 0x0, mfc_sr1_value);
-        SPU_P1_Write64(1, 0x0, mfc_sr1_value);
-        SPU_P1_Write64(2, 0x0, mfc_sr1_value);
-        SPU_P1_Write64(4, 0x0, mfc_sr1_value);
-        SPU_P1_Write64(5, 0x0, mfc_sr1_value);
-        SPU_P1_Write64(6, 0x0, mfc_sr1_value);
-        SPU_P1_Write64(7, 0x0, mfc_sr1_value);
+        // disabled spu may not always 3?
+
+        //SPU_P1_Write64(0, 0x0, mfc_sr1_value);
+        //SPU_P1_Write64(1, 0x0, mfc_sr1_value);
+        //SPU_P1_Write64(2, 0x0, mfc_sr1_value);
+        //SPU_P1_Write64(4, 0x0, mfc_sr1_value);
+        //SPU_P1_Write64(5, 0x0, mfc_sr1_value);
+        //SPU_P1_Write64(6, 0x0, mfc_sr1_value);
+        //SPU_P1_Write64(7, 0x0, mfc_sr1_value);
+
+        SPU_P1_Write64(myspu_id, 0x0, mfc_sr1_value);
 
         eieio();
     }

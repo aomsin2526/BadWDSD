@@ -1427,6 +1427,34 @@ FUNC_DEF void XdrRegWrite(uint32_t data)
     eieio();
 }
 
+uint64_t calc_myspu_id()
+{
+    uint8_t found = 0;
+    uint64_t myspu_id = 0;
+
+    uint32_t spu_avail = *((const volatile uint32_t*)0x20000509C38);
+
+    for (uint32_t i = 0; i < 8; ++i)
+    {
+        uint32_t mask = (1U << i);
+
+        if ((spu_avail & mask) != 0)
+        {
+            found = 1;
+            myspu_id = (7 - i);
+            break;
+        }
+    }
+
+    if (!found)
+    {
+        puts("calc_myspu_id failed!!\n");
+        dead_beep();
+    }
+
+    return myspu_id;
+}
+
 struct coreos_header_s
 {
     uint64_t unknown0;
@@ -1934,7 +1962,7 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc, uint8_t use_spu)
 
     struct ElfPhdr_s *elfPhdrs = (struct ElfPhdr_s *)(dest + (elfHeader->e_phoff));
 
-    uint64_t spu_id = 0;
+    uint64_t spu_id = calc_myspu_id();
     uint64_t spu_old_mfc_sr1;
 
     if (use_spu)
@@ -2108,7 +2136,7 @@ FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void *destAddress, uint64
 
         //
 
-        uint64_t spu_id = 0;
+        uint64_t spu_id = calc_myspu_id();
         uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id);
 
         spu_zlib_decompress(spu_id, compressed_data, compressed_size, destAddress, &yyy);
@@ -2370,7 +2398,7 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
 
     struct ElfPhdr_s *elfPhdrs = (struct ElfPhdr_s *)(dest + (elfHeader->e_phoff));
 
-    uint64_t spu_id = 0;
+    uint64_t spu_id = calc_myspu_id();
     uint64_t spu_old_mfc_sr1;
 
     if (use_spu)

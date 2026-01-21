@@ -146,7 +146,7 @@ FUNC_DEF void Stage3()
     }
 
     {
-        uint64_t spu_id = 0;
+        uint64_t spu_id = calc_myspu_id();
         uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id);
         spu_stage3(spu_id);
         SpuAux_Uninit(spu_id, spu_old_mfc_sr1);

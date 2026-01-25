@@ -44,6 +44,7 @@ void Sc_Thread_x16_Stage0()
     Led_SetStatus(LED_STATUS_BLINK);
 
     Sc_Init();
+    Hold_Init();
 
     uint8_t wdslData0[32];
     uint8_t wdslData1[32];
@@ -125,6 +126,7 @@ void Sc_Thread_x32_Stage0()
     Led_SetStatus(LED_STATUS_BLINK);
 
     Sc_Init();
+    Hold_Init();
 
     uint8_t wdslData0[64];
 
@@ -219,9 +221,7 @@ void main()
     DebugUart_Init();
 #endif
 
-    Hold_Init();
     Led_Init();
-
     multicore_launch_core1(Core1_Thread);
 
 #if XDR_IS_X32

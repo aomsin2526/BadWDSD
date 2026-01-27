@@ -16,7 +16,7 @@ All **CECH-3000**
 
 <img width="220" height="285" alt="firefox_LGBpLg82NH" src="https://github.com/user-attachments/assets/6592b99e-f80f-4319-a450-10a894aa5164" />
 
-One way to know if your console is eMMC or not is to enter safe mode, If you see **Change system storage** option. It is eMMC.
+One way to know if your console is eMMC or not is enter safe mode. If you see **Change system storage** option, It is eMMC.
 
 Other way is try to install stagex. If it says **Flash is not NOR** then it is eMMC.
 

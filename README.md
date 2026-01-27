@@ -142,12 +142,14 @@ Simply reinstall firmware normally, then use **Install qCFW** with updated files
 
 Always use this method when possible. Simply reinstall firmware as normal. No extra steps required.
 
+If you want to uninstall the modchip, you can do so after this
+
 # Go back to OFW using BANKSEL pin
 
 **Avoid this unless absolutely needed.**
 
 1. Unplug your console
-2. Short BANKSEL pin to ground
+2. Short **BANKSEL** pin to ground
 3. Plug in your console, wait until modchip LED flashes very fast. Then it is successful. You can't turn on the console while this pin is shorted
 4. Unplug your console and unshort the pin. **If necessary** remove or use HOLD pin to disable the modchip
 5. Plug in your console again and turn it on, you will likely to get black screen, this is expected since dev_flash is still qCFW but you're on OFW now

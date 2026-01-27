@@ -18,7 +18,7 @@ All **CECH-3000**
 
 One way to know if your console is eMMC or not is enter safe mode. If you see **Change system storage** option, It is eMMC.
 
-Other way is try to install stagex. If it says **Flash is not NOR** then it is eMMC.
+Other way is try to install Stagex. If it says **Flash is not NOR** then it is eMMC.
 
 # What is qCFW?
 

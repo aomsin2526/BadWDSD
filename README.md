@@ -125,5 +125,16 @@ Short to ground to activate
 
 # Update qCFW
 
-You can't update qCFW while on qCFW, you must go back to OFW first.
+You can't update qCFW while on qCFW. you must go back to OFW first.
 Simply reinstall firmware normally, then use **Install qCFW** with updated files on USB again. No need to do anything else
+
+# Downgrading
+
+After booting the console with modchip, It is possible to downgrade the firmware up to 4.80. It can't be done in XMB. You must use safe mode.
+
+# Accessing Syscon
+
+You can't access syscon the old ways anymore. It must be done through modchip. Simply connect **DEBUG** pin of modchip into your UART adapter.
+
+<img width="1206" height="644" alt="Termite_s1m3OjonO8" src="https://github.com/user-attachments/assets/b8ba3786-d2ab-488f-b6c2-85032f0615de" />
+

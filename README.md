@@ -154,7 +154,7 @@ If you want to uninstall the modchip, you can do so after this
 2. Short **BANKSEL** pin to ground
 3. Plug in your console, wait until modchip LED flashes very fast. Then it is successful. You can't turn on the console while this pin is shorted
 4. Unplug your console and unshort the pin. **If necessary** remove or use HOLD pin to disable the modchip
-5. Plug in your console again and turn it on, you will likely to get black screen, this is expected since dev_flash is still qCFW but you're on OFW now
+5. Plug in your console again and turn it on, you will likely to get black screen. This is expected since dev_flash is still qCFW but you're on OFW now
 6. Enter safe mode and reinstall firmware normally to get full recovery
 
 # Downgrading
@@ -167,7 +167,7 @@ It is different from CFW. Simply follow these steps.
 
 1. Download [dtbImage.ps3.zfself](https://github.com/aomsin2526/ps3-petitboot-kexec-patched/releases) and put it into root of your USB drive
 2. Plug your USB drive into **RIGHTMOST** USB port of your ps3
-3. On XMB, use **Network -> Custom Firmware Tools -> OtherOS Tools -> Install OtherOS (qCFW) option**. It should show **Success**
+3. On XMB, use **Network -> Custom Firmware Tools -> OtherOS Tools -> Install OtherOS (qCFW)** option. It should show **Success**
 4. Use **Boot OtherOS (qCFW)** option. It should enter petitboot right away
 
 # Accessing Syscon

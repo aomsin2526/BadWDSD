@@ -20,9 +20,9 @@ All **CECH-3000**
 
 You still can't install CFW PUP, so new variant of CFW must be made. This is called **quasi-CFW**.
 
-It is heavily based from **Evilnat PEX CFW**. And will support every feature except: **Dumping eid_root_key and anything that needed it**.
+It is heavily based on **Evilnat PEX CFW**. And will support every feature except: **Dumping eid_root_key and anything that needed it**.
 
-Cobra must be active at all times or some feature will not work properly.
+[Cobra](https://github.com/aomsin2526/Cobra-PS3-qCFW) must be active at all times or some feature will not work properly.
 
 # qCFW quirks
 

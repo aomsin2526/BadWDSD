@@ -192,7 +192,7 @@ In very short summary, What modchip is doing is writing these code into ram at b
 
 ```
 stage_entry:
-    // Jump to 0x2401F031000, aka 0x31000 on NOR flash
+    // Jump to 0x2401F031000, aka 0x31000 on NOR flash where Stagex.bin is stored
 
     bl 4
     mflr %r3

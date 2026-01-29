@@ -49,7 +49,7 @@ then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract
 
 <img width="617" height="174" alt="explorer_71wt3KBo5T" src="https://github.com/user-attachments/assets/b63da1b3-3982-4703-b07b-8ae8b209349a" />
 
-2. Install HEN version that include qCFW installer
+2. Install **HEN 3.4.1 or later**
 3. Plug your USB drive into **RIGHTMOST** USB port of your ps3
 4. On XMB, Enable HEN then use **Network -> Hybrid Firmware Tools -> QCFW Installer -> Install Stagex** option. It must show **Success**
 5. If not already, Install the modchip by following **Installation (Hardware)** section

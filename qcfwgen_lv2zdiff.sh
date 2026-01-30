@@ -123,6 +123,4 @@ read -p "Modify outros now then press ENTER to continue"
 echo Generate CoreOS.bin...
 temp/coreos_tools create_coreos outros CoreOS.bin || exit 1
 
-rm CoreOS.bin.crc32
-Coreos_crc32=$(crc32 CoreOS.bin)
-echo -n $Coreos_crc32 | xxd -r -p > CoreOS.bin.crc32 || exit 1
+../qcfwgen_finalize.sh || exit 1

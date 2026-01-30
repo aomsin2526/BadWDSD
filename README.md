@@ -57,7 +57,7 @@ then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract
 7. Turn on the console. modchip LED should flash briefly with triple beep right after. This means exploit is successful. If your console keep turning off and on, check **CMD/CLK** wire and **Stagex**
 8. You should be on XMB now. now Enable HEN then use **Install qCFW** option
 9. If it tell you to reinstall firmware and try again, do it **ONCE**.
-10. Your screen will appear frozen. it is installing. This process take 10-20 minutes. If something goes wrong during this step, you should be still able to recover by entering safe mode and reinstall firmware normally
+10. Your screen will appear frozen. it is installing. This process take 10-20 minutes. **If something goes wrong during this step, you should be still able to recover by entering safe mode and reinstall firmware normally**
 11. Then it will reboot itself. you should be on qCFW and see Evilnat logo now.
 12. Congrats! qCFW installation is complete
 

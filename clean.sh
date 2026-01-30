@@ -34,6 +34,9 @@ rm BadWDSD-Stage/Stagex.bin
 rm BadWDSD-Stage/Stagex.elf
 rm BadWDSD-Stage/Stagex_aux.bin
 
+rm BadWDSD-Stage/Stagex.bin.crc32
+rm BadWDSD-Stage/Stagex_aux.bin.crc32
+
 rm BadWDSD-Stage/Aux/mymetldr.elf
 rm BadWDSD-Stage/Aux/mymetldr_debug.elf
 

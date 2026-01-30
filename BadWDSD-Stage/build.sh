@@ -40,3 +40,11 @@ cd Aux || exit 1
 cd .. || exit 1
 rm Stagex_aux.bin
 cp Aux/Stagex_aux.bin Stagex_aux.bin || exit 1
+
+rm Stagex.bin.crc32
+Stagex_crc32=$(crc32 Stagex.bin)
+echo -n $Stagex_crc32 | xxd -r -p > Stagex.bin.crc32 || exit 1
+
+rm Stagex_aux.bin.crc32
+Stagex_aux_crc32=$(crc32 Stagex_aux.bin)
+echo -n $Stagex_aux_crc32 | xxd -r -p > Stagex_aux.bin.crc32 || exit 1

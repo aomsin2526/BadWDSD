@@ -18,7 +18,7 @@ void Sc_RxFn()
 
         bool trigger = false;
 
-        if (strstr(scContext.rxBuf, "XDR Link"))
+        if (strstr(scContext.rxBuf, "XDR Link successfully"))
             trigger = true;
 
         if (trigger)

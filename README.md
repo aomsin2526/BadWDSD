@@ -117,6 +117,16 @@ Exclude power and ground, you only need to solder 4 wires that marked red **(CMD
 
 It is possible to power the modchip using external power as long as it is active during ps3 standby
 
+# Wiring guides
+
+CMD/CLK wire should not be too thick
+
+Success rate depends on quality of your soldering and wiring.
+
+Keep all wire short as much as you can, **GND** is the most important one. and avoid routing to noisy area.
+
+When done properly, success rate should be 100%.
+
 # Pin description
 
 **SIGNAL PIN:**

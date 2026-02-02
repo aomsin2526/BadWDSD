@@ -16,15 +16,15 @@ All **CECH-3000**
 
 <img width="220" height="285" alt="firefox_LGBpLg82NH" src="https://github.com/user-attachments/assets/6592b99e-f80f-4319-a450-10a894aa5164" />
 
-One way to know if your console is eMMC or not is enter safe mode. If you see **Change system storage** option, It is eMMC.
+One way to know if your console is eMMC or not is enter safe mode. If you see the **Change system storage** option, It is eMMC.
 
-Other way is try to install Stagex. If it says **Flash is not NOR** then it is eMMC.
+Another way is try to install Stagex. If it says **Flash is not NOR** then it is eMMC.
 
 # What is qCFW?
 
-You still can't install CFW PUP, so new variant of CFW must be made. This is called **quasi-CFW**.
+You still can't install CFW PUP, so a new variant of CFW must be made. This is called **quasi-CFW**.
 
-It is heavily based on **Evilnat PEX CFW**. And will support every feature except: **Dumping eid_root_key and anything that needed it**.
+It is heavily based on **Evilnat PEX CFW**. It will support every feature except: **Dumping eid_root_key and anything that needed it**.
 
 [Cobra](https://github.com/aomsin2526/Cobra-PS3-qCFW) must be active at all times or some feature will not work properly.
 
@@ -42,7 +42,7 @@ To recover, use **BANKSEL** pin on the modchip to go back to OFW.
 
 # Installation (Software)
 
-**FOR FIRST INSTALLATION, BACKUP FLASH FIRST!!!. IF SOMETHING GOES TOO WRONG AND YOU DON'T HAVE BACKUP, YOUR CONSOLE MAY BE PERMANENTLY BRICKED**
+**FOR THE FIRST INSTALLATION, BACKUP FLASH FIRST!!!. IF SOMETHING GOES TOO WRONG AND YOU DON'T HAVE BACKUP, YOUR CONSOLE MAY BE PERMANENTLY BRICKED**
 
 1. Prepare the USB drive by **DELETING old qcfw folder if existed, DO NOT OVERWRITE!!**
 then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract it into your drive like this:
@@ -50,14 +50,14 @@ then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract
 <img width="617" height="174" alt="explorer_71wt3KBo5T" src="https://github.com/user-attachments/assets/b63da1b3-3982-4703-b07b-8ae8b209349a" />
 
 2. Install **PS3HEN 3.4.1 FINAL or later**
-3. Plug your USB drive into **RIGHTMOST** USB port of your ps3
+3. Plug your USB drive into the **RIGHTMOST** USB port of your ps3
 4. On XMB, Enable HEN then use **Network -> Hybrid Firmware Tools -> qCFW Options -> Install Stagex** option. It must show **Success**
 5. If not already, Install the modchip by following **Installation (Hardware)** section
-6. After modchip installed and power plugged in, wait until LED of modchip becomes solid. If it doesn't solid after a while, check **SC_RX/SC_TX** wire
-7. Turn on the console. modchip LED should flash briefly with triple beep right after. This means exploit is successful. If your console keep turning off and on, check **CMD/CLK** wire and **Stagex**
+6. After modchip is installed and power is plugged in, wait until LED of modchip becomes solid. If it doesn't go solid after a while, check **SC_RX/SC_TX** wire
+7. Turn on the console. modchip LED should flash briefly with triple beep right after. This means exploit is successful. If your console keeps turning off and on, check **CMD/CLK** wire and **Stagex**
 8. You should be on XMB now. now Enable HEN then use **Install qCFW** option
-9. If it tell you to reinstall firmware and try again, do it **ONCE**.
-10. Your screen will appear frozen. it is installing. This process take 10-20 minutes. **If something goes wrong during this step, you should be still able to recover by entering safe mode and reinstall firmware normally**
+9. If it tells you to reinstall firmware and try again, do it **ONCE**.
+10. Your screen will appear frozen. it is installing. This process takes 10-20 minutes. **If something goes wrong during this step, you should be still able to recover by entering safe mode and reinstall firmware normally**
 11. Then it will reboot itself. you should be on qCFW and see Evilnat logo now.
 12. Congrats! qCFW installation is complete
 
@@ -109,9 +109,9 @@ Currently, **Raspberry Pi Pico (RP2040)** and **RP2040-Zero** are supported.
 </p>
 </details>
 
-To flash .uf2 file (it is included in qCFW zip), simply connect modchip USB port into your PC while pressing **BOOTSEL** button. Then new drive will appear, simply drag .uf2 file into it.
+To flash the .uf2 file (it is included in qCFW zip), simply connect modchip USB port into your PC while pressing **BOOTSEL** button. Then new drive will appear, simply drag .uf2 file into it.
 
-You should see LED blinking. Flash successful and ready to use. You can disconnect it from your PC.
+You should see LED blinking. Flash is successful and the modchip ready to use. You can disconnect it from your PC.
 
 Exclude power and ground, you only need to solder 4 wires that marked red **(CMD, CLK, SC_RX, SC_TX)**. Other pin is optional.
 
@@ -156,7 +156,7 @@ You can't update qCFW while on qCFW. you must go back to OFW first.
 
 Simply reinstall firmware normally, then use **Install qCFW** option with updated files on USB again. No need to do anything else
 
-**When updating files on USB, delete whole qcfw folder first. Don't overwrite or it may causes problem.**
+**When updating files on USB, delete the whole qcfw folder first. Don't overwrite or it may cause problem.**
 
 # Go back to OFW using PUP method (Recommended)
 
@@ -168,7 +168,7 @@ If you want to uninstall the modchip, you can do so after this
 
 **Avoid this unless absolutely needed.**
 
-**DO NOT GO STRAIGHT TO THIS PIN WITHOUT TRYING TO BOOT THE CONSOLE WITHOUT MODCHIP FIRST!, IF IT SHUT IFSELF OFF, THEN YOU CAN FOLLOW BELOW**
+**DO NOT GO STRAIGHT TO THIS PIN WITHOUT TRYING TO BOOT THE CONSOLE WITHOUT MODCHIP FIRST!, IF IT SHUTS ITSELF OFF, THEN YOU CAN FOLLOW THE INSTRUCTIONS BELOW**
 
 1. Unplug your console
 2. Short **BANKSEL** pin to ground
@@ -179,7 +179,7 @@ If you want to uninstall the modchip, you can do so after this
 
 # Recover from bad Stagex.bin or CoreOS.bin flash
 
-No worries, your console isn't really bricked. **FIRST, disable the modchip then try to boot the console if it boots then all is good.** If it shut itself off, Simply follow **Go back to OFW using BANKSEL pin** section above. But this time disable modchip before boot as well.
+No worries, your console isn't really bricked. **FIRST, disable the modchip then try to boot the console if it boots then all is good.** If it shuts itself off, Simply follow **Go back to OFW using BANKSEL pin** section above. But this time disable modchip before boot as well.
 
 # Downgrading
 
@@ -202,7 +202,7 @@ You can't access syscon the old ways anymore. It must be done through modchip. S
 
 # NoBT
 
-TODO. It requires LITE pin and hardware flasher for first installation if you are already on update loop.
+TODO. It requires LITE pin and hardware flasher for the first installation if you are already on update loop.
 
 # eMMC Support?
 

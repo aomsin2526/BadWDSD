@@ -49,7 +49,7 @@ then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract
 
 <img width="617" height="174" alt="explorer_71wt3KBo5T" src="https://github.com/user-attachments/assets/b63da1b3-3982-4703-b07b-8ae8b209349a" />
 
-2. Install **PS3HEN 3.4.1 or later**
+2. Install **PS3HEN 3.4.1 FINAL or later**
 3. Plug your USB drive into **RIGHTMOST** USB port of your ps3
 4. On XMB, Enable HEN then use **Network -> Hybrid Firmware Tools -> qCFW Options -> Install Stagex** option. It must show **Success**
 5. If not already, Install the modchip by following **Installation (Hardware)** section
@@ -57,7 +57,7 @@ then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract
 7. Turn on the console. modchip LED should flash briefly with triple beep right after. This means exploit is successful. If your console keep turning off and on, check **CMD/CLK** wire and **Stagex**
 8. You should be on XMB now. now Enable HEN then use **Install qCFW** option
 9. If it tell you to reinstall firmware and try again, do it **ONCE**.
-10. Your screen will appear frozen. it is installing. This process take 10-20 minutes. If something goes wrong during this step, you should be still able to recover by entering safe mode and reinstall firmware normally
+10. Your screen will appear frozen. it is installing. This process take 10-20 minutes. **If something goes wrong during this step, you should be still able to recover by entering safe mode and reinstall firmware normally**
 11. Then it will reboot itself. you should be on qCFW and see Evilnat logo now.
 12. Congrats! qCFW installation is complete
 
@@ -116,6 +116,16 @@ You should see LED blinking. Flash successful and ready to use. You can disconne
 Exclude power and ground, you only need to solder 4 wires that marked red **(CMD, CLK, SC_RX, SC_TX)**. Other pin is optional.
 
 It is possible to power the modchip using external power as long as it is active during ps3 standby
+
+# Wiring guides
+
+CMD/CLK wire should not be too thick
+
+Success rate depends on quality of your soldering and wiring.
+
+Keep all wire short as much as you can, **GND** is the most important one. and avoid routing to noisy area.
+
+When done properly, success rate should be 100%.
 
 # Pin description
 
@@ -213,3 +223,28 @@ stage_entry:
 ```
 
 Do we have something like 0x2401F031000 on eMMC? If answer is yes, then eMMC can be supported (with more porting work).
+
+# New hvcalls
+
+Available in both qCFW and HEN
+
+```
+// lv1_peek64(34)
+// in: r3 = addr
+// out: r3 = value
+
+// lv1_poke64(35)
+// in: r3 = addr, r4 = value
+// out: r3 = 0
+
+// lv1_exec(36)
+// in: r3-r8 = args, r9 = addr
+
+// lv1_peek32(37)
+// in: r3 = addr
+// out: r3 = value
+
+// lv1_poke32(38)
+// in: r3 = addr, r4 = value
+// out: r3 = 0
+```

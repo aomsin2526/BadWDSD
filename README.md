@@ -223,3 +223,28 @@ stage_entry:
 ```
 
 Do we have something like 0x2401F031000 on eMMC? If answer is yes, then eMMC can be supported (with more porting work).
+
+# New hvcalls
+
+Available in both qCFW and HEN
+
+```
+// lv1_peek64(34)
+// in: r3 = addr
+// out: r3 = value
+
+// lv1_poke64(35)
+// in: r3 = addr, r4 = value
+// out: r3 = 0
+
+// lv1_exec(36)
+// in: r3-r8 = args, r9 = addr
+
+// lv1_peek32(37)
+// in: r3 = addr
+// out: r3 = value
+
+// lv1_poke32(38)
+// in: r3 = addr, r4 = value
+// out: r3 = 0
+```

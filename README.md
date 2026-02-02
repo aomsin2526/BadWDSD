@@ -55,6 +55,9 @@ then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract
 5. If not already, Install the modchip by following **Installation (Hardware)** section
 6. After modchip installed and power plugged in, wait until LED of modchip becomes solid. If it doesn't solid after a while, check **SC_RX/SC_TX** wire
 7. Turn on the console. modchip LED should flash briefly with triple beep right after. This means exploit is successful. If your console keep turning off and on, check **CMD/CLK** wire and **Stagex**
+   
+**!!! If modchip LED didn't flash briefly and console is GLOD, CMD/CLK resistor may be damaged !!!**
+
 8. You should be on XMB now. now Enable HEN then use **Install qCFW** option
 9. If it tell you to reinstall firmware and try again, do it **ONCE**.
 10. Your screen will appear frozen. it is installing. This process take 10-20 minutes. **If something goes wrong during this step, you should be still able to recover by entering safe mode and reinstall firmware normally**

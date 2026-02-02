@@ -120,7 +120,7 @@ Exclude power and ground, you only need to solder 4 wires that marked red **(CMD
 
 It is possible to power the modchip using external power as long as it is active during ps3 standby
 
-**You should measure the resistance of CMD/CLK wire. Measuring to ground should get around 55 ohm. If it doesn't then something is wrong.**
+**You should measure the resistance of CMD/CLK wire. Resistance to ground should get around 55 ohm. If it doesn't then something is wrong.**
 
 # Wiring guides
 

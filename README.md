@@ -62,7 +62,8 @@ then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract
 9. If it tell you to reinstall firmware and try again, do it **ONCE**.
 10. Your screen will appear frozen. it is installing. This process take 10-20 minutes. **If something goes wrong during this step, you should be still able to recover by entering safe mode and reinstall firmware normally**
 11. Then it will reboot itself. you should be on qCFW and see Evilnat logo now.
-12. Congrats! qCFW installation is complete
+12. **!! You should "Sync date & time with internet" at least once after install to avoid issues such as XMB hangs !!**
+13. Congrats! qCFW installation is complete
 
 From now on, modchip will be required to boot the console until you go back to OFW again
 

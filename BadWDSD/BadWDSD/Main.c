@@ -28,7 +28,7 @@ void Watchdog()
         if ((t2 - t1) > 2500)
         {
             Sc_Puts("shutdown\r\n");
-            busy_wait_ms(2500);
+            busy_wait_ms(4000);
 
             Sc_Puts("powersw\r\n");
             break;

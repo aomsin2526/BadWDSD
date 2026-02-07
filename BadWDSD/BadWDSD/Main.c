@@ -210,8 +210,10 @@ void Core1_Thread()
 
 void main()
 {
+#if 0
     vreg_set_voltage(VREG_VOLTAGE_1_30);
     set_sys_clock_khz(250000, true);
+#endif
 
 #if !PICO_IS_ZERO
     GPIO_FLOATTOHIGH(TRISTATE_PIN_ID);

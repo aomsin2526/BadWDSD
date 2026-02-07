@@ -1,6 +1,7 @@
 // stage4j max size = 644
 
 #pragma GCC optimize("align-functions=8")
+#pragma GCC optimize("O1")
 
 typedef char int8_t;
 typedef unsigned char uint8_t;

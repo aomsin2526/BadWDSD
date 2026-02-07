@@ -1,6 +1,3 @@
-#pragma GCC push_options
-#pragma GCC optimize("O0")
-
 FUNC_DEF void SpuAux_Uninit(uint64_t spu_id, uint64_t spu_old_mfc_sr1)
 {
     //puts("SpuAux_Uninit()\n");
@@ -469,5 +466,3 @@ FUNC_DEF void spu_stage2(uint64_t spu_id, const struct Stagex_spu_job_stage2_con
 
     puts("spu_stage2() done.\n");
 }
-
-#pragma GCC pop_options

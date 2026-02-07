@@ -22,16 +22,11 @@
 .global stage_entry
 
 stage_entry:
-    //r11 = 0x10003;
-    //li %r11, 0x7fff
-    //addi %r11, %r11, 0x7fff
-    //addi %r11, %r11, 0x5
-
     li %r4, 0x6996
     li %r5, 0x30
     mr %r6, %r28
 
-    //r11 = 0x10030
+    // r11 = 0x10030
     addis %r11, %r5, 0x1
 
     sc

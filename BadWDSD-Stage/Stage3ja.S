@@ -18,7 +18,7 @@ stage_entry:
     li %r4, 0x6996
     li %r5, 0x31
 
-    //r11 = 0x10031
+    // r11 = 0x10031
     addis %r11, %r5, 0x1
 
     sc

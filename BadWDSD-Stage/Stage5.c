@@ -1,9 +1,6 @@
 // note: log should be disabled in normal use
 // STAGE5_LOG_ENABLED
 
-#pragma GCC push_options
-#pragma GCC optimize("O0")
-
 FUNC_DEF void Stage5(uint64_t type)
 {
     //lv1_puts("BadWDSD Stage5 by Kafuu(aomsin2526)\n");
@@ -55,16 +52,13 @@ FUNC_DEF void Stage5(uint64_t type)
     //lv1_puts("Stage5 done.\n");
 }
 
-__attribute__((section("main5"))) void stage5_main()
+__attribute__((section("main5"))) void stage5_main(
+    uint64_t in_r3, uint64_t in_r4, uint64_t in_r5, uint64_t in_r6, uint64_t in_r7, uint64_t in_r8, uint64_t in_r9, uint64_t in_r10
+)
 {
-    register uint64_t r10 asm("r10");
-    uint64_t r10_2 = r10;
-
     sc_puts_init();
-    Stage5(r10_2);
+    Stage5(in_r10);
 }
-
-#pragma GCC pop_options
 
 __attribute__((noreturn, section("entry5"))) void stage5_entry()
 {
@@ -127,9 +121,6 @@ __attribute__((noreturn, section("entry5"))) void stage5_entry()
 
     // set lv1_rtoc
     asm volatile("mr %0, 2" : "=r"(lv1_rtoc)::);
-
-    // set interrupt_depth to 0
-    interrupt_depth = 0;
 
     // set is_lv1 to 0x9666 (stage5)
     is_lv1 = 0x9666;

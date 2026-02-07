@@ -1,3 +1,19 @@
+#pragma GCC optimize("align-functions=8")
+#pragma GCC diagnostic ignored "-Wunused-function"
+
+#define FUNC_DECL __attribute__((section("code")))
+#define FUNC_DEF FUNC_DECL
+
+// branch code
+#define FUNC_DECL_NONSTATIC __attribute__((section("bcode")))
+#define FUNC_DEF_NONSTATIC FUNC_DECL_NONSTATIC
+
+#define OPTIMIZE_ON_PUSH _Pragma("GCC push_options"); _Pragma("GCC optimize \"O1\"")
+#define OPTIMIZE_ON_POP _Pragma("GCC pop_options")
+
+#define OPTIMIZE_OFF_PUSH _Pragma("GCC push_options"); _Pragma("GCC optimize \"O0\"")
+#define OPTIMIZE_OFF_POP _Pragma("GCC pop_options")
+
 #define SC_PUTS_BUFFER_ENABLED 1
 
 //#define LOGGING_ENABLED 1
@@ -8,15 +24,11 @@
 #define ZLIB_SPU_ONLY_ENABLED 1
 #define STAGE0_DECRYPTLV0SELF_SPU_ENABLED 1
 
-#pragma GCC optimize("align-functions=8")
-#pragma GCC diagnostic ignored "-Wunused-function"
+//#define DECRYPTLV2SELF_ENABLED 1
 
-#define FUNC_DECL __attribute__((section("code")))
-#define FUNC_DEF FUNC_DECL
-
-// branch code
-#define FUNC_DECL_NONSTATIC __attribute__((section("bcode")))
-#define FUNC_DEF_NONSTATIC FUNC_DECL_NONSTATIC
+#if DECRYPTLV2SELF_ENABLED
+#define AES_ENABLED 1
+#endif
 
 typedef char int8_t;
 typedef unsigned char uint8_t;
@@ -110,15 +122,15 @@ FUNC_DECL void puts(const char *str);
 
 FUNC_DECL void print_hex(uint64_t v);
 
-//
+// reserve register...
 
-register uint64_t r13 asm("r13");
-register uint64_t r14 asm("r14");
-register uint64_t r15 asm("r15");
-register uint64_t r16 asm("r16");
+//register uint64_t r13 asm("r13");
+//register uint64_t r14 asm("r14");
+//register uint64_t r15 asm("r15");
+//register uint64_t r16 asm("r16");
 
-register uint64_t r23 asm("r23");
-register uint64_t r24 asm("r24");
+//register uint64_t r23 asm("r23");
+//register uint64_t r24 asm("r24");
 
 register uint64_t is_lv1 asm("r17"); // 0x9669, 0x9666 (stage5)
 register uint64_t lv1_rtoc asm("r18");
@@ -129,7 +141,7 @@ register uint64_t stage_rtoc asm("r20");
 register uint64_t stage_sp asm("r21");
 register uint64_t stage_zero asm("r22");
 
-register uint64_t interrupt_depth asm("r26");
+//
 
 struct Stagex_Context_s
 {
@@ -1429,7 +1441,7 @@ FUNC_DEF void XdrRegWrite(uint32_t data)
     eieio();
 }
 
-uint64_t calc_myspu_id()
+FUNC_DEF uint64_t calc_myspu_id()
 {
     uint8_t found = 0;
     uint64_t myspu_id = 0;
@@ -1762,8 +1774,10 @@ struct SceMetaKey_s
     uint64_t key[2];
 };
 
+#if AES_ENABLED
 // can't compile as seperate files because of global registers
 #include "Aes/Aes.c"
+#endif
 
 #if !STAGE0_DECRYPTLV0SELF_SPU_ENABLED
 
@@ -2185,8 +2199,7 @@ FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void *destAddress, uint64
     *destSize = xxx;
 }
 
-#pragma GCC push_options
-//#pragma GCC optimize("O0")
+#if DECRYPTLV2SELF_ENABLED
 
 FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, uint8_t use_spu)
 {
@@ -2535,7 +2548,7 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
     puts("DecryptLv2Self() done.\n");
 }
 
-#pragma GCC pop_options
+#endif
 
 #include "Stage1.c"
 #include "Stage2.c"
@@ -2543,9 +2556,6 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
 #include "Stage4.c"
 #include "Stage5.c"
 #include "Stage6.c"
-
-#pragma GCC push_options
-#pragma GCC optimize("O0")
 
 void stage_link_entry()
 {
@@ -2555,5 +2565,3 @@ void stage_link_entry()
     asm volatile("bl stage5_entry");
     asm volatile("bl stage6_entry");
 }
-
-#pragma GCC pop_options

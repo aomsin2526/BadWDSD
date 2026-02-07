@@ -239,9 +239,6 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
     asm volatile("mflr %0" : "=r"(stage_entry_ra)::);
     stage_entry_ra -= 4;
 
-    // set interrupt_depth to 0
-    interrupt_depth = 0;
-
     // set is_lv1 to 0
     is_lv1 = 0;
 

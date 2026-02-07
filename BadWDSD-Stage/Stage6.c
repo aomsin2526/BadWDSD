@@ -1,6 +1,3 @@
-#pragma GCC push_options
-#pragma GCC optimize("O0")
-
 struct __attribute__((aligned(8))) mymetldr_context_s
 {
     uint64_t myldrElfAddress;
@@ -199,6 +196,8 @@ FUNC_DEF void Stage6_RequestExitIsolation(uint64_t spu_id)
 
 FUNC_DEF void Stage6_UpdateSPUStatusAndTransitionNotifierInShadowRegArea(uint64_t r3_2, uint64_t r4_2)
 {
+    //lv1_puts("Stage6_UpdateSPUStatusAndTransitionNotifierInShadowRegArea()\n");
+
     uint64_t x = *(uint64_t*)r3_2;
     uint64_t shadow_addr = *(uint64_t*)(r3_2 + 8);
 
@@ -245,21 +244,20 @@ FUNC_DEF void Stage6_UpdateSPUStatusAndTransitionNotifierInShadowRegArea(uint64_
     *(uint64_t*)(shadow_addr + 0xf10) = someval;
 }
 
-__attribute__((section("main6"))) uint64_t stage6_main(uint64_t r3_2, uint64_t r4_2)
+__attribute__((section("main6"))) uint64_t stage6_main(
+    uint64_t in_r3, uint64_t in_r4, uint64_t in_r5, uint64_t in_r6, uint64_t in_r7, uint64_t in_r8, uint64_t in_r9, uint64_t in_r10
+)
 {
-    register uint64_t r10 asm("r10");
-    uint64_t r10_2 = r10;
-
     sc_puts_init();
 
-    if (r10_2 == 1)
-        Stage6_IsoLoadRequest(r3_2);
-    else if (r10_2 == 2)
-        return Stage6_GetSpuStatus(r3_2);
-    else if (r10_2 == 3)
-        Stage6_RequestExitIsolation(r3_2);
-    else if (r10_2 == 4)
-        Stage6_UpdateSPUStatusAndTransitionNotifierInShadowRegArea(r3_2, r4_2);
+    if (in_r10 == 1)
+        Stage6_IsoLoadRequest(in_r3);
+    else if (in_r10 == 2)
+        return Stage6_GetSpuStatus(in_r3);
+    else if (in_r10 == 3)
+        Stage6_RequestExitIsolation(in_r3);
+    else if (in_r10 == 4)
+        Stage6_UpdateSPUStatusAndTransitionNotifierInShadowRegArea(in_r3, in_r4);
     else
     {
         lv1_puts("stage6_main bad r10!\n");
@@ -268,8 +266,6 @@ __attribute__((section("main6"))) uint64_t stage6_main(uint64_t r3_2, uint64_t r
 
     return 0;
 }
-
-#pragma GCC pop_options
 
 __attribute__((noreturn, section("entry6"))) void stage6_entry()
 {
@@ -331,9 +327,6 @@ __attribute__((noreturn, section("entry6"))) void stage6_entry()
 
     // set lv1_rtoc
     asm volatile("mr %0, 2" : "=r"(lv1_rtoc)::);
-
-    // set interrupt_depth to 0
-    interrupt_depth = 0;
 
     // set is_lv1 to 0x9669
     is_lv1 = 0x9669;

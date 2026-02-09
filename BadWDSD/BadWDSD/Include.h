@@ -26,6 +26,7 @@
 
 #include "pico/multicore.h"
 #include "pico/rand.h"
+#include "pico/mutex.h"
 
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 
@@ -314,9 +315,12 @@ struct ScContext_s
 extern volatile bool scIsInited;
 extern volatile struct ScContext_s scContext;
 
+extern recursive_mutex_t scMutex;
+
 extern void Sc_Thread();
 
 extern bool Sc_IsInited();
+extern bool Sc_IsReadyForUser();
 
 #if PICO_IS_ZERO
 static const uint32_t SC_LITE_PIN_ID = 3;
@@ -337,7 +341,6 @@ extern void Sc_ClearTrigger();
 extern bool Sc_GetSuccess();
 extern void Sc_ClearSuccess();
 
-extern void Sc_Putc(char c);
 extern void Sc_Puts(const char* buf);
 
 struct Sc_SendCommandContext_s

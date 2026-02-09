@@ -1,7 +1,10 @@
 #include "Include.h"
 
 volatile bool scIsInited = false;
+volatile bool scIsReadyForUser = false;
 volatile struct ScContext_s scContext;
+
+recursive_mutex_t scMutex;
 
 void Sc_RxFn()
 {
@@ -123,6 +126,11 @@ bool Sc_IsInited()
     return scIsInited;
 }
 
+bool Sc_IsReadyForUser()
+{
+    return scIsReadyForUser;
+}
+
 bool Sc_GetScLite()
 {
     return !Gpio_GetOnce(SC_LITE_PIN_ID);
@@ -135,8 +143,16 @@ bool Sc_GetScBanksel()
 
 volatile struct Sc_SendCommandContext_s cmdCtx;
 
+WORD sc2tb_key_schedule[60];
+uint64_t sc2tb_key[2];
+
+WORD tb2sc_key_schedule[60];
+uint64_t tb2sc_key[2];
+
 void Sc_Init()
 {
+    recursive_mutex_init(&scMutex);
+
     scContext.uartId = uart0;
 
     scContext.rxBufLen = 0;
@@ -182,18 +198,12 @@ void Sc_Init()
 
         // 71f03f184c01c5ebc3f6a22a42ba9525
 
-        WORD sc2tb_key_schedule[60];
-        uint64_t sc2tb_key[2];
-
         sc2tb_key[0] = swap_uint64(0x71f03f184c01c5eb);
         sc2tb_key[1] = swap_uint64(0xc3f6a22a42ba9525);
 
         aes_key_setup((BYTE *)sc2tb_key, sc2tb_key_schedule, 128);
 
         // 907e730f4d4e0a0b7b75f030eb1d9d36
-
-        WORD tb2sc_key_schedule[60];
-        uint64_t tb2sc_key[2];
 
         tb2sc_key[0] = swap_uint64(0x907e730f4d4e0a0b);
         tb2sc_key[1] = swap_uint64(0x7b75f030eb1d9d36);
@@ -385,10 +395,20 @@ void Sc_Init()
 
             if (banksel)
             {
-                sprintf(cmdCtx.cmd, "w 1224 %s\r\n", banksel ? "00" : "ff");
-                sprintf(cmdCtx.expectedResponse, "OK 00000000");
+                // clear request_os_bank_indicator
+                {
+                    sprintf(cmdCtx.cmd, "w f02 ff\r\n");
+                    sprintf(cmdCtx.expectedResponse, "OK 00000000");
 
-                Sc_SendCommand(&cmdCtx);
+                    Sc_SendCommand(&cmdCtx);
+                }
+
+                {
+                    sprintf(cmdCtx.cmd, "w 1224 00\r\n");
+                    sprintf(cmdCtx.expectedResponse, "OK 00000000");
+
+                    Sc_SendCommand(&cmdCtx);
+                }
             }
 
             {
@@ -413,10 +433,20 @@ void Sc_Init()
 
             if (banksel)
             {
-                sprintf(cmdCtx.cmd, "w 48c24 %s\r\n", banksel ? "00" : "ff");
-                sprintf(cmdCtx.expectedResponse, "w complete!");
+                // clear request_os_bank_indicator
+                {
+                    sprintf(cmdCtx.cmd, "w 3002 ff\r\n");
+                    sprintf(cmdCtx.expectedResponse, "w complete!");
 
-                Sc_SendCommand(&cmdCtx);
+                    Sc_SendCommand(&cmdCtx);
+                }
+
+                {
+                    sprintf(cmdCtx.cmd, "w 48c24 00\r\n");
+                    sprintf(cmdCtx.expectedResponse, "w complete!");
+
+                    Sc_SendCommand(&cmdCtx);
+                }
             }
 
             {
@@ -449,6 +479,9 @@ void Sc_Init()
             }
         }
     }
+
+    scIsReadyForUser = true;
+    sync();
 }
 
 bool Sc_GetTrigger()
@@ -471,10 +504,15 @@ void Sc_ClearSuccess()
     scContext.success = false;
 }
 
+// internal use only!
 void Sc_Putc(char c)
 {
     if (!Sc_IsInited())
+    {
+        PrintLog("Sc is not inited!, dead!\n");
+        dead();
         return;
+    }
 
 #if SC_IS_SW
 
@@ -538,19 +576,33 @@ void Sc_Putc(char c)
 void Sc_Puts(const char *buf)
 {
     if (!Sc_IsInited())
+    {
+        PrintLog("Sc is not inited!, dead!\n");
+        dead();
         return;
+    }
+
+    recursive_mutex_enter_blocking(&scMutex);
 
     while (*buf != 0)
     {
         Sc_Putc(*buf);
         ++buf;
     }
+
+    recursive_mutex_exit(&scMutex);
 }
 
 void Sc_SendCommand(volatile struct Sc_SendCommandContext_s *ctx)
 {
     if (!Sc_IsInited())
+    {
+        PrintLog("Sc is not inited!, dead!\n");
+        dead();
         return;
+    }
+
+    recursive_mutex_enter_blocking(&scMutex);
 
     ctx->done = false;
     sync();
@@ -570,4 +622,6 @@ void Sc_SendCommand(volatile struct Sc_SendCommandContext_s *ctx)
         if ((t2 - t1) > 2000)
             watchdog_reboot(0, 0, 0);
     }
+
+    recursive_mutex_exit(&scMutex);
 }

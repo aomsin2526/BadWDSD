@@ -14,6 +14,9 @@ void DebugUart_RxFn()
     {
         char ch = uart_getc(debugUartContext.uartId);
 
+        if (!Sc_IsReadyForUser())
+            continue;
+
         if (ch == 0)
             continue;
 

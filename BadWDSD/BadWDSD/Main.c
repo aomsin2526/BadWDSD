@@ -27,10 +27,10 @@ void Watchdog()
 
         if ((t2 - t1) > 2500)
         {
-            Sc_Puts("shutdown\r\n");
+            Sc_Puts("shutdown");
             busy_wait_ms(4000);
 
-            Sc_Puts("powersw\r\n");
+            Sc_Puts("powersw");
             break;
         }
     }

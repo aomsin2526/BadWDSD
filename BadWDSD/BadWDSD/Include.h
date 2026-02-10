@@ -30,7 +30,7 @@
 
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 
-#define sync() __dsb();
+#define sync() __dsb()
 
 extern void dead();
 
@@ -103,31 +103,16 @@ static const uint32_t XDR_GPO_CMD_PIN_ID2 = 11;
 
 #endif
 
-#if 0
-
 #define XDR_GPO_DELAY_ENABLED 1
-#define XDR_GPO_DELAY_VALUE_IN_NS 300 // 1000ns/1mhz per cycle
-
-#if XDR_GPO_DELAY_ENABLED
-#define XDR_GPO_DELAY() WaitInNs(XDR_GPO_DELAY_VALUE_IN_NS)
-#else
-#define XDR_GPO_DELAY()
-#endif
-
-#else
-
-#define XDR_GPO_DELAY_ENABLED 1
-//#define XDR_GPO_DELAY_VALUE_IN_US 1 // 4000ns/250khz per cycle
+#define XDR_GPO_DELAY_VALUE_IN_US 1 // 4000ns/250khz per cycle
 //#define XDR_GPO_DELAY_VALUE_IN_US 2 // 8000ns/125khz per cycle
-#define XDR_GPO_DELAY_VALUE_IN_US 4 // 16000ns/62.5khz per cycle
+//#define XDR_GPO_DELAY_VALUE_IN_US 4 // 16000ns/62.5khz per cycle
 //#define XDR_GPO_DELAY_VALUE_IN_US 8 // 32000ns/31.25khz per cycle
 
 #if XDR_GPO_DELAY_ENABLED
 #define XDR_GPO_DELAY() busy_wait_us(XDR_GPO_DELAY_VALUE_IN_US)
 #else
 #define XDR_GPO_DELAY()
-#endif
-
 #endif
 
 #if 0
@@ -291,17 +276,17 @@ static const uint32_t SC_UART_BAUD = 57600;
 static const uint32_t SC_UART_BAUD = 115200;
 #endif
 
+#define SC_RXBUF_SIZE 1024
+#define SC_TXBUF_SIZE 1024
+
 struct Sc_SendCommandContext_s;
 
 struct ScContext_s
 {
     volatile uart_inst_t* uartId;
 
-    volatile char rxBuf[1024];
-    volatile uint32_t rxBufLen;
-
-    volatile char txBuf[2048];
-    volatile uint32_t txBufLen;
+    volatile char rxBuf[SC_RXBUF_SIZE];
+    volatile uint32_t rxBufCurLen;
 
     volatile bool trigger;
 
@@ -311,11 +296,6 @@ struct ScContext_s
 
     volatile uint64_t lastScTxTimeInMs;
 };
-
-extern volatile bool scIsInited;
-extern volatile struct ScContext_s scContext;
-
-extern recursive_mutex_t scMutex;
 
 extern void Sc_Thread();
 
@@ -341,15 +321,15 @@ extern void Sc_ClearTrigger();
 extern bool Sc_GetSuccess();
 extern void Sc_ClearSuccess();
 
-extern void Sc_Puts(const char* buf);
+extern void Sc_Puts(const char* cmd);
 
 struct Sc_SendCommandContext_s
 {
-    volatile char cmd[1024];
+    volatile char cmd[SC_TXBUF_SIZE];
 
-    volatile char expectedResponse[2048];
+    volatile char expectedResponse[SC_RXBUF_SIZE];
 
-    volatile char response[2048];
+    volatile char response[SC_RXBUF_SIZE];
     volatile uint32_t responseLen;
 
     volatile bool done;
@@ -366,16 +346,15 @@ static const uint32_t DEBUG_UART_TX_PIN_ID = 4;
 
 static const uint32_t DEBUG_UART_BAUD = 576000;
 
+#define DEBUG_UART_TXBUF_SIZE SC_TXBUF_SIZE
+
 struct DebugUartContext_s
 {
     uart_inst_t* uartId;
 
-    char txBuf[2048];
-    uint32_t txBufLen;
+    char txBuf[DEBUG_UART_TXBUF_SIZE];
+    uint32_t txBufCurLen;
 };
-
-extern volatile bool debugUartIsInited;
-extern volatile struct DebugUartContext_s debugUartContext;
 
 extern void DebugUart_Thread();
 
@@ -386,7 +365,7 @@ extern void DebugUart_Init();
 extern void DebugUart_Putc(char c);
 extern void DebugUart_Puts(const char* buf);
 
-#define PrintLog(...) { char* buf = (char*)malloc(2048); sprintf(buf, __VA_ARGS__); if (DebugUart_IsInited()) DebugUart_Puts(buf); free(buf); }
+#define PrintLog(...) { if (DebugUart_IsInited()) { char* ___buf = (char*)malloc(16384); if (___buf == NULL) { dead(); } sprintf(___buf, __VA_ARGS__); DebugUart_Puts(___buf); free(___buf); } }
 
 // aes
 

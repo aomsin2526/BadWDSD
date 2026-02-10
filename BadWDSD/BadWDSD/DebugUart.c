@@ -3,6 +3,8 @@
 volatile bool debugUartIsInited = false;
 volatile struct DebugUartContext_s debugUartContext;
 
+recursive_mutex_t debugUartMutex;
+
 bool DebugUart_IsInited()
 {
     return debugUartIsInited;
@@ -23,21 +25,16 @@ void DebugUart_RxFn()
         if (ch == '\r')
             continue;
 
-        if (ch == '\n')
-        {
-            debugUartContext.txBuf[debugUartContext.txBufLen] = '\r';
-            ++debugUartContext.txBufLen;
-            debugUartContext.txBuf[debugUartContext.txBufLen] = 0;
-        }
+        debugUartContext.txBuf[debugUartContext.txBufCurLen] = ch;
+        ++debugUartContext.txBufCurLen;
+        debugUartContext.txBuf[debugUartContext.txBufCurLen] = 0;
 
-        debugUartContext.txBuf[debugUartContext.txBufLen] = ch;
-        ++debugUartContext.txBufLen;
-        debugUartContext.txBuf[debugUartContext.txBufLen] = 0;
-
-        if ((ch == '\n') || (debugUartContext.txBufLen >= 2000))
+        if ((ch == '\n') || (debugUartContext.txBufCurLen >= (DEBUG_UART_TXBUF_SIZE - 1)))
         {
             Sc_Puts(debugUartContext.txBuf);
-            debugUartContext.txBufLen = 0;
+
+            debugUartContext.txBufCurLen = 0;
+            debugUartContext.txBuf[debugUartContext.txBufCurLen] = 0;
         }
     }
 }
@@ -52,9 +49,11 @@ void DebugUart_Thread()
 
 void DebugUart_Init()
 {
+    recursive_mutex_init(&debugUartMutex);
+
     debugUartContext.uartId = uart1;
 
-    debugUartContext.txBufLen = 0;
+    debugUartContext.txBufCurLen = 0;
     debugUartContext.txBuf[0] = 0;
 
     Uart_Init(debugUartContext.uartId, DEBUG_UART_BAUD, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID, NULL);
@@ -75,7 +74,9 @@ void DebugUart_Putc(char c)
     if (!DebugUart_IsInited())
         return;
 
+    recursive_mutex_enter_blocking(&debugUartMutex);
     Uart_Putc(debugUartContext.uartId, c);
+    recursive_mutex_exit(&debugUartMutex);
 }
 
 void DebugUart_Puts(const char* buf)
@@ -83,5 +84,7 @@ void DebugUart_Puts(const char* buf)
     if (!DebugUart_IsInited())
         return;
 
+    recursive_mutex_enter_blocking(&debugUartMutex);
     Uart_Puts(debugUartContext.uartId, buf);
+    recursive_mutex_exit(&debugUartMutex);
 }

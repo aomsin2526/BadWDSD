@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export FLAGS="-g -O1 -Wall -mcpu=cell -mabi=elfv1 -ffreestanding -mtoc -nostdlib -Wl,--build-id=none -static"
+export FLAGS="-g -O1 -fno-jump-tables -Wall -mcpu=cell -mabi=elfv1 -ffreestanding -mtoc -nostdlib -Wl,--build-id=none -static"
 
 export CC=powerpc64-linux-gnu-gcc
 export OBJCOPY=powerpc64-linux-gnu-objcopy

@@ -110,14 +110,18 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
 
     {
         // idps
-        const uint64_t* idps = (const uint64_t*)0x2401F02F070;
+        //const uint64_t* idps = (const uint64_t*)0x2401F02F070;
 
-        SPU_LS_Write64(spu_id, 0x39050, idps[0]);
-        SPU_LS_Write64(spu_id, 0x39058, idps[1]);
+        //SPU_LS_Write64(spu_id, 0x39050, idps[0]);
+        //SPU_LS_Write64(spu_id, 0x39058, idps[1]);
+
+        SPU_LS_Write64(spu_id, 0x39050, 0x0000000100820001);
+        SPU_LS_Write64(spu_id, 0x39058, 0x040034D1807DED30);
 
         // tid
         //const uint8_t* tid = (const uint8_t*)0x2401F02F075;
         //SPU_LS_Write64(spu_id, 0x39060, *tid);
+
         SPU_LS_Write64(spu_id, 0x39060, 0x82);
     }
 

@@ -510,9 +510,9 @@ void Stagex_spu_job_DecryptLv0Self(const volatile struct Stagex_spu_job_DecryptL
 
     );
 
-    struct SceMetaHeader_s *metaHeader = (struct SceMetaHeader_s *)&metasBuf[0];
-    struct SceMetaSectionHeader_s *metaSectionHeaders = (struct SceMetaSectionHeader_s *)&metasBuf[sizeof(struct SceMetaHeader_s)];
-    struct SceMetaKey_s *metaKeys = (struct SceMetaKey_s *)&metasBuf[sizeof(struct SceMetaHeader_s) + ((metaHeader->section_entry_num) * sizeof(struct SceMetaSectionHeader_s))];
+    const struct SceMetaHeader_s *metaHeader = (const struct SceMetaHeader_s *)&metasBuf[0];
+    const struct SceMetaSectionHeader_s *metaSectionHeaders = (const struct SceMetaSectionHeader_s *)&metasBuf[sizeof(struct SceMetaHeader_s)];
+    const struct SceMetaKey_s *metaKeys = (const struct SceMetaKey_s *)&metasBuf[sizeof(struct SceMetaHeader_s) + ((metaHeader->section_entry_num) * sizeof(struct SceMetaSectionHeader_s))];
 
     uint8_t *tmpBuf = (uint8_t *)0x24000; // [16384]
 
@@ -532,12 +532,12 @@ void Stagex_spu_job_DecryptLv0Self(const volatile struct Stagex_spu_job_DecryptL
 
     for (uint16_t i = 0; i < elfHeader.e_phnum; ++i)
     {
-        struct ElfPhdr_s *phdr = &elfPhdrs[i];
+        const struct ElfPhdr_s *phdr = &elfPhdrs[i];
 
-        struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
+        const struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
 
-        struct SceMetaKey_s *key = &metaKeys[h->key_idx];
-        struct SceMetaKey_s *iv = &metaKeys[h->iv_idx];
+        const struct SceMetaKey_s *key = &metaKeys[h->key_idx];
+        const struct SceMetaKey_s *iv = &metaKeys[h->iv_idx];
 
         uint64_t in_addr = (job_context->inSrcEa + h->segment_offset);
         uint64_t out_addr = (job_context->inDestEa + phdr->p_offset);

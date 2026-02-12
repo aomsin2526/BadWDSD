@@ -8,12 +8,6 @@
 #define FUNC_DECL_NONSTATIC __attribute__((section("bcode")))
 #define FUNC_DEF_NONSTATIC FUNC_DECL_NONSTATIC
 
-#define OPTIMIZE_ON_PUSH _Pragma("GCC push_options"); _Pragma("GCC optimize \"O1\"")
-#define OPTIMIZE_ON_POP _Pragma("GCC pop_options")
-
-#define OPTIMIZE_OFF_PUSH _Pragma("GCC push_options"); _Pragma("GCC optimize \"O0\"")
-#define OPTIMIZE_OFF_POP _Pragma("GCC pop_options")
-
 #define SC_PUTS_BUFFER_ENABLED 1
 
 //#define LOGGING_ENABLED 1
@@ -167,7 +161,7 @@ FUNC_DEF struct Stagex_Context_s* GetStagexContext()
 
 FUNC_DEF uint8_t IsLv1()
 {
-    return (is_lv1 == 0x9669) || (is_lv1 == 0x9666) ? 1 : 0;
+    return ((is_lv1 == 0x9669) || (is_lv1 == 0x9666)) ? 1 : 0;
 }
 
 FUNC_DEF uint8_t IsStage5()
@@ -1490,14 +1484,14 @@ FUNC_DEF uint8_t CoreOS_FindFileEntry(uint64_t startAddress, const char *fileNam
 {
     uint64_t curAddress = startAddress;
 
-    struct coreos_header_s *header = (struct coreos_header_s *)curAddress;
+    const struct coreos_header_s *header = (const struct coreos_header_s *)curAddress;
     curAddress += sizeof(struct coreos_header_s);
 
     uint32_t entry_count = header->entry_count;
 
     for (uint32_t i = 0; i < entry_count; ++i)
     {
-        struct coreos_entry_s *entry = (struct coreos_entry_s *)curAddress;
+        const struct coreos_entry_s *entry = (const struct coreos_entry_s *)curAddress;
         curAddress += sizeof(struct coreos_entry_s);
 
         // puts(entry->file_name);

@@ -1653,9 +1653,9 @@ struct ElfPhdr32_s
 
 FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset, uint8_t doZero)
 {
-    struct ElfHeader_s *elfHdr = (struct ElfHeader_s *)elfFileAddress;
+    const struct ElfHeader_s *elfHdr = (const struct ElfHeader_s *)elfFileAddress;
 
-    if (*((uint32_t *)elfHdr->e_ident) != 0x7F454C46)
+    if (*((const uint32_t *)elfHdr->e_ident) != 0x7F454C46)
     {
         puts("LoadElf e_ident check failed!\n");
         dead();
@@ -1673,7 +1673,7 @@ FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset, uint8
     print_hex(elfHdr->e_phnum);
     puts("\n");
 
-    struct ElfPhdr_s *phdr = (struct ElfPhdr_s *)(elfFileAddress + elfHdr->e_phoff);
+    const struct ElfPhdr_s *phdr = (const struct ElfPhdr_s *)(elfFileAddress + elfHdr->e_phoff);
 
     for (uint16_t i = 0; i < elfHdr->e_phnum; ++i)
     {
@@ -1895,7 +1895,7 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc, uint8_t use_spu)
 
     );
 
-    struct SceMetaHeader_s *metaHeader = (struct SceMetaHeader_s *)&metasBuf[0];
+    const struct SceMetaHeader_s *metaHeader = (const struct SceMetaHeader_s *)&metasBuf[0];
 
     //puts("metaHeader:\n");
 
@@ -1907,13 +1907,13 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc, uint8_t use_spu)
     //print_decimal(metaHeader->key_entry_num);
     //puts("\n");
 
-    struct SceMetaSectionHeader_s *metaSectionHeaders = (struct SceMetaSectionHeader_s *)&metasBuf[sizeof(struct SceMetaHeader_s)];
+    const struct SceMetaSectionHeader_s *metaSectionHeaders = (const struct SceMetaSectionHeader_s *)&metasBuf[sizeof(struct SceMetaHeader_s)];
 
 #if 0
 
     for (uint32_t i = 0; i < (metaHeader->section_entry_num); ++i)
     {
-        struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
+        const struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
 
         puts("section_headers[");
         print_decimal(i);
@@ -1942,13 +1942,13 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc, uint8_t use_spu)
 
 #endif
 
-    struct SceMetaKey_s *metaKeys = (struct SceMetaKey_s *)&metasBuf[sizeof(struct SceMetaHeader_s) + ((metaHeader->section_entry_num) * sizeof(struct SceMetaSectionHeader_s))];
+    const struct SceMetaKey_s *metaKeys = (const struct SceMetaKey_s *)&metasBuf[sizeof(struct SceMetaHeader_s) + ((metaHeader->section_entry_num) * sizeof(struct SceMetaSectionHeader_s))];
 
 #if 0
 
     for (uint32_t i = 0; i < (metaHeader->key_entry_num); ++i)
     {
-        struct SceMetaKey_s *k = &metaKeys[i];
+        const struct SceMetaKey_s *k = &metaKeys[i];
 
         puts("keys[");
         print_decimal(i);
@@ -1965,12 +1965,12 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc, uint8_t use_spu)
 
 #endif
 
-    struct ElfHeader_s *elfHeader = (struct ElfHeader_s *)&src[0x90];
+    const struct ElfHeader_s *elfHeader = (const struct ElfHeader_s *)&src[0x90];
 
     memcpy(dest, elfHeader, sizeof(struct ElfHeader_s));
     memcpy(dest + (elfHeader->e_phoff), &src[0x90 + (elfHeader->e_phoff)], (elfHeader->e_phentsize) * (elfHeader->e_phnum));
 
-    struct ElfPhdr_s *elfPhdrs = (struct ElfPhdr_s *)(dest + (elfHeader->e_phoff));
+    const struct ElfPhdr_s *elfPhdrs = (const struct ElfPhdr_s *)(dest + (elfHeader->e_phoff));
 
     uint64_t spu_id = calc_myspu_id();
     uint64_t spu_old_mfc_sr1;
@@ -1980,16 +1980,16 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc, uint8_t use_spu)
 
     for (uint16_t i = 0; i < (elfHeader->e_phnum); ++i)
     {
-        struct ElfPhdr_s *phdr = &elfPhdrs[i];
+        const struct ElfPhdr_s *phdr = &elfPhdrs[i];
 
         puts("decrypting phdr ");
         print_decimal(i);
         puts("...\n");
 
-        struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
+        const struct SceMetaSectionHeader_s *h = &metaSectionHeaders[i];
 
-        struct SceMetaKey_s *key = &metaKeys[(h->key_idx)];
-        struct SceMetaKey_s *iv = &metaKeys[(h->iv_idx)];
+        const struct SceMetaKey_s *key = &metaKeys[(h->key_idx)];
+        const struct SceMetaKey_s *iv = &metaKeys[(h->iv_idx)];
 
         puts("segment_offset = ");
         print_hex(h->segment_offset);

@@ -29,7 +29,7 @@ FUNC_DEF uint64_t SPU_CalcMMIOAddress_P1(uint64_t spu_id, uint64_t offset)
 FUNC_DEF uint64_t SPU_LS_Read64(uint64_t spu_id, uint64_t offset)
 {
     eieio();
-    return *((volatile uint64_t *)SPU_CalcMMIOAddress_LS(spu_id, offset));
+    return *((const volatile uint64_t *)SPU_CalcMMIOAddress_LS(spu_id, offset));
 }
 
 FUNC_DEF void SPU_LS_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
@@ -41,7 +41,7 @@ FUNC_DEF void SPU_LS_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
 FUNC_DEF uint32_t SPU_LS_Read32(uint64_t spu_id, uint64_t offset)
 {
     eieio();
-    return *((volatile uint32_t *)SPU_CalcMMIOAddress_LS(spu_id, offset));
+    return *((const volatile uint32_t *)SPU_CalcMMIOAddress_LS(spu_id, offset));
 }
 
 FUNC_DEF void SPU_LS_Write32(uint64_t spu_id, uint64_t offset, uint32_t value)
@@ -53,7 +53,7 @@ FUNC_DEF void SPU_LS_Write32(uint64_t spu_id, uint64_t offset, uint32_t value)
 FUNC_DEF uint64_t SPU_PS_Read64(uint64_t spu_id, uint64_t offset)
 {
     eieio();
-    return *((volatile uint64_t *)SPU_CalcMMIOAddress_PS(spu_id, offset));
+    return *((const volatile uint64_t *)SPU_CalcMMIOAddress_PS(spu_id, offset));
 }
 
 FUNC_DEF void SPU_PS_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
@@ -65,7 +65,7 @@ FUNC_DEF void SPU_PS_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
 FUNC_DEF uint32_t SPU_PS_Read32(uint64_t spu_id, uint64_t offset)
 {
     eieio();
-    return *((volatile uint32_t *)SPU_CalcMMIOAddress_PS(spu_id, offset));
+    return *((const volatile uint32_t *)SPU_CalcMMIOAddress_PS(spu_id, offset));
 }
 
 FUNC_DEF void SPU_PS_Write32(uint64_t spu_id, uint64_t offset, uint32_t value)
@@ -77,7 +77,7 @@ FUNC_DEF void SPU_PS_Write32(uint64_t spu_id, uint64_t offset, uint32_t value)
 FUNC_DEF uint64_t SPU_P2_Read64(uint64_t spu_id, uint64_t offset)
 {
     eieio();
-    return *((volatile uint64_t *)SPU_CalcMMIOAddress_P2(spu_id, offset));
+    return *((const volatile uint64_t *)SPU_CalcMMIOAddress_P2(spu_id, offset));
 }
 
 FUNC_DEF void SPU_P2_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
@@ -89,7 +89,7 @@ FUNC_DEF void SPU_P2_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
 FUNC_DEF uint32_t SPU_P2_Read32(uint64_t spu_id, uint64_t offset)
 {
     eieio();
-    return *((volatile uint32_t *)SPU_CalcMMIOAddress_P2(spu_id, offset));
+    return *((const volatile uint32_t *)SPU_CalcMMIOAddress_P2(spu_id, offset));
 }
 
 FUNC_DEF void SPU_P2_Write32(uint64_t spu_id, uint64_t offset, uint32_t value)
@@ -101,7 +101,7 @@ FUNC_DEF void SPU_P2_Write32(uint64_t spu_id, uint64_t offset, uint32_t value)
 FUNC_DEF uint64_t SPU_P1_Read64(uint64_t spu_id, uint64_t offset)
 {
     eieio();
-    return *((volatile uint64_t *)SPU_CalcMMIOAddress_P1(spu_id, offset));
+    return *((const volatile uint64_t *)SPU_CalcMMIOAddress_P1(spu_id, offset));
 }
 
 FUNC_DEF void SPU_P1_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
@@ -113,7 +113,7 @@ FUNC_DEF void SPU_P1_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
 FUNC_DEF uint32_t SPU_P1_Read32(uint64_t spu_id, uint64_t offset)
 {
     eieio();
-    return *((volatile uint32_t *)SPU_CalcMMIOAddress_P1(spu_id, offset));
+    return *((const volatile uint32_t *)SPU_CalcMMIOAddress_P1(spu_id, offset));
 }
 
 FUNC_DEF void SPU_P1_Write32(uint64_t spu_id, uint64_t offset, uint32_t value)
@@ -127,9 +127,9 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet
     if (!quiet)
         puts("LoadElfSpu()\n");
 
-    struct ElfHeader32_s *elfHdr = (struct ElfHeader32_s *)elfFileAddress;
+    const struct ElfHeader32_s *elfHdr = (const struct ElfHeader32_s *)elfFileAddress;
 
-    if (*((uint32_t *)elfHdr->e_ident) != 0x7F454C46)
+    if (*((const uint32_t *)elfHdr->e_ident) != 0x7F454C46)
     {
         puts("LoadElfSpu e_ident check failed!\n");
         dead();
@@ -162,7 +162,7 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet
 
     for (uint16_t i = 0; i < elfHdr->e_phnum; ++i)
     {
-        struct ElfPhdr32_s *phdr = (struct ElfPhdr32_s *)curPhdrAddress;
+        const struct ElfPhdr32_s *phdr = (const struct ElfPhdr32_s *)curPhdrAddress;
 
         if (!quiet)
         {

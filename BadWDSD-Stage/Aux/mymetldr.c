@@ -35,7 +35,7 @@ void LoadElfSpu(uint64_t elfFileAddress)
     struct ElfHeader32_s elfHdr;
     DMARead(&elfHdr, elfFileAddress, sizeof(elfHdr));
 
-    if (*((uint32_t *)elfHdr.e_ident) != 0x7F454C46)
+    if (*((const uint32_t *)elfHdr.e_ident) != 0x7F454C46)
         stop(0x69);
 
     uint64_t curPhdrAddress = (elfFileAddress + elfHdr.e_phoff);

@@ -475,44 +475,6 @@ void lv1gen(bool is4j, const char *inFilePath, const char *outFilePath, const ch
 
 #endif
 
-#if 1
-
-    {
-        // Hvcall 114
-
-        {
-            uint8_t searchData[] = {0x2F, 0x80, 0x00, 0x00, 0x41, 0x9E, 0x00, 0x28, 0x38, 0x60, 0x00, 0x00, 0x38, 0x80, 0x00, 0x00};
-            uint8_t replaceData[] = {0x60, 0x00, 0x00, 0x00, 0x48, 0x00, 0x00, 0x28, 0x38, 0x60, 0x00, 0x00, 0x38, 0x80, 0x00, 0x00};
-
-            printf("Patching hvcall 114 1...\n");
-
-            if (!SearchAndReplace(outData, inFileSize, searchData, 16, replaceData, 16))
-            {
-                printf("patch failed!\n");
-
-                //abort();
-                //return;
-            }
-        }
-
-        {
-            uint8_t searchData[] = {0x00, 0x4B, 0xFF, 0xFB, 0xFD, 0x7C, 0x60, 0x1B};
-            uint8_t replaceData[] = {0x01, 0x4B, 0xFF, 0xFB, 0xFD, 0x7C, 0x60, 0x1B};
-
-            printf("Patching hvcall 114 2...\n");
-
-            if (!SearchAndReplace(outData, inFileSize, searchData, 8, replaceData, 8))
-            {
-                printf("patch failed!\n");
-
-                //abort();
-                //return;
-            }
-        }
-    }
-
-#endif
-
     fwrite(outData, 1, inFileSize, outFile);
 
     free(outData);

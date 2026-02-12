@@ -54,18 +54,6 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
 
     //
 
-    {
-        struct ElfHeader32_s *elfHdr = (struct ElfHeader32_s *)myldrElfAddress;
-
-        if (*((uint32_t *)elfHdr->e_ident) != 0x7F454C46)
-        {
-            SPU_PS_Write32(spu_id, 0x0401C, 0x3);
-            return;
-        }
-    }
-
-    //
-
     uint64_t mymetldrElfAddress = ctx->cached_mymetldrElfAddress;
 
     if (mymetldrElfAddress == 0)

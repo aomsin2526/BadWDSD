@@ -2221,7 +2221,7 @@ FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void *destAddress, uint64
 
     puts("\n");
 
-    if (decompress_result != 0 || xxx != original_size)
+    if ((decompress_result != 0) || (xxx != original_size))
     {
         puts("decompress failed!\n");
 

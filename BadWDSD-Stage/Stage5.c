@@ -15,7 +15,7 @@ FUNC_DEF void Stage5(uint64_t type)
 
     if (type == 0x1)
     {
-        volatile uint64_t* isDisableMyappldr = (volatile uint64_t*)0x230;
+        const volatile uint64_t* isDisableMyappldr = (const volatile uint64_t*)0x230;
 
         if (*isDisableMyappldr != 1)
             ctx->stage6_isAppldr = 1;

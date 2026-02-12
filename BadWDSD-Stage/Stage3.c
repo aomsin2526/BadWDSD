@@ -190,7 +190,7 @@ FUNC_DEF void ApplyLv2Diff2(uint64_t lv2DiffFileAddress, uint64_t lv2AreaAddr, u
     {
         uint64_t curAddress = lv2DiffFileAddress;
 
-        uint32_t diffCount = *((uint32_t *)curAddress);
+        uint32_t diffCount = *((const uint32_t *)curAddress);
         curAddress += 4;
 
         lv1_puts("diffCount = ");
@@ -199,10 +199,10 @@ FUNC_DEF void ApplyLv2Diff2(uint64_t lv2DiffFileAddress, uint64_t lv2AreaAddr, u
 
         for (uint32_t i = 0; i < diffCount; ++i)
         {
-            uint32_t addr = *((uint32_t *)curAddress);
+            uint32_t addr = *((const uint32_t *)curAddress);
             curAddress += 4;
 
-            uint32_t value = *((uint32_t *)curAddress);
+            uint32_t value = *((const uint32_t *)curAddress);
             curAddress += 4;
 
             uint8_t newVal = (uint8_t)(value >> 8);
@@ -223,7 +223,7 @@ FUNC_DEF void ApplyLv2Diff2(uint64_t lv2DiffFileAddress, uint64_t lv2AreaAddr, u
 
             if (verifyOrig)
             {
-                uint8_t curVal = *((uint8_t *)(uint64_t)(addr + lv2AreaAddr));
+                uint8_t curVal = *((const uint8_t *)((uint64_t)(addr + lv2AreaAddr)));
 
                 if (curVal != origVal)
                 {
@@ -241,7 +241,7 @@ FUNC_DEF void ApplyLv2Diff2(uint64_t lv2DiffFileAddress, uint64_t lv2AreaAddr, u
                 }
             }
 
-            *((uint8_t *)(uint64_t)(addr + lv2AreaAddr)) = useNewVal ? newVal : origVal;
+            *((uint8_t *)((uint64_t)(addr + lv2AreaAddr))) = useNewVal ? newVal : origVal;
         }
     }
 
@@ -303,7 +303,7 @@ FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal, uint8_t veri
 
             lv1_puts("\n");
 
-            uint64_t zelf_magic = *((uint64_t *)lv2DiffFileAddress);
+            uint64_t zelf_magic = *((const uint64_t *)lv2DiffFileAddress);
 
             if ((zelf_magic == 0x5A454C465A454C46) || (zelf_magic == 0x5A454C465A454C32))
             {
@@ -355,7 +355,7 @@ FUNC_DEF void LoadLv2(uint64_t srcAddr, uint64_t loadme_addr)
     lv1_puts("\n");
 
     {
-        struct SceHeader_s *sceHeader = (struct SceHeader_s *)srcAddr;
+        const struct SceHeader_s *sceHeader = (const struct SceHeader_s *)srcAddr;
 
         if (sceHeader->magic != 0x53434500)
         {
@@ -385,12 +385,12 @@ FUNC_DEF void LoadLv2(uint64_t srcAddr, uint64_t loadme_addr)
         }
         else
         {
-            uint64_t file_offset = *((uint64_t *)(srcAddr + 0x10));
+            uint64_t file_offset = *((const uint64_t *)(srcAddr + 0x10));
 
             lv1_puts("file_offset = ");
             lv1_print_hex(file_offset);
 
-            uint64_t real_file_size = *((uint64_t *)(srcAddr + 0x18));
+            uint64_t real_file_size = *((const uint64_t *)(srcAddr + 0x18));
 
             lv1_puts(", real_file_size = ");
             lv1_print_hex(real_file_size);
@@ -414,7 +414,7 @@ FUNC_DEF void LoadLv2(uint64_t srcAddr, uint64_t loadme_addr)
 
             lv1_puts("\n");
 
-            uint64_t zelf_magic = *((uint64_t *)file_data);
+            uint64_t zelf_magic = *((const uint64_t *)file_data);
 
             if ((zelf_magic == 0x5A454C465A454C46) || (zelf_magic == 0x5A454C465A454C32))
             {
@@ -433,7 +433,7 @@ FUNC_DEF void LoadLv2(uint64_t srcAddr, uint64_t loadme_addr)
                 lv1_puts("ZELF not detected, assume RAW\n");
 
                 memset((void *)loadme_addr, 0, (16 * 1024 * 1024));
-                memcpy((void *)loadme_addr, (void *)file_data, file_size);
+                memcpy((void *)loadme_addr, (const void *)file_data, file_size);
             }
         }
     }

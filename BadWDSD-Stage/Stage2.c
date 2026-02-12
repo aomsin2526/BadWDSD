@@ -6,7 +6,7 @@ FUNC_DEF void ApplyLv1Diff(uint64_t lv1DiffFileAddress, uint8_t verifyOrig)
 
     uint64_t curAddress = lv1DiffFileAddress;
 
-    uint32_t diffCount = *((uint32_t *)curAddress);
+    uint32_t diffCount = *((const uint32_t *)curAddress);
     curAddress += 4;
 
     puts("diffCount = ");
@@ -15,10 +15,10 @@ FUNC_DEF void ApplyLv1Diff(uint64_t lv1DiffFileAddress, uint8_t verifyOrig)
 
     for (uint32_t i = 0; i < diffCount; ++i)
     {
-        uint32_t addr = *((uint32_t *)curAddress);
+        uint32_t addr = *((const uint32_t *)curAddress);
         curAddress += 4;
 
-        uint32_t value = *((uint32_t *)curAddress);
+        uint32_t value = *((const uint32_t *)curAddress);
         curAddress += 4;
 
         uint8_t origVal = (uint8_t)(value >> 8);
@@ -39,7 +39,7 @@ FUNC_DEF void ApplyLv1Diff(uint64_t lv1DiffFileAddress, uint8_t verifyOrig)
 
         if (verifyOrig)
         {
-            uint8_t curVal = *((uint8_t *)(uint64_t)addr);
+            uint8_t curVal = *((const uint8_t *)(uint64_t)addr);
 
             if (curVal != origVal)
             {

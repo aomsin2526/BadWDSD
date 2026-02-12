@@ -110,6 +110,7 @@ FUNC_DECL void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *
 FUNC_DECL void sc_triple_beep();
 FUNC_DECL void sc_continuous_beep();
 
+FUNC_DECL void sc_soft_restart();
 FUNC_DECL void sc_hard_restart();
 
 FUNC_DECL void puts(const char *str);
@@ -1004,6 +1005,23 @@ FUNC_DEF void sc_continuous_beep()
     sc_send_packet(&pkt, NULL);
 }
 
+FUNC_DEF void sc_soft_restart()
+{
+    struct sc_packet_s pkt;
+
+    pkt.service_id = 0x13;
+    pkt.communication_tag = 1;
+
+    pkt.payload_size = 4;
+
+    pkt.data[0] = 0x11;
+    pkt.data[1] = 0x00;
+    pkt.data[2] = 0x00;
+    pkt.data[3] = 0x01;
+
+    sc_send_packet(&pkt, NULL);
+}
+
 FUNC_DEF void sc_hard_restart()
 {
     struct sc_packet_s pkt;
@@ -1218,6 +1236,26 @@ FUNC_DEF void sc_write_request_os_bank_indicator(uint8_t val)
     // block id (0x3000)
     // offset (0x3002)
     sc_write_eeprom8(0x20, 0x2, val);
+}
+
+FUNC_DEF void sc_query_system_power_up_cause(uint64_t* outCause) // [2]
+{
+    struct sc_packet_s pkt;
+
+    pkt.service_id = 0x13;
+    pkt.communication_tag = 1;
+
+    pkt.payload_size = 1;
+    pkt.data[0] = 0x10;
+
+    struct sc_packet_s outpkt;
+    sc_send_packet(&pkt, &outpkt);
+
+    if (outpkt.payload_size != 16)
+        dead();
+
+    if (outCause != NULL)
+        memcpy(outCause, outpkt.data, 16);
 }
 
 FUNC_DEF void real_puts(const char *str)

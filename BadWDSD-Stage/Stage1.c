@@ -6,7 +6,7 @@ FUNC_DEF void Stage1()
     //
 
     real_sc_puts_init();
-    sc_puts("BadWDSD Stage1 by Kafuu(aomsin2526)" " (Build Date: " __DATE__ " " __TIME__ ")\n");
+    sc_puts("Bad_WDSD Stage1 by Kafuu(aomsin2526)" " (Build Date: " __DATE__ " " __TIME__ ")\n");
 
     sc_triple_beep();
 
@@ -82,6 +82,31 @@ FUNC_DEF void Stage1()
     puts("isqCFW = ");
     print_decimal(isqCFW);
     puts("\n");
+
+    //
+
+    if (isqCFW)
+    {
+        uint64_t power_up_cause[2];
+        sc_query_system_power_up_cause(power_up_cause);
+
+        puts("power_up_cause[0] = ");
+        print_hex(power_up_cause[0]);
+        puts("\n");
+
+        puts("power_up_cause[1] = ");
+        print_hex(power_up_cause[1]);
+        puts("\n");
+
+        if ((power_up_cause[0] & 0x00000000ffffffff) == 0x200)
+        {
+            sc_puts("Wake source is BT!, waiting for power cycle by modchip...\n");
+            dead();
+        }
+    }
+
+    // inform modchip that we are good...
+    sc_puts("BadWDSD ok!\n");
 
     //
 

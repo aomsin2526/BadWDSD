@@ -125,7 +125,7 @@ It is possible to power the modchip using external power as long as it is active
 
 # Wiring guides
 
-CMD/CLK wire should not be too thick
+CMD/CLK wire should not be too thick. **0.1mm magnet wire RECOMMENDED**
 
 Success rate depends on quality of your soldering and wiring.
 
@@ -208,7 +208,7 @@ You can't access syscon the old ways anymore. It must be done through modchip. S
 
 # NoBT
 
-TODO. It requires LITE pin and hardware flasher for first installation if you are already on update loop.
+[See PSX-Place](https://www.psx-place.com/threads/badwdsd-qcfw-hw-flasher-nobt-thread.49625/)
 
 # eMMC Support?
 

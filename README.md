@@ -30,7 +30,11 @@ It is heavily based on **Evilnat PEX CFW**. And will support every feature excep
 
 # qCFW quirks
 
-For some unknown reason, When you turn on the console using wireless controller it won't sync. You must power cycle the controller for it to sync.
+For some unknown reason, When you turn on the console using wireless controller it won't sync.
+
+Workaround has been implemented. If you turn the console on using wireless, it will always power cycle once before fully boot.
+
+But controller sync will work fine.
 
 # Note on DEX mode
 

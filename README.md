@@ -121,11 +121,12 @@ To flash .uf2 file (it is included in qCFW zip), simply connect modchip USB port
 
 You should see LED blinking. Flash successful and ready to use. You can disconnect it from your PC.
 
-Exclude power and ground, you only need to solder 4 wires that marked red **(CMD, CLK, SC_RX, SC_TX)**. Other pin is optional.
+For signal, you only need to solder 4 wires that marked red **(CMD, CLK, SC_RX, SC_TX)**. Other signal pin is optional.
+For power, you must solder **5V/3.3V and GND**.
 
-It is possible to power the modchip using external power as long as it is active during ps3 standby
+It is possible to power the modchip using external power as long as it is active during ps3 standby (**GND must be soldered to motherboard!**)
 
-**You should measure the resistance of CMD/CLK wire. Resistance to ground should get around 55 ohm. If it doesn't then something is wrong.**
+**You should measure the resistance of CMD/CLK point. Resistance to ground should be around 55 ohm. If it doesn't then something is wrong.**
 
 # Wiring guides
 

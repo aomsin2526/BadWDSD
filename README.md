@@ -103,6 +103,8 @@ Currently, **Raspberry Pi Pico (RP2040)** and **RP2040-Zero** are supported.
   <summary> <b>3000</b> </summary>
 <p>
 <img src="https://github.com/user-attachments/assets/6787886e-58a6-4fe9-877c-7ce4efbf8af7" />
+
+<img src="KTE-001-label.jpg" />
 </p>
 </details>
 

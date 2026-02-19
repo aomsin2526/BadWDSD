@@ -90,6 +90,9 @@ temp/lv1gen lv1diff lv1.elf.orig lv1.stage3j3ja4j5j6j.elf lv1.diff || exit 1
 echo Copying inros to outros...
 cp -a inros outros || exit 1
 
+echo Renaming lv1.self to lv1.qelf...
+mv outros/lv1.self outros/lv1.qelf || exit 1
+
 echo Deleting creserved_0...
 rm outros/creserved_0
 

@@ -28,7 +28,6 @@
 // 0xC000000 = temp lv1FileAddress
 
 // Stage3:
-// 0xE000000 = stage_sp
 // 0xB000000 = temp lv2DiffFileAddress
 
 // Stage4:

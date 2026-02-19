@@ -63,9 +63,6 @@ typedef uint64_t uintptr_t;
 
 FUNC_DECL void dead();
 
-FUNC_DECL void intr_disable();
-FUNC_DECL void intr_enable();
-
 FUNC_DECL uint64_t GetTimeInNs();
 FUNC_DECL void WaitInNs(uint64_t ns);
 
@@ -103,7 +100,7 @@ struct sc_real_packet_header_s
     uint16_t payload_size[2];
 };
 
-FUNC_DECL uint16_t sc_real_packet_header_calc_cksum(struct sc_real_packet_header_s *pkt_hdr);
+FUNC_DECL uint16_t sc_real_packet_header_calc_cksum(const struct sc_real_packet_header_s *pkt_hdr);
 
 FUNC_DECL void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *out);
 
@@ -692,9 +689,9 @@ FUNC_DEF uint8_t SearchAndReplace(void *in_data, uint64_t dataSize, const void *
     return 0;
 }
 
-FUNC_DEF uint8_t SearchMemory(void *in_data, uint64_t dataSize, const void *in_searchData, uint64_t searchDataSize, uint64_t *outFoundAddr)
+FUNC_DEF uint8_t SearchMemory(const void *in_data, uint64_t dataSize, const void *in_searchData, uint64_t searchDataSize, uint64_t *outFoundAddr)
 {
-    uint8_t *data = (uint8_t *)in_data;
+    const uint8_t *data = (const uint8_t *)in_data;
 
     const uint8_t *searchData = (const uint8_t *)in_searchData;
 
@@ -716,7 +713,7 @@ FUNC_DEF uint8_t SearchMemory(void *in_data, uint64_t dataSize, const void *in_s
     return 0;
 }
 
-FUNC_DEF uint16_t sc_real_packet_header_calc_cksum(struct sc_real_packet_header_s *pkt_hdr)
+FUNC_DEF uint16_t sc_real_packet_header_calc_cksum(const struct sc_real_packet_header_s *pkt_hdr)
 {
     uint8_t *ptr;
     uint32_t sum;
@@ -729,7 +726,7 @@ FUNC_DEF uint16_t sc_real_packet_header_calc_cksum(struct sc_real_packet_header_
 
     sum += 0x8000;
 
-    return sum & 0xffff;
+    return (sum & 0xffff);
 }
 
 FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *out)
@@ -739,9 +736,6 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
         // printf("payload too big!\n");
         dead();
     }
-
-    //if (IsLv1())
-        //intr_disable();
 
     // 0x24000000000
     uint64_t sb_base_addr = 0x24;
@@ -954,9 +948,6 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
             }
         }
     }
-
-    //if (IsLv1())
-        //intr_enable();
 }
 
 FUNC_DEF void sc_triple_beep()
@@ -1552,19 +1543,6 @@ FUNC_DEF uint8_t CoreOS_FindFileEntry(uint64_t startAddress, const char *fileNam
 
 FUNC_DEF uint8_t CoreOS_FindFileEntry_Bank(uint8_t os_bank_indicator, const char *fileName, uint64_t *outFileAddress, uint64_t *outFileSize)
 {
-#if 0
-
-    puts("os_bank_indicator = ");
-    print_hex(os_bank_indicator);
-    puts("\n");
-
-    if (os_bank_indicator == 0xff)
-        puts("Will use ros0\n");
-    else
-        puts("Will use ros1\n");
-
-#endif
-
     uint64_t coreOSStartAddress = (os_bank_indicator == 0xff) ? 0x2401F0C0000 : 0x2401F7C0000;
 
     return CoreOS_FindFileEntry(coreOSStartAddress, fileName, outFileAddress, outFileSize);

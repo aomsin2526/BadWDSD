@@ -88,6 +88,9 @@ temp/lv2gen lv2diff lv2_kernel.elf.orig lv2_kernel.elf lv2_kernel.diff || exit 1
 echo Copying inros to outros...
 cp -a inros outros || exit 1
 
+echo Renaming lv1.self to lv1.qelf...
+mv outros/lv1.self outros/lv1.qelf || exit 1
+
 echo Deleting creserved_0...
 rm outros/creserved_0
 

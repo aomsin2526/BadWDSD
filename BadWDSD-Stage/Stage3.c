@@ -648,10 +648,10 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
     asm volatile("mr %0, 1" : "=r"(lv1_sp)::);
 
     // set stage_sp to 0xE000000
-    stage_sp = 0xE000000;
+    //stage_sp = 0xE000000;
 
     // set r1 to stage_sp
-    asm volatile("mr 1, %0" ::"r"(stage_sp) :);
+    //asm volatile("mr 1, %0" ::"r"(stage_sp) :);
 
     // sync
     asm volatile("sync");

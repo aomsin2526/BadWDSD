@@ -335,7 +335,7 @@ __attribute__((noreturn, section("entry6"))) void stage6_entry()
     asm volatile("mr 2, %0" ::"r"(stage_rtoc) :);
 
     // set lv1_sp
-    asm volatile("mr %0, 1" :"=r"(lv1_sp)::);
+    asm volatile("mr %0, 1" : "=r"(lv1_sp)::);
 
     // set stage_sp to 0xE000000
     //stage_sp = 0xE000000;

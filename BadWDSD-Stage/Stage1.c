@@ -110,10 +110,6 @@ FUNC_DEF void Stage1()
 
     //
 
-    memset((void*)0, 0, (16 * 1024 * 1024));
-
-    //
-
     {
         uint64_t lv0FileAddress;
         uint64_t lv0FileSize;
@@ -203,11 +199,24 @@ FUNC_DEF void Stage1()
 
                         puts("Installing stage2j...\n");
                 
-                        if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, 16, stage2jData, 32))
+                        if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, sizeof(searchData), stage2jData, sizeof(stage2jData)))
                             puts("Install failed!\n");
                     }
                     else
                         puts("fw too low!\n");
+
+                    if (isqCFW)
+                    {
+                        // lv1.self -> lv1.qelf
+
+                        uint8_t searchData[] = {0x6C, 0x76, 0x31, 0x2E, 0x73, 0x65, 0x6C, 0x66};
+                        uint8_t replaceData[] = {0x6C, 0x76, 0x31, 0x2E, 0x71, 0x65, 0x6C, 0x66};
+
+                        puts("lv1.self -> lv1.qelf\n");
+
+                        if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, sizeof(searchData), replaceData, sizeof(replaceData)))
+                            puts("failed!\n");
+                    }
                 }
                 else
                     puts("File not found!\n");
@@ -246,10 +255,6 @@ FUNC_DEF void Stage1()
 
 __attribute__((section("main1"))) void stage1_main()
 {
-    // zeroing ram
-    //memset((void*)0x0, 0, (256 * 1024 * 1024));
-    //eieio();
-
     sc_puts_init();
 
     Stage1();

@@ -281,6 +281,8 @@ struct ScContext_s
     volatile bool success;
     volatile bool shutdownSuccess;
     
+    volatile bool needReboot;
+
     volatile struct Sc_SendCommandContext_s* sendCommandCtx;
 
     volatile uint64_t lastScTxTimeInMs;
@@ -312,6 +314,9 @@ extern void Sc_ClearSuccess();
 
 extern bool Sc_GetShutdownSuccess();
 extern void Sc_ClearShutdownSuccess();
+
+extern bool Sc_GetNeedReboot();
+extern void Sc_ClearNeedReboot();
 
 extern void Sc_Puts(const char* cmd);
 

@@ -52,6 +52,17 @@ void Sc_RxFn()
             sync();
         }
 
+        bool needReboot = false;
+
+        if (strstr(scContext.rxBuf, "Wake source is BT!"))
+            needReboot = true;
+
+        if (needReboot)
+        {
+            scContext.needReboot = true;
+            sync();
+        }
+
         bool reset = false;
 
         if ((get_time_in_ms() - scContext.lastScTxTimeInMs) > 5000)
@@ -173,6 +184,8 @@ void Sc_Init()
 
     scContext.success = false;
     scContext.shutdownSuccess = false;
+
+    scContext.needReboot = false;
 
     scContext.sendCommandCtx = NULL;
 
@@ -521,6 +534,16 @@ bool Sc_GetShutdownSuccess()
 void Sc_ClearShutdownSuccess()
 {
     scContext.shutdownSuccess = false;
+}
+
+bool Sc_GetNeedReboot()
+{
+    return scContext.needReboot;
+}
+
+void Sc_ClearNeedReboot()
+{
+    scContext.needReboot = false;
 }
 
 void Sc_CheckIsInited()

@@ -40,24 +40,62 @@ void memset(void *buf, uint8_t v, uint32_t count)
 {
     if ((((uint32_t)buf % 8) == 0) && ((count % 8) == 0))
     {
+        uint64_t vv = 0;
+
+        if (v != 0)
+        {
+            uint64_t v64 = v;
+
+            vv |= (v64 << 56);
+            vv |= (v64 << 48);
+            vv |= (v64 << 40);
+            vv |= (v64 << 32);
+            vv |= (v64 << 24);
+            vv |= (v64 << 16);
+            vv |= (v64 << 8);
+            vv |= v64;
+        }
+
         uint64_t *buff = (uint64_t *)buf;
 
         for (uint32_t i = 0; i < (count / 8); ++i)
-            buff[i] = v;
+            buff[i] = vv;
     }
     else if ((((uint32_t)buf % 4) == 0) && ((count % 4) == 0))
     {
+        uint32_t vv = 0;
+
+        if (v != 0)
+        {
+            uint32_t v32 = v;
+
+            vv |= (v32 << 24);
+            vv |= (v32 << 16);
+            vv |= (v32 << 8);
+            vv |= v32;
+        }
+
         uint32_t *buff = (uint32_t *)buf;
 
         for (uint32_t i = 0; i < (count / 4); ++i)
-            buff[i] = v;
+            buff[i] = vv;
     }
     else if ((((uint32_t)buf % 2) == 0) && ((count % 2) == 0))
     {
+        uint16_t vv = 0;
+
+        if (v != 0)
+        {
+            uint16_t v16 = v;
+
+            vv |= (v16 << 8);
+            vv |= v16;
+        }
+
         uint16_t *buff = (uint16_t *)buf;
 
         for (uint32_t i = 0; i < (count / 2); ++i)
-            buff[i] = v;
+            buff[i] = vv;
     }
     else
     {

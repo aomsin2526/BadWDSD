@@ -110,6 +110,10 @@ FUNC_DEF void Stage1()
 
     //
 
+    memset((void*)0, 0, (16 * 1024 * 1024));
+
+    //
+
     {
         uint64_t lv0FileAddress;
         uint64_t lv0FileSize;

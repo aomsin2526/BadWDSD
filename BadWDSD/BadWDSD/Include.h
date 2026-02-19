@@ -85,23 +85,11 @@ extern bool Led_IsInited();
 
 // XDRs
 
-#if PICO_IS_ZERO
-
-static const uint32_t XDR_GPO_CLK_PIN_ID = 6;
-static const uint32_t XDR_GPO_CLK_PIN_ID2 = 7;
-
-static const uint32_t XDR_GPO_CMD_PIN_ID = 10;
-static const uint32_t XDR_GPO_CMD_PIN_ID2 = 9;
-
-#else
-
 static const uint32_t XDR_GPO_CLK_PIN_ID = 6;
 static const uint32_t XDR_GPO_CLK_PIN_ID2 = 7;
 
 static const uint32_t XDR_GPO_CMD_PIN_ID = 10;
 static const uint32_t XDR_GPO_CMD_PIN_ID2 = 11;
-
-#endif
 
 #define XDR_GPO_DELAY_ENABLED 1
 #define XDR_GPO_DELAY_VALUE_IN_US 1 // 4000ns/250khz per cycle
@@ -291,7 +279,8 @@ struct ScContext_s
     volatile bool trigger;
 
     volatile bool success;
-
+    volatile bool shutdownSuccess;
+    
     volatile struct Sc_SendCommandContext_s* sendCommandCtx;
 
     volatile uint64_t lastScTxTimeInMs;
@@ -320,6 +309,9 @@ extern void Sc_ClearTrigger();
 
 extern bool Sc_GetSuccess();
 extern void Sc_ClearSuccess();
+
+extern bool Sc_GetShutdownSuccess();
+extern void Sc_ClearShutdownSuccess();
 
 extern void Sc_Puts(const char* cmd);
 

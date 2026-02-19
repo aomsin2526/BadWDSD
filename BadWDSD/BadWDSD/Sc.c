@@ -41,6 +41,17 @@ void Sc_RxFn()
             sync();
         }
 
+        bool shutdownSuccess = false;
+
+        if (strstr(scContext.rxBuf, "(PowerOff State)"))
+            shutdownSuccess = true;
+
+        if (shutdownSuccess)
+        {
+            scContext.shutdownSuccess = true;
+            sync();
+        }
+
         bool reset = false;
 
         if ((get_time_in_ms() - scContext.lastScTxTimeInMs) > 5000)
@@ -161,6 +172,7 @@ void Sc_Init()
     scContext.trigger = false;
 
     scContext.success = false;
+    scContext.shutdownSuccess = false;
 
     scContext.sendCommandCtx = NULL;
 
@@ -499,6 +511,16 @@ bool Sc_GetSuccess()
 void Sc_ClearSuccess()
 {
     scContext.success = false;
+}
+
+bool Sc_GetShutdownSuccess()
+{
+    return scContext.shutdownSuccess;
+}
+
+void Sc_ClearShutdownSuccess()
+{
+    scContext.shutdownSuccess = false;
 }
 
 void Sc_CheckIsInited()

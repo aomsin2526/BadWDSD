@@ -28,12 +28,16 @@ void GPIO_FLOAT(uint32_t pinId)
 void GPIO_FLOATTOLOW2(uint32_t pinId1, uint32_t pinId2)
 {
     GPIO_FLOATTOLOW(pinId1);
-    GPIO_FLOATTOLOW(pinId2);
+
+    if (pinId2 != pinId1)
+        GPIO_FLOATTOLOW(pinId2);
 }
 
 void GPIO_FLOAT2(uint32_t pinId1, uint32_t pinId2)
 {
-    GPIO_FLOAT(pinId2);
+    if (pinId2 != pinId1)
+        GPIO_FLOAT(pinId2);
+
     GPIO_FLOAT(pinId1);
 }
 

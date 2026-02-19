@@ -27,9 +27,22 @@ void Watchdog()
 
         if ((t2 - t1) > 2500)
         {
+            Sc_ClearShutdownSuccess();
             Sc_Puts("shutdown");
-            busy_wait_ms(4000);
 
+            {
+                uint64_t st1 = get_time_in_ms();
+
+                while (!Sc_GetShutdownSuccess())
+                {
+                    uint64_t st2 = get_time_in_ms();
+
+                    if ((st2 - st1) > 10000)
+                        break;
+                }
+            }
+
+            busy_wait_ms(500);
             Sc_Puts("powersw");
             break;
         }
@@ -109,11 +122,11 @@ void Sc_Thread_x16_Stage0()
 
             //
 
-            Sc_ClearTrigger();
+            Watchdog();
 
             //
 
-            Watchdog();
+            Sc_ClearTrigger();
         }
     }
 }
@@ -184,11 +197,11 @@ void Sc_Thread_x32_Stage0()
 
             //
 
-            Sc_ClearTrigger();
+            Watchdog();
 
             //
 
-            Watchdog();
+            Sc_ClearTrigger();
         }
     }
 }

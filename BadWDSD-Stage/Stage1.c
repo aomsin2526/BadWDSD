@@ -214,7 +214,12 @@ FUNC_DEF void Stage1()
                         puts("Installing stage2j...\n");
                 
                         if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, sizeof(searchData), stage2jData, sizeof(stage2jData)))
+                        {
                             puts("Install failed!\n");
+
+                            if (isqCFW)
+                                dead_beep();
+                        }
                     }
                     else
                         puts("fw too low!\n");
@@ -229,7 +234,10 @@ FUNC_DEF void Stage1()
                         puts("lv1.self -> lv1.qelf\n");
 
                         if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, sizeof(searchData), replaceData, sizeof(replaceData)))
+                        {
                             puts("failed!\n");
+                            dead_beep();
+                        }
                     }
                 }
                 else

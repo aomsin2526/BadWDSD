@@ -204,6 +204,8 @@ FUNC_DEF void Stage1()
                     DecryptLv0Self((void*)lv0FileAddress, (const void*)lv0SelfFileAddress, 1);
 #endif
 
+                    // ANTI BRICK!!!
+                    // isqCFW!!!
                     if ((fwVersion >= 470) || isqCFW)
                     {
                         uint8_t searchData[] = {0x38, 0x60, 0x01, 0x00, 0x7C, 0x69, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x60, 0x00, 0x00, 0x00};
@@ -224,6 +226,7 @@ FUNC_DEF void Stage1()
                     else
                         puts("fw too low!\n");
 
+                    // ANTI BRICK!!!
                     if (isqCFW)
                     {
                         // lv1.self -> lv1.qelf

@@ -38,11 +38,11 @@ void Watchdog()
                     uint64_t st2 = get_time_in_ms();
 
                     if ((st2 - st1) > 20000)
-                        break;
+                        return;
                 }
             }
 
-            busy_wait_ms(10);
+            busy_wait_ms(500);
             Sc_Puts("powersw");
             break;
         }

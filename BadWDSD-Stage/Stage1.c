@@ -112,6 +112,16 @@ FUNC_DEF void Stage1()
 
     memset((void*)0, 0, (16 * 1024 * 1024));
 
+    // clear lv2
+    memset((void*)0x1000000, 0, 0x10000);
+    memset((void*)0x2000000, 0, 0x10000);
+    memset((void*)0x3000000, 0, 0x10000);
+    memset((void*)0x4000000, 0, 0x10000);
+    memset((void*)0x5000000, 0, 0x10000);
+    memset((void*)0x6000000, 0, 0x10000);
+    memset((void*)0x7000000, 0, 0x10000);
+    memset((void*)0x8000000, 0, 0x10000);
+
     //
 
     {

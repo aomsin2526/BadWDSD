@@ -20,7 +20,7 @@
 
 //#define DECRYPTLV2SELF_ENABLED 1
 
-#if DECRYPTLV2SELF_ENABLED
+#if DECRYPTLV2SELF_ENABLED || 1
 #define AES_ENABLED 1
 #endif
 
@@ -637,6 +637,15 @@ FUNC_DEF void memcpy(void *dest, const void *src, uint64_t count)
         for (uint64_t i = 0; i < count; ++i)
             destt[i] = srcc[i];
     }
+}
+
+FUNC_DEF void memcpy8(void *dest, const void *src, uint64_t count)
+{
+    uint8_t *destt = (uint8_t *)dest;
+    const uint8_t *srcc = (const uint8_t *)src;
+
+    for (uint64_t i = 0; i < count; ++i)
+        destt[i] = srcc[i];
 }
 
 FUNC_DEF void memcpy32(void *dest, const void *src, uint64_t count)
@@ -1267,6 +1276,68 @@ FUNC_DEF void sc_write_request_os_bank_indicator(uint8_t val)
     sc_write_eeprom8(0x20, 0x2, val);
 }
 
+FUNC_DEF uint8_t sc_read_hdd_key_dumper_flag()
+{
+    // block id (0x3000)
+    // offset (0x3003)
+    return sc_read_eeprom8(0x20, 0x3);
+}
+
+FUNC_DEF void sc_write_hdd_key_dumper_flag(uint8_t val)
+{
+    // block id (0x3000)
+    // offset (0x3003)
+    sc_write_eeprom8(0x20, 0x3, val);
+}
+
+// in[32]
+FUNC_DEF void sc_write_ata_data_key(const uint8_t* in)
+{
+    if (in == NULL)
+        dead();
+
+    // block id (0x3000)
+    // offset (0x3020 - 0x303f)
+    for (uint32_t i = 0; i < 32; ++i)
+        sc_write_eeprom8(0x20, (0x20 + i), in[i]);
+}
+
+// in[32]
+FUNC_DEF void sc_write_ata_tweak_key(const uint8_t* in)
+{
+    if (in == NULL)
+        dead();
+
+    // block id (0x3000)
+    // offset (0x3040 - 0x305f)
+    for (uint32_t i = 0; i < 32; ++i)
+        sc_write_eeprom8(0x20, (0x40 + i), in[i]);
+}
+
+// in[32]
+FUNC_DEF void sc_write_encdec_data_key(const uint8_t* in)
+{
+    if (in == NULL)
+        dead();
+
+    // block id (0x3000)
+    // offset (0x3060 - 0x307f)
+    for (uint32_t i = 0; i < 32; ++i)
+        sc_write_eeprom8(0x20, (0x60 + i), in[i]);
+}
+
+// in[32]
+FUNC_DEF void sc_write_encdec_tweak_key(const uint8_t* in)
+{
+    if (in == NULL)
+        dead();
+
+    // block id (0x3000)
+    // offset (0x3080 - 0x309f)
+    for (uint32_t i = 0; i < 32; ++i)
+        sc_write_eeprom8(0x20, (0x80 + i), in[i]);
+}
+
 FUNC_DEF void sc_query_system_power_up_cause(uint64_t* outCause) // [2]
 {
     struct sc_packet_s pkt;
@@ -1289,38 +1360,12 @@ FUNC_DEF void sc_query_system_power_up_cause(uint64_t* outCause) // [2]
 
 FUNC_DEF void real_puts(const char *str)
 {
-    if (!IsLogEnabled())
-        return;
-
     sc_puts(str);
 }
 
 FUNC_DEF void real_print_decimal(uint64_t v)
 {
-    if (!IsLogEnabled())
-        return;
-
-    char charArr[16];
-
-    charArr[0] = '0';
-    charArr[1] = '1';
-    charArr[2] = '2';
-    charArr[3] = '3';
-
-    charArr[4] = '4';
-    charArr[5] = '5';
-    charArr[6] = '6';
-    charArr[7] = '7';
-
-    charArr[8] = '8';
-    charArr[9] = '9';
-    charArr[10] = 'a';
-    charArr[11] = 'b';
-
-    charArr[12] = 'c';
-    charArr[13] = 'd';
-    charArr[14] = 'e';
-    charArr[15] = 'f';
+    const char* charArr = "0123456789abcdef";
 
     char buf[64];
     uint64_t curBufLen = 0;
@@ -1365,32 +1410,9 @@ FUNC_DEF void real_print_decimal(uint64_t v)
     real_puts(outBuf);
 }
 
-FUNC_DEF void real_print_hex(uint64_t v)
+FUNC_DEF void real_do_print_hex(uint64_t v, uint8_t prefix, uint64_t leadingZeros)
 {
-    if (!IsLogEnabled())
-        return;
-
-    char charArr[16];
-
-    charArr[0] = '0';
-    charArr[1] = '1';
-    charArr[2] = '2';
-    charArr[3] = '3';
-
-    charArr[4] = '4';
-    charArr[5] = '5';
-    charArr[6] = '6';
-    charArr[7] = '7';
-
-    charArr[8] = '8';
-    charArr[9] = '9';
-    charArr[10] = 'a';
-    charArr[11] = 'b';
-
-    charArr[12] = 'c';
-    charArr[13] = 'd';
-    charArr[14] = 'e';
-    charArr[15] = 'f';
+    const char* charArr = "0123456789abcdef";
 
     char buf[64];
     uint64_t curBufLen = 0;
@@ -1417,38 +1439,71 @@ FUNC_DEF void real_print_hex(uint64_t v)
     char outBuf[64];
     uint64_t curOutBufLen = 0;
 
-    outBuf[curOutBufLen] = '0';
-    ++curOutBufLen;
-
-    outBuf[curOutBufLen] = 'x';
-    ++curOutBufLen;
-
     for (uint64_t i = 0; i < curBufLen; i++)
         outBuf[(curOutBufLen + i)] = buf[((curBufLen - 1) - i)];
 
     curOutBufLen += curBufLen;
 
-    if (curOutBufLen == 2)
-    {
-        outBuf[curOutBufLen] = '0';
-        ++curOutBufLen;
-    }
+    if (prefix)
+        real_puts("0x");
 
-    // outBuf[curOutBufLen] = '\n';
-    //++curOutBufLen;
+    if (curBufLen < leadingZeros)
+    {
+        for (uint64_t i = 0; i < (leadingZeros - curBufLen); ++i)
+            real_puts("0");
+    }
 
     outBuf[curOutBufLen] = 0;
     real_puts(outBuf);
 }
 
+FUNC_DEF void real_print_hex(uint64_t v)
+{
+    real_do_print_hex(v, 1, 1);
+}
+
+FUNC_DEF void real_hexdump(const void* ptr, uint64_t sz)
+{
+    if (sz == 0)
+        return;
+
+    const uint8_t* buf = (const uint8_t*)ptr;
+
+    uint64_t col = 32;
+    uint64_t i = 0;
+
+    while (1)
+    {
+        uint8_t v = buf[i];
+        real_do_print_hex(v, 0, 2);
+
+        ++i;
+
+        if (i == sz)
+            break;
+
+        if ((i % col) == 0)
+        {
+            real_puts("\n");
+            continue;
+        }
+
+        real_puts(" ");
+    }
+}
+
 #if LOGGING_ENABLED
 #define puts real_puts
 #define print_decimal real_print_decimal
+#define do_print_hex real_do_print_hex
 #define print_hex real_print_hex
+#define hexdump real_hexdump
 #else
 #define puts(...)
 #define print_decimal(...)
+#define do_print_hex(...)
 #define print_hex(...)
+#define hexdump(...)
 #endif
 
 #if SC_LV1_LOGGING_ENABLED

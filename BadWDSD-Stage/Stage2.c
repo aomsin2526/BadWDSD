@@ -1,5 +1,3 @@
-#undef ENTRY_WAIT_IN_MS
-
 FUNC_DEF void ApplyLv1Diff(uint64_t lv1DiffFileAddress, uint8_t verifyOrig)
 {
     puts("ApplyLv1Diff()\n");
@@ -298,11 +296,16 @@ FUNC_DEF void Stage2()
     }
 }
 
-__attribute__((section("main2"))) void stage2_main()
+#include "Stage2_HDDKeyDumper.c"
+
+__attribute__((section("main2"))) void stage2_main(uint64_t in_r3)
 {
     sc_puts_init();
 
-    Stage2();
+    if (sc_read_hdd_key_dumper_flag() == 0x2)
+        Stage2_HDDKeyDumper(in_r3);
+    else
+        Stage2();
 
     dead();
 }
@@ -333,12 +336,6 @@ __attribute__((noreturn, section("entry2"))) void stage2_entry()
 
     // set r1 to stage_sp
     asm volatile("mr 1, %0" ::"r"(stage_sp) :);
-
-#if ENTRY_WAIT_IN_MS > 0
-    // optional wait
-    asm volatile("li 3, %0" ::"i"(ENTRY_WAIT_IN_MS) :);
-    asm volatile("bl WaitInMs2");
-#endif
 
     // sync
     asm volatile("sync");

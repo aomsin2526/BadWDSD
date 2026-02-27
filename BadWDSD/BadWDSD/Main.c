@@ -230,7 +230,12 @@ void main()
     set_sys_clock_khz(250000, true);
 #endif
 
-#if !PICO_IS_ZERO
+#if PICO_TYPE == PICO_TYPE_E_PICO_W
+    if (cyw43_arch_init())
+        dead();
+#endif
+
+#if PICO_TYPE == PICO_TYPE_E_PICO
     GPIO_FLOATTOHIGH(TRISTATE_PIN_ID);
 #endif
 

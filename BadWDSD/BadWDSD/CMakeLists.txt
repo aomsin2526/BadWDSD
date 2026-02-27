@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
 
+if (IS_PICO_W)
+set(PICO_BOARD pico_w)
+endif()
+
 # initialize the SDK based on PICO_SDK_PATH
 # note: this must happen before project()
 include ($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
@@ -23,6 +27,11 @@ target_link_libraries(BadWDSD pico_stdlib hardware_resets hardware_irq pico_mult
 # WS2812
 pico_generate_pio_header(BadWDSD ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/build/generated)
 target_link_libraries(BadWDSD hardware_pio)
+
+# Pico W
+if (IS_PICO_W)
+target_link_libraries(BadWDSD pico_cyw43_arch_none)
+endif()
 
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(BadWDSD)

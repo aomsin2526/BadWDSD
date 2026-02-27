@@ -9,7 +9,7 @@ mkdir build
 
 cd build || exit 1
 
-cmake .. || exit 1
+cmake $@ .. || exit 1
 
 make clean || exit 1
 make BadWDSD -j12 || exit 1

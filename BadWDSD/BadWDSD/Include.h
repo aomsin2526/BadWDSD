@@ -1,10 +1,8 @@
 //
 
-// RP2040-Zero
-//#define PICO_IS_ZERO 1
-
-//#define SC_IS_SW 1
-//#define XDR_IS_X32 1
+#define PICO_TYPE_E_PICO 1
+#define PICO_TYPE_E_PICO_W 2
+#define PICO_TYPE_E_RP2040_ZERO 3
 
 // generated at build
 #include "build/Config.h"
@@ -28,6 +26,10 @@
 #include "pico/rand.h"
 #include "pico/mutex.h"
 
+#if PICO_TYPE == PICO_TYPE_E_PICO_W
+#include "pico/cyw43_arch.h"
+#endif
+
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 
 #define sync() __dsb()
@@ -43,13 +45,17 @@ static const uint32_t HOLD_PIN_ID = 2;
 
 extern void Hold_Init();
 
-#if PICO_IS_ZERO
+#if PICO_TYPE == PICO_TYPE_E_RP2040_ZERO
 #define LED_IS_WS2812 1
 #define LED_WS2812_PIO pio0
 static const uint32_t LED_PIN_ID = 16;
 static const uint8_t LED_RGB[3] = {0, 0, 30};
+#elif PICO_TYPE == PICO_TYPE_E_PICO
+static const uint32_t LED_PIN_ID = PICO_DEFAULT_LED_PIN;
+#elif PICO_TYPE == PICO_TYPE_E_PICO_W
+#define LED_IS_NOT_GPIO 1
 #else
-static const uint32_t LED_PIN_ID = PICO_DEFAULT_LED_PIN; // original pico
+#error bad!!!
 #endif
 
 static const uint32_t LED_STATUS_OFF = 0;
@@ -250,7 +256,7 @@ extern void Uart_Puts(uart_inst_t* uartId, const char* buf);
 
 //
 
-#if PICO_IS_ZERO
+#if PICO_TYPE == PICO_TYPE_E_RP2040_ZERO
 static const uint32_t SC_UART_RX_PIN_ID = 13;
 static const uint32_t SC_UART_TX_PIN_ID = 12;
 #else
@@ -293,7 +299,7 @@ extern void Sc_Thread();
 extern bool Sc_IsInited();
 extern bool Sc_IsReadyForUser();
 
-#if PICO_IS_ZERO
+#if PICO_TYPE == PICO_TYPE_E_RP2040_ZERO
 static const uint32_t SC_LITE_PIN_ID = 3;
 static const uint32_t SC_BANKSEL_PIN_ID = 14;
 #else
@@ -372,7 +378,7 @@ extern void DebugUart_Puts(const char* buf);
 
 // kafuu's personal pin for hooking sb tristate (hw flasher) pin to it for convenience
 
-#if !PICO_IS_ZERO
+#if PICO_TYPE == PICO_TYPE_E_PICO
 static const uint32_t TRISTATE_PIN_ID = 21;
 #endif
 

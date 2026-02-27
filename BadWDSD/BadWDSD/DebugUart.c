@@ -64,8 +64,15 @@ void DebugUart_Init()
     PrintLog("Debug Uart ready.\n");
 
     PrintLog("BadWDSD Pico By Kafuu(aomsin2526) (Build date: %s %s)\n", __DATE__, __TIME__);
-#if PICO_IS_ZERO
-    PrintLog("Zero version.\n");
+
+#if PICO_TYPE == PICO_TYPE_E_PICO
+    PrintLog("Pico\n");
+#elif PICO_TYPE == PICO_TYPE_E_PICO_W
+    PrintLog("Pico W\n");
+#elif PICO_TYPE == PICO_TYPE_E_RP2040_ZERO
+    PrintLog("RP2040-Zero\n");
+#else
+#error bad!!!
 #endif
 }
 

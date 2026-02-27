@@ -55,7 +55,7 @@ void Led_Init()
 
 #if LED_IS_WS2812
     ws2812_init();
-#else
+#elif !LED_IS_NOT_GPIO
     gpio_deinit(LED_PIN_ID);
 
     gpio_init(LED_PIN_ID);
@@ -67,6 +67,19 @@ void Led_Init()
     ledIsInited = true;
     sync();
 }
+
+#if LED_IS_WS2812
+#define LED_ON() ws2812_put_rgb(LED_RGB[0], LED_RGB[1], LED_RGB[2])
+#define LED_OFF() ws2812_put_rgb(0, 0, 0)
+#elif PICO_TYPE == PICO_TYPE_E_PICO_W
+#define LED_ON() cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1)
+#define LED_OFF() cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0)
+#elif !LED_IS_NOT_GPIO
+#define LED_ON() gpio_put(LED_PIN_ID, true)
+#define LED_OFF() gpio_put(LED_PIN_ID, false)
+#else
+#error bad!!!
+#endif
 
 void Led_Thread()
 {
@@ -81,21 +94,13 @@ void Led_Thread()
         {
             ledContext.curLedStatus = true;
 
-#if LED_IS_WS2812
-            ws2812_put_rgb(LED_RGB[0], LED_RGB[1], LED_RGB[2]);
-#else
-            gpio_put(LED_PIN_ID, true);
-#endif
+            LED_ON();
         }
         else if (newStatus == LED_STATUS_OFF)
         {
             ledContext.curLedStatus = false;
 
-#if LED_IS_WS2812
-            ws2812_put_rgb(0, 0, 0);
-#else
-            gpio_put(LED_PIN_ID, false);
-#endif
+            LED_OFF();
         }
 
         ledContext.prevStatus = newStatus;
@@ -111,14 +116,13 @@ void Led_Thread()
 
             ledContext.curLedStatus = !ledContext.curLedStatus;
 
-#if LED_IS_WS2812
             if (ledContext.curLedStatus)
-                ws2812_put_rgb(LED_RGB[0], LED_RGB[1], LED_RGB[2]);
+                LED_ON();
             else
-                ws2812_put_rgb(0, 0, 0);
-#else
-            gpio_put(LED_PIN_ID, ledContext.curLedStatus);
-#endif
+                LED_OFF();
         }
     }
 }
+
+#undef LED_OFF
+#undef LED_ON

@@ -77,6 +77,56 @@ FUNC_DEF void HDDKeyDumper_Init(struct HDDKeyDumper_Context_s* ctx)
     ctx->encdecRndDataSize = 0;
 }
 
+FUNC_DEF void HDDKeyDumper_Finalize(struct HDDKeyDumper_Context_s* ctx)
+{
+    real_puts("ATA-DATA-KEY:\n");
+    real_hexdump(&ctx->ataDataKey[32], 32);
+    real_puts("\n");
+
+    real_puts("ATA-TWEAK-KEY:\n");
+    real_hexdump(&ctx->ataTweakKey[32], 32);
+    real_puts("\n");
+
+    real_puts("ENCDEC-DATA-KEY:\n");
+    real_hexdump(&ctx->encdecDataKey[32], 32);
+    real_puts("\n");
+
+    real_puts("ENCDEC-TWEAK-KEY:\n");
+    real_hexdump(&ctx->encdecTweakKey[32], 32);
+    real_puts("\n");
+
+    // for PS3HDH slims
+    {
+        uint8_t atakey_bin[32];
+        memcpy(&atakey_bin[0], &ctx->ataDataKey[32], 16);
+        memcpy(&atakey_bin[16], &ctx->ataTweakKey[32], 16);
+
+        real_puts("ata_key.bin (PS3HDH):\n");
+        real_hexdump(atakey_bin, 32);
+        real_puts("\n");
+    }
+
+    {
+        uint8_t vflashkey_bin[32];
+        memcpy(&vflashkey_bin[0], &ctx->encdecDataKey[32], 16);
+        memcpy(&vflashkey_bin[16], &ctx->encdecTweakKey[32], 16);
+
+        real_puts("vflash_key.bin (PS3HDH):\n");
+        real_hexdump(vflashkey_bin, 32);
+        real_puts("\n");
+    }
+
+    sc_write_ata_data_key(&ctx->ataDataKey[32]);
+    sc_write_ata_tweak_key(&ctx->ataTweakKey[32]);
+
+    sc_write_encdec_data_key(&ctx->encdecDataKey[32]);
+    sc_write_encdec_tweak_key(&ctx->encdecTweakKey[32]);
+
+    sc_write_hdd_key_dumper_flag(0xfe); // dumped
+
+    sc_soft_restart();
+}
+
 FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx, 
     uint8_t isGet, uint64_t ea, uint64_t ls, const void* dataBuf, uint64_t dataSize)
 {
@@ -140,7 +190,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
             //hexdump(ctx->encdecRndData, 32);
             //puts("\n");
 
-            for (uint32_t i = 0; i < 32; i++)
+            for (uint32_t i = 0; i < 32; ++i)
                 ctx->sessionKey[i] = (ctx->hostRndData[i] ^ ctx->encdecRndData[i]);
         }
     }
@@ -156,10 +206,6 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
         WORD aes_key[60];
         aes_key_setup(ctx->sessionKey, aes_key, 192);
         aes_decrypt_cbc(ctx->ataDataKey, 64, ctx->ataDataKey, aes_key, 192, ctx->iv);
-
-        real_puts("ATA-DATA-KEY:\n");
-        real_hexdump(&ctx->ataDataKey[32], 32);
-        real_puts("\n");
     }
 
     // ata tweak key
@@ -173,10 +219,6 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
         WORD aes_key[60];
         aes_key_setup(ctx->sessionKey, aes_key, 192);
         aes_decrypt_cbc(ctx->ataTweakKey, 64, ctx->ataTweakKey, aes_key, 192, ctx->iv);
-
-        real_puts("ATA-TWEAK-KEY:\n");
-        real_hexdump(&ctx->ataTweakKey[32], 32);
-        real_puts("\n");
     }
 
     // encdec data key
@@ -190,10 +232,6 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
         WORD aes_key[60];
         aes_key_setup(ctx->sessionKey, aes_key, 192);
         aes_decrypt_cbc(ctx->encdecDataKey, 64, ctx->encdecDataKey, aes_key, 192, ctx->iv);
-
-        real_puts("ENCDEC-DATA-KEY:\n");
-        real_hexdump(&ctx->encdecDataKey[32], 32);
-        real_puts("\n");
     }
 
     // encdec tweak key
@@ -208,21 +246,8 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
         aes_key_setup(ctx->sessionKey, aes_key, 192);
         aes_decrypt_cbc(ctx->encdecTweakKey, 64, ctx->encdecTweakKey, aes_key, 192, ctx->iv);
 
-        real_puts("ENCDEC-TWEAK-KEY:\n");
-        real_hexdump(&ctx->encdecTweakKey[32], 32);
-        real_puts("\n");
-
         // finishing...
-
-        sc_write_ata_data_key(&ctx->ataDataKey[32]);
-        sc_write_ata_tweak_key(&ctx->ataTweakKey[32]);
-
-        sc_write_encdec_data_key(&ctx->encdecDataKey[32]);
-        sc_write_encdec_tweak_key(&ctx->encdecTweakKey[32]);
-
-        sc_write_hdd_key_dumper_flag(0xfe); // dumped
-
-        sc_soft_restart();
+        HDDKeyDumper_Finalize(ctx);
     }
 }
 

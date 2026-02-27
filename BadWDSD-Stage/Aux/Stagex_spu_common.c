@@ -27,8 +27,6 @@
 // #define NULL 0
 
 #define sync() asm volatile("sync")
-#define eieio sync
-
 #define stop(...) asm volatile("stop %0" ::"i"(__VA_ARGS__) :)
 
 uint8_t IsPow2(uint64_t x)

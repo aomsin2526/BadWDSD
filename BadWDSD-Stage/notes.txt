@@ -24,6 +24,7 @@
 // 0xC000000 = temp lv0FileAddress
 
 // Stage2:
+// 0xA000000 = tmpEa (HDDKeyDumper)
 // 0xE000000 = stage_sp
 // 0xC000000 = temp lv1FileAddress
 

@@ -10,6 +10,17 @@ bool DebugUart_IsInited()
     return debugUartIsInited;
 }
 
+void DebugUart_Flush()
+{
+    if (debugUartContext.txBufCurLen == 0)
+        return;
+
+    Sc_Puts(debugUartContext.txBuf);
+
+    debugUartContext.txBufCurLen = 0;
+    debugUartContext.txBuf[debugUartContext.txBufCurLen] = 0;
+}
+
 void DebugUart_RxFn()
 {
     while (uart_is_readable(debugUartContext.uartId))
@@ -30,12 +41,9 @@ void DebugUart_RxFn()
         debugUartContext.txBuf[debugUartContext.txBufCurLen] = 0;
 
         if ((ch == '\n') || (debugUartContext.txBufCurLen >= (DEBUG_UART_TXBUF_SIZE - 1)))
-        {
-            Sc_Puts(debugUartContext.txBuf);
+            DebugUart_Flush();
 
-            debugUartContext.txBufCurLen = 0;
-            debugUartContext.txBuf[debugUartContext.txBufCurLen] = 0;
-        }
+        debugUartContext.lastRxTimeInMs = get_time_in_ms();
     }
 }
 
@@ -45,6 +53,9 @@ void DebugUart_Thread()
         return;
 
     DebugUart_RxFn();
+
+    if ((get_time_in_ms() - debugUartContext.lastRxTimeInMs) > 100)
+        DebugUart_Flush();
 }
 
 void DebugUart_Init()
@@ -55,6 +66,8 @@ void DebugUart_Init()
 
     debugUartContext.txBufCurLen = 0;
     debugUartContext.txBuf[0] = 0;
+
+    debugUartContext.lastRxTimeInMs = 0;
 
     Uart_Init(debugUartContext.uartId, DEBUG_UART_BAUD, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID, NULL);
 

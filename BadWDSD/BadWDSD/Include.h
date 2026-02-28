@@ -357,6 +357,8 @@ struct DebugUartContext_s
 
     char txBuf[DEBUG_UART_TXBUF_SIZE];
     uint32_t txBufCurLen;
+
+    uint64_t lastRxTimeInMs;
 };
 
 extern void DebugUart_Thread();

@@ -592,7 +592,7 @@ void Sc_Puts(const char *cmd)
     if (cmd_StrLenToSend == 0)
         return;
 
-    if (cmd_StrLenToSend >= (SC_TXBUF_SIZE - 1))
+    if (cmd_StrLenToSend > (SC_TXBUF_SIZE - 1))
     {
         PrintLog("cmd_StrLenToSend too big!\n");
         dead();

@@ -33,14 +33,11 @@ void DebugUart_RxFn()
         if (ch == 0)
             continue;
 
-        if (ch == '\r')
-            continue;
-
         debugUartContext.txBuf[debugUartContext.txBufCurLen] = ch;
         ++debugUartContext.txBufCurLen;
         debugUartContext.txBuf[debugUartContext.txBufCurLen] = 0;
 
-        if ((ch == '\n') || (debugUartContext.txBufCurLen >= (DEBUG_UART_TXBUF_SIZE - 1)))
+        if ((ch == '\r') || (ch == '\n') || (debugUartContext.txBufCurLen >= (DEBUG_UART_TXBUF_SIZE - 1)))
             DebugUart_Flush();
 
         debugUartContext.lastRxTimeInMs = get_time_in_ms();
@@ -54,8 +51,9 @@ void DebugUart_Thread()
 
     DebugUart_RxFn();
 
-    if ((get_time_in_ms() - debugUartContext.lastRxTimeInMs) > 100)
-        DebugUart_Flush();
+    // doesn't work in putty, because it send every input without buffering
+    //if ((get_time_in_ms() - debugUartContext.lastRxTimeInMs) > 100)
+    //    DebugUart_Flush();
 }
 
 void DebugUart_Init()

@@ -36,7 +36,17 @@ void Uart_Puts(uart_inst_t* uartId, const char* buf)
 {
     while (*buf != 0)
     {
-        Uart_Putc(uartId, *buf);
+        char c = *buf;
+
+        if ((c == '\r') || (c == '\n'))
+        {
+            Uart_Putc(uartId, '\r');
+            Uart_Putc(uartId, '\n');
+            break;
+        }
+        else
+            Uart_Putc(uartId, c);
+
         ++buf;
     }
 }

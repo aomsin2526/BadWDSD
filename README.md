@@ -231,7 +231,7 @@ You can't access syscon the old ways anymore. It must be done through modchip. S
 4. Use **Save HDD Key to USB (qCFW)** option
 5. HDD Key dumped
 
-You can use [PS3HDH](https://www.psx-place.com/resources/ps3-hdd-decryption-helper.1293/) to mount it
+You can use [PS3HDH](https://www.psx-place.com/resources/ps3-hdd-decryption-helper.1293/) or [PS3HDDTool](https://github.com/Pheeeeenom/PS3HDDTool) **(Import ata_key.bin)** to mount it
 
 <img width="1350" height="749" alt="mstsc_RUKXzMX8lD" src="https://github.com/user-attachments/assets/808f1399-9294-42db-b538-b7c86e05f867" />
 

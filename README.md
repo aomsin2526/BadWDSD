@@ -66,6 +66,8 @@ then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract
 
 **!!! (Since qcfw-20260228-release-3) If CMD/CLK is damaged, modchip LED will flash rapidly for 5 seconds before shut the console off (Console power LED turn red) !!!**
 
+**This means XDR ram initialization has failed. Anything related to it can be a cause but CMD/CLK is the most common one**
+
 8. You should be on XMB now. now Enable HEN then use **Install qCFW** option
 9. If it tell you to reinstall firmware and try again, do it **ONCE**. **(PS3 Firmware)**
 10. Your screen will appear frozen. it is installing. This process take 10-20 minutes. **If something goes wrong during this step, you should be still able to recover by entering safe mode and reinstall firmware normally**

@@ -283,6 +283,7 @@ struct ScContext_s
     volatile uint32_t rxBufCurLen;
 
     volatile bool trigger;
+    volatile bool xdrInitFail;
 
     volatile bool success;
     volatile bool shutdownSuccess;
@@ -314,6 +315,9 @@ extern void Sc_Init();
 
 extern bool Sc_GetTrigger();
 extern void Sc_ClearTrigger();
+
+extern bool Sc_GetXdrInitFail();
+extern void Sc_ClearXdrInitFail();
 
 extern bool Sc_GetSuccess();
 extern void Sc_ClearSuccess();

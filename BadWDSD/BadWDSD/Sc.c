@@ -30,6 +30,17 @@ void Sc_RxFn()
             sync();
         }
 
+        bool xdrInitFail = false;
+
+        if (strstr(scContext.rxBuf, "XDR Link not"))
+            xdrInitFail = true;
+
+        if (xdrInitFail)
+        {
+            scContext.xdrInitFail = true;
+            sync();
+        }
+
         bool success = false;
 
         if (strstr(scContext.rxBuf, "BadWDSD"))
@@ -181,6 +192,7 @@ void Sc_Init()
     scContext.rxBuf[0] = 0;
 
     scContext.trigger = false;
+    scContext.xdrInitFail = false;
 
     scContext.success = false;
     scContext.shutdownSuccess = false;
@@ -514,6 +526,16 @@ bool Sc_GetTrigger()
 void Sc_ClearTrigger()
 {
     scContext.trigger = false;
+}
+
+bool Sc_GetXdrInitFail()
+{
+    return scContext.xdrInitFail;
+}
+
+void Sc_ClearXdrInitFail()
+{
+    scContext.xdrInitFail = false;
 }
 
 bool Sc_GetSuccess()

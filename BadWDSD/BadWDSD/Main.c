@@ -49,6 +49,25 @@ void Watchdog()
     }
 }
 
+void XdrInitFail_Watchdog()
+{
+    if (Sc_GetXdrInitFail())
+    {
+        Led_SetBlinkIntervalInMs(100);
+        Led_SetStatus(LED_STATUS_BLINK);
+
+        busy_wait_ms(5000);
+
+        Led_SetStatus(LED_STATUS_ON);
+        Sc_Puts("shutdown");
+
+        //
+
+        Sc_ClearXdrInitFail();
+        Sc_ClearTrigger();
+    }
+}
+
 void Sc_Thread_x16_Stage0()
 {
     PrintLog("Sc_Thread_x16_Stage0()\n");
@@ -129,6 +148,8 @@ void Sc_Thread_x16_Stage0()
 
             Sc_ClearTrigger();
         }
+
+        XdrInitFail_Watchdog();
     }
 }
 
@@ -205,6 +226,8 @@ void Sc_Thread_x32_Stage0()
 
             Sc_ClearTrigger();
         }
+
+        XdrInitFail_Watchdog();
     }
 }
 

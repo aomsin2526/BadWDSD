@@ -62,7 +62,9 @@ then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract
 6. After modchip installed and power plugged in, wait until LED of modchip becomes solid. If it doesn't solid after a while, check **SC_RX/SC_TX** wire
 7. Turn on the console. modchip LED should flash briefly with triple beep right after. This means exploit is successful. If your console keep turning off and on, check **CMD/CLK** wire and **Stagex**
    
-**!!! If modchip LED didn't flash briefly and console is GLOD, CMD/CLK resistor may be damaged !!!**
+**!!! (Pre qcfw-20260228-release-3) If modchip LED didn't flash briefly and console is GLOD for 30 seconds, CMD/CLK resistor may be damaged !!!**
+
+**!!! (Since qcfw-20260228-release-3) If CMD/CLK is damaged, modchip LED will flash rapidly for 5 seconds before shut the console off (Console power LED turn red) !!!**
 
 8. You should be on XMB now. now Enable HEN then use **Install qCFW** option
 9. If it tell you to reinstall firmware and try again, do it **ONCE**. **(PS3 Firmware)**

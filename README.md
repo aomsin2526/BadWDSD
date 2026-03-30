@@ -144,7 +144,7 @@ CMD/CLK wire should not be too thick. **0.1mm magnet wire RECOMMENDED**
 
 **DO NOT USE MAGNET WIRE FOR 3.3V/GND! USE SOMETHING THICK FOR POWER!**
 
-**WIRE RESISTANCE MATTERS A LOT!**
+**WIRE RESISTANCE, LENGTH AND THICKNESS MATTERS A LOT!**
 
 Success rate depends on quality of your soldering and wiring.
 

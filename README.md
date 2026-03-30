@@ -142,6 +142,8 @@ It is possible to power the modchip using external power as long as it is active
 
 CMD/CLK wire should not be too thick. **0.1mm magnet wire RECOMMENDED**
 
+**DO NOT USE MAGNET WIRE FOR 3.3V/GND! USE SOMETHING THICK FOR POWER!**
+
 Success rate depends on quality of your soldering and wiring.
 
 Keep all wire short as much as you can, **GND** is the most important one. and avoid routing to noisy area.

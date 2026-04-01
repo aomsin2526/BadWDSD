@@ -1058,6 +1058,7 @@ FUNC_DEF void sc_soft_restart()
     pkt.data[3] = 0x01;
 
     sc_send_packet(&pkt, NULL);
+    dead();
 }
 
 FUNC_DEF void sc_hard_restart()
@@ -1075,6 +1076,7 @@ FUNC_DEF void sc_hard_restart()
     pkt.data[3] = 0x02;
 
     sc_send_packet(&pkt, NULL);
+    dead();
 }
 
 FUNC_DEF void real_sc_puts_init()

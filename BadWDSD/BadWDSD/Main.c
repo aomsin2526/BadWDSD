@@ -43,9 +43,8 @@ void Watchdog()
             }
 
             {
-                busy_wait_ms(500);
-
                 Sc_ClearBringupSuccess();
+                busy_wait_ms(500);
 
                 uint64_t bt1 = get_time_in_ms();
                 uint64_t lastPowerswTime = 0;

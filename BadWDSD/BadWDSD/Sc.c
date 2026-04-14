@@ -63,6 +63,17 @@ void Sc_RxFn()
             sync();
         }
 
+        bool bringupSuccess = false;
+
+        if (strstr(scContext.rxBuf, "Bringup"))
+            bringupSuccess = true;
+
+        if (bringupSuccess)
+        {
+            scContext.bringupSuccess = true;
+            sync();
+        }
+
         bool needReboot = false;
 
         if (strstr(scContext.rxBuf, "Wake source is BT!"))
@@ -196,6 +207,7 @@ void Sc_Init()
 
     scContext.success = false;
     scContext.shutdownSuccess = false;
+    scContext.bringupSuccess = false;
 
     scContext.needReboot = false;
 
@@ -556,6 +568,16 @@ bool Sc_GetShutdownSuccess()
 void Sc_ClearShutdownSuccess()
 {
     scContext.shutdownSuccess = false;
+}
+
+bool Sc_GetBringupSuccess()
+{
+    return scContext.bringupSuccess;
+}
+
+void Sc_ClearBringupSuccess()
+{
+    scContext.bringupSuccess = false;
 }
 
 bool Sc_GetNeedReboot()

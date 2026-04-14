@@ -287,7 +287,8 @@ struct ScContext_s
 
     volatile bool success;
     volatile bool shutdownSuccess;
-    
+    volatile bool bringupSuccess;
+
     volatile bool needReboot;
 
     volatile struct Sc_SendCommandContext_s* sendCommandCtx;
@@ -324,6 +325,9 @@ extern void Sc_ClearSuccess();
 
 extern bool Sc_GetShutdownSuccess();
 extern void Sc_ClearShutdownSuccess();
+
+extern bool Sc_GetBringupSuccess();
+extern void Sc_ClearBringupSuccess();
 
 extern bool Sc_GetNeedReboot();
 extern void Sc_ClearNeedReboot();

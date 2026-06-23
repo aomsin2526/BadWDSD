@@ -209,6 +209,10 @@ void NorWrite(uint64_t offset, const void* data, uint64_t size)
 	static const uint64_t sector_size = 512;
 	uint64_t burst_size = (512 * sector_size);
 
+	// example workaround to fix 0xf31000 bug
+	if (burst_size > (64 * 1024))
+		burst_size = (64 * 1024);
+
 	PrintLog("burst_size = %lu\n", burst_size);
 
 	uint32_t dev_handle;

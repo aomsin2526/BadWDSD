@@ -269,6 +269,11 @@ FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal, uint8_t veri
                 lv1_puts("Searching for qcfwlite492cex_lv2_kernel.zdiff...\n");
                 CoreOS_FindFileEntry_Aux("qcfwlite492cex_lv2_kernel.zdiff", &lv2DiffFileAddress, &lv2DiffFileSize);
             }
+            else if (fwVersion == 493)
+            {
+                lv1_puts("Searching for qcfwlite493cex_lv2_kernel.zdiff...\n");
+                CoreOS_FindFileEntry_Aux("qcfwlite493cex_lv2_kernel.zdiff", &lv2DiffFileAddress, &lv2DiffFileSize);
+            }
             else
             {
                 lv1_puts("Current firmware doesn't support qCFW lite!\n");

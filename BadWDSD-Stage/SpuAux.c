@@ -429,6 +429,8 @@ struct __attribute__((aligned(8))) Stagex_spu_job_stage2_context_s
 {
     uint8_t patch_aim;
     uint8_t patch_inspect_package_tophalf;
+
+    uint8_t fsm_toggle;
 };
 
 FUNC_DEF void spu_stage2(uint64_t spu_id, const struct Stagex_spu_job_stage2_context_s* job_context)

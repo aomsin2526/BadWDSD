@@ -150,6 +150,11 @@ FUNC_DEF void Stage2()
                     puts("Searching for qcfwlite492cex_lv1.diff...\n");
                     CoreOS_FindFileEntry_Aux("qcfwlite492cex_lv1.diff", &lv1DiffFileAddress, &lv1DiffFileSize);
                 }
+                else if (fwVersion == 493)
+                {
+                    puts("Searching for qcfwlite493cex_lv1.diff...\n");
+                    CoreOS_FindFileEntry_Aux("qcfwlite493cex_lv1.diff", &lv1DiffFileAddress, &lv1DiffFileSize);
+                }
                 else
                 {
                     puts("Current firmware doesn't support qCFW lite!\n");
@@ -195,8 +200,57 @@ FUNC_DEF void Stage2()
             {
                 if (CoreOS_FindFileEntry_CurrentBank("lv2Rkernel.self", NULL, NULL))
                 {
-                    job_context.patch_aim = 1;
-                    job_context.patch_inspect_package_tophalf = 1;
+                    uint8_t tid = read_targetid();
+
+                    if (tid != 0x82)
+                    {
+                        job_context.patch_aim = 1;
+                        job_context.patch_inspect_package_tophalf = 1;
+                    }
+                }
+            }
+
+            {
+                uint8_t fsm_counter = sc_read_fsm_counter();
+                uint8_t fsm_toggle_flag = sc_read_fsm_toggle_flag();
+
+                puts("fsm_counter = ");
+                print_decimal(fsm_counter);
+                puts("\n");
+
+                puts("fsm_toggle_flag = ");
+                print_hex(fsm_toggle_flag);
+                puts("\n");
+
+                job_context.fsm_toggle = 0xff; // do nothing
+
+                if (fsm_toggle_flag == 0xfe) // always do nothing
+                {
+                    puts("ALWAYS DO NOTHING\n");
+                    sc_write_fsm_counter(0);
+                }
+                else if (fsm_toggle_flag == 0x1) // enter
+                {
+                    puts("ENTER FSM\n");
+
+                    job_context.fsm_toggle = 0x1;
+
+                    sc_write_fsm_counter(0);
+                    sc_write_fsm_toggle_flag(0xff);
+                }
+                else if ((fsm_toggle_flag == 0x0) || (fsm_counter >= 5)) // exit
+                {
+                    puts("EXIT FSM\n");
+
+                    job_context.fsm_toggle = 0x0;
+
+                    sc_write_fsm_counter(0);
+                    sc_write_fsm_toggle_flag(0xff);
+                }
+                else
+                {
+                    puts("DO NOTHING (INCREMENT COUNTER)\n");
+                    sc_write_fsm_counter(fsm_counter + 1);
                 }
             }
 
@@ -284,7 +338,20 @@ FUNC_DEF void Stage2()
             puts("\n");
 
             //
+
+            ctx->cached_fwVersion = CoreOS_Bank_GetFWVersion(os_bank_indicator);
+
+            puts("cached_fwVersion = ");
+            print_decimal(ctx->cached_fwVersion);
+            puts("\n");
+
+            //
         }
+
+        if (isqCFW)
+            sc_led_static_yellow();
+        else
+            sc_led_static_green();
 
         puts("Booting lv1...\n");
 

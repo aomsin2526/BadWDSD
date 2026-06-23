@@ -67,6 +67,7 @@ void LoadElfSpu(uint64_t elfFileAddress)
 struct __attribute__((aligned(8))) mymetldr_context_s
 {
     uint64_t myldrElfAddress;
+    uint64_t fwVersion;
 };
 
 void main()
@@ -76,6 +77,11 @@ void main()
 
     //
 
+    uint8_t minor_ver_hex = 0x92;
+
+    if (ctx->fwVersion == 493)
+        minor_ver_hex = 0x93;
+
     {
         // keyring
 
@@ -83,9 +89,17 @@ void main()
         // rootkey:  F5    FD    0D FD 54 B7 38 FC 88 95
         // finalbuf: F5 04 FD 92 0D FD 54 B7 38 FC 88 95
 
-        *((uint64_t *)0x39000) = 0xF504FD920DFD54B7;
+        *((uint64_t *)0x39000) = 0xF504FD930DFD54B7;
         *((uint64_t *)(0x39000 + 8)) = 0x38FC889500000000;
+
+        *((uint8_t *)0x39003) = minor_ver_hex;
     }
+
+    if (*((const uint64_t*)0x26E90) == 0x0004009200000000) // lv2ldr
+        *((uint8_t*)(0x26E90 + 3)) = minor_ver_hex;
+
+    if (*((const uint64_t*)0x2E680) == 0x0004009200000000) // appldr
+        *((uint8_t*)(0x2E680 + 3)) = minor_ver_hex;
 
     {
         // myappldr marker

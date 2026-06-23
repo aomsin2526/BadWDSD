@@ -38,6 +38,7 @@ rm BadWDSD-Stage/Aux/mymetldr.elf
 rm BadWDSD-Stage/Aux/mymetldr_debug.elf
 
 rm BadWDSD-Stage/Aux/Stagex_aux.bin
+rm BadWDSD-Stage/Aux/Stagex_aux.bin.orig
 
 rm BadWDSD-Stage/Aux/Stagex_spu.elf
 rm BadWDSD-Stage/Aux/Stagex_spu_debug.elf

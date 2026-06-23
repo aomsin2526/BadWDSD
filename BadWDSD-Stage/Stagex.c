@@ -141,6 +141,8 @@ struct Stagex_Context_s
     uint64_t cached_mylv2ldrElfAddress;
     uint64_t cached_mymetldrElfAddress;
     
+    uint16_t cached_fwVersion;
+
     uint8_t cached_os_bank_indicator;
     uint8_t cached_qcfw_lite_flag;
 
@@ -1079,6 +1081,67 @@ FUNC_DEF void sc_hard_restart()
     dead();
 }
 
+FUNC_DEF void sc_led_control(uint8_t v1, uint8_t v2)
+{
+    struct sc_packet_s pkt;
+
+    pkt.service_id = 0x16;
+    pkt.communication_tag = 1;
+
+    pkt.payload_size = 3;
+
+    pkt.data[0] = 17;
+    pkt.data[1] = v1;
+    pkt.data[2] = v2;
+
+    sc_send_packet(&pkt, NULL);
+}
+
+FUNC_DEF void sc_led_off()
+{
+    sc_led_control(0, 0);
+}
+
+FUNC_DEF void sc_led_static_red()
+{
+    sc_led_control(0, 1);
+}
+
+FUNC_DEF void sc_led_static_green()
+{
+    sc_led_control(1, 0);
+}
+
+FUNC_DEF void sc_led_blinking_green()
+{
+    sc_led_control(2, 0);
+}
+
+FUNC_DEF void sc_led_static_yellow()
+{
+    sc_led_control(1, 1);
+}
+
+FUNC_DEF void sc_led_short_green_long_yellow()
+{
+    sc_led_control(1, 2);
+}
+
+FUNC_DEF void sc_led_green_yellow()
+{
+    sc_led_control(1, 3);
+}
+
+FUNC_DEF void sc_led_long_green_short_yellow()
+{
+    sc_led_control(1, 4);
+}
+
+FUNC_DEF void sc_led_short_red_long_yellow()
+{
+    sc_led_control(2, 1);
+}
+
 FUNC_DEF void real_sc_puts_init()
 {
 #if SC_PUTS_BUFFER_ENABLED
@@ -1290,6 +1353,34 @@ FUNC_DEF void sc_write_hdd_key_dumper_flag(uint8_t val)
     // block id (0x3000)
     // offset (0x3003)
     sc_write_eeprom8(0x20, 0x3, val);
+}
+
+FUNC_DEF uint8_t sc_read_fsm_counter()
+{
+    // block id (0x3000)
+    // offset (0x3004)
+    return sc_read_eeprom8(0x20, 0x4);
+}
+
+FUNC_DEF void sc_write_fsm_counter(uint8_t val)
+{
+    // block id (0x3000)
+    // offset (0x3004)
+    sc_write_eeprom8(0x20, 0x4, val);
+}
+
+FUNC_DEF uint8_t sc_read_fsm_toggle_flag()
+{
+    // block id (0x3000)
+    // offset (0x3005)
+    return sc_read_eeprom8(0x20, 0x5);
+}
+
+FUNC_DEF void sc_write_fsm_toggle_flag(uint8_t val)
+{
+    // block id (0x3000)
+    // offset (0x3005)
+    sc_write_eeprom8(0x20, 0x5, val);
 }
 
 // in[32]
@@ -1526,35 +1617,38 @@ FUNC_DEF void dead_beep()
     dead();
 }
 
-#define SCMD_SBW 0x1 /* Serial Broadcast Write */
-#define SCMD_SDW 0x0 /* Serial Device Write */
+#define XDR_SCMD_SBW 0x1 /* Serial Broadcast Write */
+#define XDR_SCMD_SDW 0x0 /* Serial Device Write */
 
 #define XDR_CFG 0x02  /* Configuration */
 #define XDR_PM 0x03   /* Power management */
 #define XDR_WDSL 0x04 /* Write data serial load control */
 #define XDR_DLY 0x1f  /* Delay control */
 
+#define XDR_SLE_DISABLED_X32 0x5
+
 #define XDR_SCMD(CMD, SSID, REG) (((CMD) << 28) | 0x04000000 | ((SSID) << 16) | ((REG) << 8))
 
-#define BE_MMIO_BASE 0x20000000000UL
-#define MMIO_BE_MIC (0x50A000 | BE_MMIO_BASE)
+//#define BE_MMIO_BASE 0x20000000000
+//#define MMIO_BE_MIC (0x50A000 | BE_MMIO_BASE)
 
 // ch0
-#define YREG_YDRAM_DTA_0 0x108
-#define MIC_YREG_STAT_0 0x110
+//#define YREG_YDRAM_DTA_0 0x108
+//#define MIC_YREG_STAT_0 0x110
 
 // ch1
-#define YREG_YDRAM_DTA_1 0x148
-#define MIC_YREG_STAT_1 0x150
+//#define YREG_YDRAM_DTA_1 0x148
+//#define MIC_YREG_STAT_1 0x150
 
-FUNC_DEF void XdrRegWrite(uint32_t data)
+#define XDR_CH0_SCMD ((volatile uint32_t*)0x2000050A108)
+#define XDR_CH0_SCMD_STAT ((volatile uint32_t*)0x2000050A110)
+
+FUNC_DEF void Xdr_Ch0_SendScmd(uint32_t data)
 {
-    volatile uint32_t *reg = (volatile uint32_t *)(MMIO_BE_MIC | YREG_YDRAM_DTA_0);
-    *reg = data;
+    *XDR_CH0_SCMD = data;
     eieio();
 
-    volatile uint32_t *xxx = (volatile uint32_t *)(MMIO_BE_MIC | MIC_YREG_STAT_0);
-    volatile uint32_t yyy = *xxx;
+    volatile uint32_t yyy = *XDR_CH0_SCMD_STAT;
     ++yyy;
     eieio();
 }
@@ -1700,6 +1794,12 @@ FUNC_DEF uint16_t CoreOS_CurrentBank_GetFWVersion()
 FUNC_DEF uint8_t CoreOS_CurrentBank_IsqCFW()
 {
     return CoreOS_Bank_IsqCFW(get_os_bank_indicator());
+}
+
+FUNC_DEF uint8_t read_targetid()
+{
+    const uint8_t* tid = (const uint8_t*)0x2401F02F075;
+    return *tid;
 }
 
 struct ElfHeader_s

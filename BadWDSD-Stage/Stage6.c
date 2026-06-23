@@ -1,6 +1,7 @@
 struct __attribute__((aligned(8))) mymetldr_context_s
 {
     uint64_t myldrElfAddress;
+    uint64_t fwVersion;
 };
 
 FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
@@ -92,6 +93,7 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
     {
         struct mymetldr_context_s mctx;
         mctx.myldrElfAddress = myldrElfAddress;
+        mctx.fwVersion = ctx->cached_fwVersion;
 
         memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &mctx, sizeof(mctx));
     }

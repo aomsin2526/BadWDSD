@@ -158,6 +158,9 @@ uint8_t memcmp(const void *p1, const void *p2, uint32_t count)
 
 uint8_t memcmp32(const void *p1, const void *p2, uint32_t count)
 {
+    if ((count % 4) != 0)
+        stop(0x69);
+
     const uint32_t *pp1 = (const uint32_t *)p1;
     const uint32_t *pp2 = (const uint32_t *)p2;
 

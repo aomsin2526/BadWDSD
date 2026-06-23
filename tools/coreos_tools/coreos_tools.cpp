@@ -248,7 +248,8 @@ void create_coreos(const char *inDir, const char *rosPath)
         return;
     }
 
-    FILE *rosFile = fopen(rosPath, "wb");
+    const char* tmpRosPath = "/tmp/tmpros.bin";
+    FILE *rosFile = fopen(tmpRosPath, "wb");
 
     if (rosFile == NULL)
     {
@@ -430,6 +431,54 @@ void create_coreos(const char *inDir, const char *rosPath)
     fclose(rosFile);
 
     closedir(dp);
+
+    {
+        FILE* inFile = fopen(tmpRosPath, "rb");
+
+        if (inFile == NULL)
+        {
+            printf("can't open inFile!\n");
+
+            abort();
+            return;
+        }
+
+        FILE* outFile = fopen(rosPath, "wb");
+
+        if (outFile == NULL)
+        {
+            printf("can't open outFile!\n");
+
+            abort();
+            return;
+        }
+
+        size_t inFileSize = get_file_size(inFile);
+
+        size_t tmpBufSize = (inFileSize + 0x1000);
+        uint8_t* tmpBuf = (uint8_t*)malloc(tmpBufSize);
+
+        size_t outFileSize = inFileSize;
+
+        fread(tmpBuf, 1, inFileSize, inFile);
+        fclose(inFile);
+
+        if (inFileSize <= 0x18000) // This is Stagex_aux.bin
+        {
+            if (inFileSize > 0x10000)
+            {
+                printf("Stagex_aux.bin is bigger than 0x10000. This is not allowed until 0xF31000 bug is fixed\n");
+
+                abort();
+                return;
+            }
+        }
+
+        fwrite(tmpBuf, 1, outFileSize, outFile);
+        fclose(outFile);
+
+        free(tmpBuf);
+    }
 
     printf("create_coreos() done\n");
 }

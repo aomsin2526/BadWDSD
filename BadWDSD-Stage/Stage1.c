@@ -1,5 +1,4 @@
 #define ENTRY_WAIT_IN_MS 100 // 1000
-#define HW_INIT_ENABLED 1
 
 FUNC_DEF void Stage1()
 {
@@ -7,8 +6,6 @@ FUNC_DEF void Stage1()
 
     real_sc_puts_init();
     sc_puts("Bad_WDSD Stage1 by Kafuu(aomsin2526)" " (Build Date: " __DATE__ " " __TIME__ ")\n");
-
-    sc_triple_beep();
 
 #if 0
 
@@ -77,6 +74,12 @@ FUNC_DEF void Stage1()
     print_decimal(fwVersion);
     puts("\n");
 
+    uint8_t tid = read_targetid();
+
+    puts("tid = ");
+    print_hex(tid);
+    puts("\n");
+
     uint8_t isqCFW = CoreOS_Bank_IsqCFW(os_bank_indicator);
 
     puts("isqCFW = ");
@@ -100,10 +103,15 @@ FUNC_DEF void Stage1()
 
         if ((power_up_cause[0] & 0x00000000ffffffff) == 0x200)
         {
+            sc_led_blinking_green();
             sc_puts("Wake source is BT!, waiting for power cycle by modchip...\n");
             dead();
         }
     }
+    else
+        sc_triple_beep();
+
+    sc_led_short_green_long_yellow();
 
     // inform modchip that we are good...
     sc_puts("BadWDSD ok!\n");
@@ -211,7 +219,7 @@ FUNC_DEF void Stage1()
                     DecryptLv0Self((void*)lv0FileAddress, (const void*)lv0SelfFileAddress, 1);
 #endif
 
-                    if (hdd_key_dumper_flag == 0x1) // dump request
+                    if ((hdd_key_dumper_flag == 0x1) && ((fwVersion >= 470) || isqCFW)) // dump request
                     {
                         sc_write_hdd_key_dumper_flag(0x2); // will dump soon
 
@@ -321,10 +329,8 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
     // set stage_zero to 0
     stage_zero = 0;
 
-#if HW_INIT_ENABLED
     // call HW_Init
     asm volatile("bl HW_Init");
-#endif
 
     // set stage_rtoc
     stage_rtoc = stage_entry_ra;
@@ -336,24 +342,8 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
 
     // restore XDR now
     {
-        //register uint64_t r3 asm("r3");
-        //r3 = (XDR_SCMD(SCMD_SDW, 0, XDR_CFG) | 0x5); // SLE Disabled, x32
-
-        //register uint64_t r4 asm("r4");
-        //r4 = (MMIO_BE_MIC | YREG_YDRAM_DTA_0);
-
-        //asm volatile("stw %0, 0(%1)" ::"r"(r3),"r"(r4):);
-        //eieio();
-
-#if 0
-        //entry1:000002401F031028                 lis       r3_0, 0x400
-        //entry1:000002401F03102C                 ori       r3_0, r3_0, 0x205 # 0x4000205
-        //entry1:000002401F031030                 lis       r4_0, 0x200
-        //entry1:000002401F031034                 ori       r4_0, r4_0, 0x50 # 'P' # 0x2000050
-        //entry1:000002401F031038                 sldi      r4_0, r4_0, 16
-        //entry1:000002401F03103C                 ori       r4_0, r4_0, 0xA108
-        //entry1:000002401F031040                 stw       r3_0, 0(r4_0)
-#endif
+        // *XDR_CH0_SCMD = (XDR_SCMD(XDR_SCMD_SDW, 0, XDR_CFG) | XDR_SLE_DISABLED_X32);
+        // *((volatile uint32_t*)0x2000050A108) = 0x4000205
 
         asm volatile("lis 3, 0x400");
         asm volatile("ori 3, 3, 0x205");

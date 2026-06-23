@@ -62,14 +62,10 @@ then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract
 6. After modchip installed and power plugged in, wait until LED of modchip becomes solid. If it doesn't solid after a while, check **SC_RX/SC_TX** wire
 7. Turn on the console. modchip LED should flash briefly with triple beep right after. This means exploit is successful. If your console keep turning off and on, check **CMD/CLK** wire and **Stagex**
    
-**!!! (Pre qcfw-20260228-release-3) If modchip LED didn't flash briefly and console is GLOD for 30 seconds, CMD/CLK resistor may be damaged !!!**
-
-**!!! (Since qcfw-20260228-release-3) If CMD/CLK is damaged, modchip LED will flash rapidly for 5 seconds before shut the console off (Console power LED turn red) !!!**
-
-**This means XDR ram initialization has failed. Anything related to it can be a cause but CMD/CLK is the most common one**
+**!!! If modchip LED didn't flash briefly and console is GLOD, CMD/CLK resistor may be damaged !!!**
 
 8. You should be on XMB now. now Enable HEN then use **Install qCFW** option
-9. If it tell you to reinstall firmware and try again, do it **ONCE**. **(PS3 Firmware)**
+9. If it tell you to reinstall firmware and try again, do it **ONCE**.
 10. Your screen will appear frozen. it is installing. This process take 10-20 minutes. **If something goes wrong during this step, you should be still able to recover by entering safe mode and reinstall firmware normally**
 11. Then it will reboot itself. you should be on qCFW and see Evilnat logo now.
 12. **!! You should "Sync date & time with internet" at least once after install to avoid issues such as XMB hangs !!**
@@ -141,10 +137,6 @@ It is possible to power the modchip using external power as long as it is active
 # Wiring guides
 
 CMD/CLK wire should not be too thick. **0.1mm magnet wire RECOMMENDED**
-
-**DO NOT USE MAGNET WIRE FOR 3.3V/GND! USE SOMETHING THICK FOR POWER!**
-
-**WIRE RESISTANCE, LENGTH AND THICKNESS MATTERS A LOT!**
 
 Success rate depends on quality of your soldering and wiring.
 
@@ -221,9 +213,7 @@ It is different from CFW. Simply follow these steps.
 
 # Accessing Syscon
 
-You can't access syscon the old ways anymore. It must be done through modchip. Simply connect **DEBUG** pin of modchip into your UART adapter. **(See pico pinout)**
-
-**Do not use syscon script, instead use normal serial terminal program with baud 576000.**
+You can't access syscon the old ways anymore. It must be done through modchip. Simply connect **DEBUG** pin of modchip into your UART adapter.
 
 <img width="1206" height="644" alt="Termite_s1m3OjonO8" src="https://github.com/user-attachments/assets/b8ba3786-d2ab-488f-b6c2-85032f0615de" />
 
@@ -239,7 +229,7 @@ You can't access syscon the old ways anymore. It must be done through modchip. S
 4. Use **Save HDD Key to USB (qCFW)** option
 5. HDD Key dumped
 
-You can use [PS3HDH](https://www.psx-place.com/resources/ps3-hdd-decryption-helper.1293/) or [PS3HDDTool](https://github.com/Pheeeeenom/PS3HDDTool) **(Import ata_key.bin)** to mount it
+You can use [PS3HDH](https://www.psx-place.com/resources/ps3-hdd-decryption-helper.1293/) to mount it
 
 <img width="1350" height="749" alt="mstsc_RUKXzMX8lD" src="https://github.com/user-attachments/assets/808f1399-9294-42db-b538-b7c86e05f867" />
 

@@ -560,6 +560,8 @@ struct __attribute__((aligned(8))) Stagex_spu_job_stage2_context_s
 {
     uint8_t patch_aim;
     uint8_t patch_inspect_package_tophalf;
+
+    uint8_t fsm_toggle; // 0x0 = exit, 0x1 = enter, other values = do nothing
 };
 
 void Stagex_spu_job_stage2(const volatile struct Stagex_spu_job_stage2_context_s *job_context)
@@ -570,13 +572,18 @@ void Stagex_spu_job_stage2(const volatile struct Stagex_spu_job_stage2_context_s
     uint8_t found_UpdateMgrCoreOSHashCheck = 0;
     uint8_t found_SysmgrCoreOSHashCheck = 0;
 
-    uint8_t found_disable_erase_hash_standby_bank_and_fsm = 0;
+    uint8_t found_disable_erase_hash_standby_bank_and_enter_fsm = 0;
+    uint8_t found_disable_erase_hash_standby_bank_and_exit_fsm = 0;
+    uint8_t found_disable_erase_hash_standby_bank = 0;
+
     uint8_t found_get_version_and_hash = 0;
 
     uint8_t found_hvcall_114_1 = 0;
     uint8_t found_hvcall_114_2 = 0;
 
     uint8_t found_fsm = 0;
+
+    uint8_t found_ps2_fan_control = 0;
 
     uint8_t found_aim_get_device_type = 0;
     uint8_t found_aim_get_device_id = 0;
@@ -621,19 +628,72 @@ void Stagex_spu_job_stage2(const volatile struct Stagex_spu_job_stage2_context_s
                 }
             }
 
-            if (!found_disable_erase_hash_standby_bank_and_fsm)
+            ////
+
+            if (job_context->fsm_toggle == 0x1) // enter
             {
-                // puts("Patching disable_erase_hash_standby_bank_and_fsm (ANTI BRICK & EXIT FSM)...\n");
-
-                __attribute__((aligned(16))) static const uint8_t searchData[] = {0xF8, 0x21, 0xFE, 0xC1, 0x7C, 0x08, 0x02, 0xA6, 0xFB, 0x41, 0x01, 0x10, 0x3B, 0x41, 0x00, 0x70, 0xFB, 0xA1, 0x01, 0x28, 0x7C, 0x7D, 0x1B, 0x78, 0x7F, 0x43, 0xD3, 0x78};
-                __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x7C, 0x08, 0x02, 0xA6, 0x38, 0x21, 0xFF, 0xC0, 0xF8, 0x01, 0x00, 0x00, 0x3D, 0x20, 0x80, 0x00, 0x61, 0x29, 0x41, 0x24, 0x79, 0x29, 0x00, 0x20, 0x38, 0x60, 0x00, 0xFF, 0x38, 0x80, 0x00, 0xFF, 0x7D, 0x29, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x21, 0xE8, 0x01, 0x00, 0x00, 0x38, 0x21, 0x00, 0x40, 0x38, 0x60, 0x00, 0x00, 0x7C, 0x08, 0x03, 0xA6, 0x4E, 0x80, 0x00, 0x20};
-
-                if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                if (!found_disable_erase_hash_standby_bank_and_enter_fsm)
                 {
-                    DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
-                    found_disable_erase_hash_standby_bank_and_fsm = 1;
+                    // puts("Patching found_disable_erase_hash_standby_bank_and_enter_fsm (ANTI BRICK & ENTER FSM)...\n");
+
+                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0xF8, 0x21, 0xFE, 0xC1, 0x7C, 0x08, 0x02, 0xA6, 0xFB, 0x41, 0x01, 0x10, 0x3B, 0x41, 0x00, 0x70, 0xFB, 0xA1, 0x01, 0x28, 0x7C, 0x7D, 0x1B, 0x78, 0x7F, 0x43, 0xD3, 0x78};
+                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x7C, 0x08, 0x02, 0xA6, 0x38, 0x21, 0xFF, 0xC0, 0xF8, 0x01, 0x00, 0x00, 0x3D, 0x20, 0x80, 0x00, 0x61, 0x29, 0x41, 0x24, 0x79, 0x29, 0x00, 0x20, 0x38, 0x60, 0x00, 0xFF, 0x38, 0x80, 0x00, 0x00, 0x7D, 0x29, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x21, 0xE8, 0x01, 0x00, 0x00, 0x38, 0x21, 0x00, 0x40, 0x38, 0x60, 0x00, 0x00, 0x7C, 0x08, 0x03, 0xA6, 0x4E, 0x80, 0x00, 0x20};
+
+                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                    {
+                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                        found_disable_erase_hash_standby_bank_and_enter_fsm = 1;
+                    }
                 }
             }
+            else if (job_context->fsm_toggle == 0x0) // exit
+            {
+                if (!found_disable_erase_hash_standby_bank_and_exit_fsm)
+                {
+                    // puts("Patching found_disable_erase_hash_standby_bank_and_exit_fsm (ANTI BRICK & EXIT FSM)...\n");
+
+                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0xF8, 0x21, 0xFE, 0xC1, 0x7C, 0x08, 0x02, 0xA6, 0xFB, 0x41, 0x01, 0x10, 0x3B, 0x41, 0x00, 0x70, 0xFB, 0xA1, 0x01, 0x28, 0x7C, 0x7D, 0x1B, 0x78, 0x7F, 0x43, 0xD3, 0x78};
+                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x7C, 0x08, 0x02, 0xA6, 0x38, 0x21, 0xFF, 0xC0, 0xF8, 0x01, 0x00, 0x00, 0x3D, 0x20, 0x80, 0x00, 0x61, 0x29, 0x41, 0x24, 0x79, 0x29, 0x00, 0x20, 0x38, 0x60, 0x00, 0xFF, 0x38, 0x80, 0x00, 0xFF, 0x7D, 0x29, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x21, 0xE8, 0x01, 0x00, 0x00, 0x38, 0x21, 0x00, 0x40, 0x38, 0x60, 0x00, 0x00, 0x7C, 0x08, 0x03, 0xA6, 0x4E, 0x80, 0x00, 0x20};
+
+                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                    {
+                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                        found_disable_erase_hash_standby_bank_and_exit_fsm = 1;
+                    }
+                }
+
+                if (!found_fsm) // exit
+                {
+                    // puts("Patching FSM...\n");
+
+                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0x80, 0x01, 0x00, 0x74, 0x7F, 0xC3, 0xF3, 0x78, 0xE8, 0xA2, 0x84, 0xE8, 0x38, 0x80, 0x00, 0x01};
+                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x38, 0x00, 0x00, 0xFF, 0x7F, 0xC3, 0xF3, 0x78, 0xE8, 0xA2, 0x84, 0xE8, 0x38, 0x80, 0x00, 0x01};
+
+                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                    {
+                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                        found_fsm = 1;
+                    }
+                }
+            }
+            else // do nothing
+            {
+                if (!found_disable_erase_hash_standby_bank)
+                {
+                    // puts("Patching found_disable_erase_hash_standby_bank (ANTI BRICK)...\n");
+
+                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0xF8, 0x21, 0xFE, 0xC1, 0x7C, 0x08, 0x02, 0xA6, 0xFB, 0x41, 0x01, 0x10, 0x3B, 0x41, 0x00, 0x70, 0xFB, 0xA1, 0x01, 0x28, 0x7C, 0x7D, 0x1B, 0x78, 0x7F, 0x43, 0xD3, 0x78};
+                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x4E, 0x80, 0x00, 0x20};
+
+                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                    {
+                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                        found_disable_erase_hash_standby_bank = 1;
+                    }
+                }
+            }
+
+            ////
 
             if (!found_get_version_and_hash)
             {
@@ -677,17 +737,17 @@ void Stagex_spu_job_stage2(const volatile struct Stagex_spu_job_stage2_context_s
                 }
             }
 
-            if (!found_fsm)
+            if (!found_ps2_fan_control)
             {
-                // puts("Patching FSM...\n");
+                // puts("Patching PS2 fan control...\n");
 
-                __attribute__((aligned(16))) static const uint8_t searchData[] = {0x80, 0x01, 0x00, 0x74, 0x7F, 0xC3, 0xF3, 0x78, 0xE8, 0xA2, 0x84, 0xE8, 0x38, 0x80, 0x00, 0x01};
-                __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x38, 0x00, 0x00, 0xFF, 0x7F, 0xC3, 0xF3, 0x78, 0xE8, 0xA2, 0x84, 0xE8, 0x38, 0x80, 0x00, 0x01};
+                __attribute__((aligned(16))) static const uint8_t searchData[] = {0xE8, 0x03, 0x01, 0xC8, 0x54, 0x00, 0x05, 0xEE, 0x2F, 0xA0, 0x00, 0x00, 0x41, 0x9E, 0x00, 0xE4};
+                __attribute__((aligned(16))) static const uint8_t replaceData[] = {0xE8, 0x03, 0x01, 0xC8, 0x54, 0x00, 0x05, 0xEE, 0x2F, 0xA0, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00};
 
                 if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
                 {
                     DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
-                    found_fsm = 1;
+                    found_ps2_fan_control = 1;
                 }
             }
 
@@ -747,7 +807,23 @@ void Stagex_spu_job_stage2(const volatile struct Stagex_spu_job_stage2_context_s
         }
     }
 
-    if (!found_disable_erase_hash_standby_bank_and_fsm || !found_get_version_and_hash)
+    if (job_context->fsm_toggle == 0x1) // enter
+    {
+        if (!found_disable_erase_hash_standby_bank_and_enter_fsm)
+            stop(8);
+    }
+    else if (job_context->fsm_toggle == 0x0) // exit
+    {
+        if (!found_disable_erase_hash_standby_bank_and_exit_fsm)
+            stop(8);
+    }
+    else // do nothing
+    {
+        if (!found_disable_erase_hash_standby_bank)
+            stop(8);
+    }
+
+    if (!found_get_version_and_hash)
         stop(8);
 
     if (job_context->patch_inspect_package_tophalf)

@@ -2,6 +2,10 @@
 
 This is a hardware modchip for **Sony PlayStation 3**. By using **Raspberry Pi Pico (RP2040)**, It is possible for non-CFW compatible models to boot **qCFW**.
 
+# Support me
+
+If you like my work, please consider support me at [Ko-fi](https://ko-fi.com/aomsin2526)!
+
 # Supported models
 
 All **CECH-2500**
@@ -244,6 +248,19 @@ This should work as long as you hear triple beeps
 3. See syscon log for keys
 
 <img width="621" height="254" alt="Termite_Pf3nlky65T" src="https://github.com/user-attachments/assets/0ed1a1ab-ab60-46e8-b8b4-11292da7da79" />
+
+# BD Remarry
+
+**Note: qCFW will exit FSM automatically every 5 boots!**
+
+1. Extract this [zip](https://github.com/user-attachments/files/29274482/qcfw-bdremarry.zip) into root of your USB drive
+2. Plug it into **RIGHTMOST** USB port of your console
+3. Enter FSM using **Network -> CFW Tools -> Service Tools -> Advanced Service Tools -> Toggle Factory Service Mode**
+4. You should see something like this on the screen:
+   <img width="640" height="360" alt="IMG_20260624_080420" src="https://github.com/user-attachments/assets/544f6992-7233-421b-a42c-c5aad3b27e7e" />
+5. Then the console should turn itself off without any errors
+6. **(Optional)** If you want to play BD movies, insert it and play it once while in FSM
+7. Exit FSM
 
 # eMMC Support?
 

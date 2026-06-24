@@ -259,8 +259,9 @@ This should work as long as you hear triple beeps
 4. You should see something like this on the screen:
    <img width="640" height="360" alt="IMG_20260624_080420" src="https://github.com/user-attachments/assets/544f6992-7233-421b-a42c-c5aad3b27e7e" />
 5. Then the console should turn itself off without any errors
-6. **(Optional)** If you want to play BD movies, insert it and play it once while in FSM
-7. Exit FSM
+6. Remove USB drive then turn on the console
+7. **(Optional)** If you want to play BD movies, insert it and play it once while in FSM
+8. Exit FSM
 
 # eMMC Support?
 

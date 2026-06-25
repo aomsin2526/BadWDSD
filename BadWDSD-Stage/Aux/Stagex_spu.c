@@ -683,7 +683,7 @@ void Stagex_spu_job_stage2(const volatile struct Stagex_spu_job_stage2_context_s
                     // puts("Patching found_disable_erase_hash_standby_bank (ANTI BRICK)...\n");
 
                     __attribute__((aligned(16))) static const uint8_t searchData[] = {0xF8, 0x21, 0xFE, 0xC1, 0x7C, 0x08, 0x02, 0xA6, 0xFB, 0x41, 0x01, 0x10, 0x3B, 0x41, 0x00, 0x70, 0xFB, 0xA1, 0x01, 0x28, 0x7C, 0x7D, 0x1B, 0x78, 0x7F, 0x43, 0xD3, 0x78};
-                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x4E, 0x80, 0x00, 0x20};
+                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x38, 0x60, 0x00, 0x00, 0x4E, 0x80, 0x00, 0x20};
 
                     if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
                     {

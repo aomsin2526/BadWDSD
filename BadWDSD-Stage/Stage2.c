@@ -250,7 +250,9 @@ FUNC_DEF void Stage2()
                 else
                 {
                     puts("DO NOTHING (INCREMENT COUNTER)\n");
+
                     sc_write_fsm_counter(fsm_counter + 1);
+                    sc_write_fsm_toggle_flag(0xff);
                 }
             }
 

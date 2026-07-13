@@ -355,7 +355,7 @@ FUNC_DEF void Stage2()
 
             //
 
-            ctx->cached_fwVersion = CoreOS_Bank_GetFWVersion(os_bank_indicator);
+            ctx->cached_fwVersion = fwVersion;
 
             puts("cached_fwVersion = ");
             print_decimal(ctx->cached_fwVersion);

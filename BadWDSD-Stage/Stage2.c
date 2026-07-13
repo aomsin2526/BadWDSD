@@ -145,7 +145,7 @@ FUNC_DEF void Stage2()
             uint64_t lv1DiffFileAddress = 0;
             uint64_t lv1DiffFileSize = 0;
 
-            if (!isqCFW && (qcfw_lite_flag == 0x1))
+            if (!(isqCFW || isqCFW_jig) && (qcfw_lite_flag == 0x1))
             {
                 if (fwVersion == 492)
                 {

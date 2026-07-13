@@ -102,7 +102,7 @@ void main()
         *((uint8_t*)(0x2E680 + 3)) = minor_ver_hex;
 
     {
-        // myappldr marker
+        // marker
 
         *((uint64_t *)0x39100) = 0x123456789;
     }

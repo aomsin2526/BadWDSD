@@ -273,6 +273,10 @@ This should work as long as you hear triple beeps
 7. **(Optional)** If you want to play BD movies, insert it and play it once while in FSM
 8. Exit FSM
 
+# Syscon Remarry
+
+See [wiki](https://github.com/aomsin2526/BadWDSD/wiki/Remarry-Syscon)
+
 # eMMC Support?
 
 In very short summary, What modchip is doing is writing these code into ram at boot:

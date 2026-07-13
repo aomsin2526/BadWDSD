@@ -85,7 +85,7 @@ void extract_coreos_from_nor_dump(const char *dumpPath, const char *outDir)
             return;
         }
 
-        fwrite(dumpData + 0x0C0000, 1, 0x700000, outFile);
+        fwrite(dumpData + 0x0C0000, 1, 0x6FFFF0, outFile);
         fclose(outFile);
     }
 
@@ -103,7 +103,7 @@ void extract_coreos_from_nor_dump(const char *dumpPath, const char *outDir)
             return;
         }
 
-        fwrite(dumpData + 0x7C0000, 1, 0x700000, outFile);
+        fwrite(dumpData + 0x7C0000, 1, 0x6FFFF0, outFile);
         fclose(outFile);
     }
 
@@ -335,9 +335,9 @@ void create_coreos(const char *inDir, const char *rosPath)
             curOffset += entry->length;
         }
 
-        if (curOffset > 0x700000)
+        if (curOffset > 0x6FFFF0)
         {
-            printf("result ros too big! (%u bytes too big)\n", (uint32_t)(curOffset - 0x700000));
+            printf("result ros too big! (%u bytes too big)\n", (uint32_t)(curOffset - 0x6FFFF0));
 
             abort();
             return;

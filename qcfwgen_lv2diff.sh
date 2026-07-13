@@ -110,7 +110,7 @@ echo Copying mylv2ldr.elf to outros/mylv2ldr.elf...
 cp -a ../spu/mylv2ldr/mylv2ldr.elf outros/mylv2ldr.elf || exit 1
 
 echo Creating outros/qcfw
-echo "qcfw_lv2diff" > outros/qcfw
+echo "qcfw_lv2diff" > outros/qcfw || exit 1
 
 read -p "Modify outros now then press ENTER to continue"
 

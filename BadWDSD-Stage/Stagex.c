@@ -1761,6 +1761,11 @@ FUNC_DEF uint8_t CoreOS_Bank_IsqCFW(uint8_t os_bank_indicator)
     return CoreOS_FindFileEntry_Bank(os_bank_indicator, "qcfw", NULL, NULL);
 }
 
+FUNC_DEF uint8_t CoreOS_Bank_IsqCFW_jig(uint8_t os_bank_indicator)
+{
+    return CoreOS_FindFileEntry_Bank(os_bank_indicator, "qcfw_jig", NULL, NULL);
+}
+
 FUNC_DEF uint8_t calc_os_bank_indicator()
 {
     return sc_read_os_bank_indicator();

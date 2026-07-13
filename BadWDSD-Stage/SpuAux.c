@@ -427,6 +427,8 @@ FUNC_DEF void SPU_DecryptLv0Self(uint64_t spu_id, void* inDest, const void* inSr
 
 struct __attribute__((aligned(8))) Stagex_spu_job_stage2_context_s
 {
+    uint8_t is_qcfw_jig;
+
     uint8_t patch_aim;
     uint8_t patch_inspect_package_tophalf;
 

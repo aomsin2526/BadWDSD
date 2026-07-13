@@ -86,6 +86,12 @@ FUNC_DEF void Stage1()
     print_decimal(isqCFW);
     puts("\n");
 
+    uint8_t isqCFW_jig = CoreOS_Bank_IsqCFW_jig(os_bank_indicator);
+
+    puts("isqCFW_jig = ");
+    print_decimal(isqCFW_jig);
+    puts("\n");
+
     //
 
     if (isqCFW)
@@ -237,7 +243,7 @@ FUNC_DEF void Stage1()
 
                     // ANTI BRICK!!!
                     // isqCFW!!!
-                    if ((fwVersion >= 470) || isqCFW)
+                    if ((fwVersion >= 470) || isqCFW || isqCFW_jig)
                     {
                         uint8_t searchData[] = {0x38, 0x60, 0x01, 0x00, 0x7C, 0x69, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x60, 0x00, 0x00, 0x00};
                         uint8_t stage2jData[] = {0x48, 0x00, 0x00, 0x05, 0x7C, 0xA8, 0x02, 0xA6, 0x38, 0xA5, 0xFF, 0xFC, 0xE8, 0xA5, 0x00, 0x18, 0x7C, 0xA9, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x00, 0x00, 0x02, 0x40, 0x1F, 0x03, 0x11, 0x00};
@@ -256,7 +262,7 @@ FUNC_DEF void Stage1()
                         puts("fw too low!\n");
 
                     // ANTI BRICK!!!
-                    if (isqCFW)
+                    if (isqCFW || isqCFW_jig)
                     {
                         // lv1.self -> lv1.qelf
 

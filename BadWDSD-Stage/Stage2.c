@@ -75,6 +75,8 @@ FUNC_DEF void Stage2()
     uint8_t os_bank_indicator = get_os_bank_indicator();
 
     uint8_t isqCFW = CoreOS_Bank_IsqCFW(os_bank_indicator);
+    uint8_t isqCFW_jig = CoreOS_Bank_IsqCFW_jig(os_bank_indicator);
+
     uint8_t qcfw_lite_flag = get_qcfw_lite_flag();
 
     uint16_t fwVersion = CoreOS_Bank_GetFWVersion(os_bank_indicator);
@@ -193,66 +195,78 @@ FUNC_DEF void Stage2()
 
         {
             struct Stagex_spu_job_stage2_context_s job_context;
-            job_context.patch_aim = 0;
-            job_context.patch_inspect_package_tophalf = 0;
+            job_context.is_qcfw_jig = 0;
 
-            if (isqCFW)
+            if (isqCFW_jig)
             {
-                if (CoreOS_FindFileEntry_CurrentBank("lv2Rkernel.self", NULL, NULL))
-                {
-                    uint8_t tid = read_targetid();
+                job_context.is_qcfw_jig = 1;
+            }
+            else
+            {
+                job_context.patch_aim = 0;
+                job_context.patch_inspect_package_tophalf = 0;
 
-                    if (tid != 0x82)
+                if (isqCFW)
+                {
+                    if (CoreOS_FindFileEntry_CurrentBank("lv2Rkernel.self", NULL, NULL))
                     {
-                        job_context.patch_aim = 1;
-                        job_context.patch_inspect_package_tophalf = 1;
+                        uint8_t tid = read_targetid();
+
+                        if (tid != 0x82)
+                        {
+                            job_context.patch_aim = 1;
+                            job_context.patch_inspect_package_tophalf = 1;
+                        }
                     }
                 }
-            }
 
-            {
-                uint8_t fsm_counter = sc_read_fsm_counter();
-                uint8_t fsm_toggle_flag = sc_read_fsm_toggle_flag();
-
-                puts("fsm_counter = ");
-                print_decimal(fsm_counter);
-                puts("\n");
-
-                puts("fsm_toggle_flag = ");
-                print_hex(fsm_toggle_flag);
-                puts("\n");
-
-                job_context.fsm_toggle = 0xff; // do nothing
-
-                if (fsm_toggle_flag == 0xfe) // always do nothing
                 {
-                    puts("ALWAYS DO NOTHING\n");
-                    sc_write_fsm_counter(0);
-                }
-                else if (fsm_toggle_flag == 0x1) // enter
-                {
-                    puts("ENTER FSM\n");
+                    uint8_t fsm_counter = sc_read_fsm_counter();
+                    uint8_t fsm_toggle_flag = sc_read_fsm_toggle_flag();
 
-                    job_context.fsm_toggle = 0x1;
+                    puts("fsm_counter = ");
+                    print_decimal(fsm_counter);
+                    puts("\n");
 
-                    sc_write_fsm_counter(0);
-                    sc_write_fsm_toggle_flag(0xff);
-                }
-                else if ((fsm_toggle_flag == 0x0) || (fsm_counter >= 5)) // exit
-                {
-                    puts("EXIT FSM\n");
+                    puts("fsm_toggle_flag = ");
+                    print_hex(fsm_toggle_flag);
+                    puts("\n");
 
-                    job_context.fsm_toggle = 0x0;
+                    job_context.fsm_toggle = 0xff; // do nothing
 
-                    sc_write_fsm_counter(0);
-                    sc_write_fsm_toggle_flag(0xff);
-                }
-                else
-                {
-                    puts("DO NOTHING (INCREMENT COUNTER)\n");
+                    if (fsm_toggle_flag == 0xfe) // always do nothing
+                    {
+                        puts("ALWAYS DO NOTHING\n");
+                        sc_write_fsm_counter(0);
+                    }
+                    else if (fsm_toggle_flag == 0x1) // enter
+                    {
+                        real_puts("ENTER FSM\n");
 
-                    sc_write_fsm_counter(fsm_counter + 1);
-                    sc_write_fsm_toggle_flag(0xff);
+                        job_context.fsm_toggle = 0x1;
+
+                        sc_write_fsm_counter(0);
+                        sc_write_fsm_toggle_flag(0xff);
+                    }
+                    else if ((fsm_toggle_flag == 0x0) || (fsm_counter >= 5)) // exit
+                    {
+                        if (fsm_toggle_flag == 0x0)
+                            real_puts("EXIT FSM\n");
+                        else
+                            puts("EXIT FSM\n");
+
+                        job_context.fsm_toggle = 0x0;
+
+                        sc_write_fsm_counter(0);
+                        sc_write_fsm_toggle_flag(0xff);
+                    }
+                    else
+                    {
+                        puts("DO NOTHING (INCREMENT COUNTER)\n");
+
+                        sc_write_fsm_counter(fsm_counter + 1);
+                        sc_write_fsm_toggle_flag(0xff);
+                    }
                 }
             }
 
@@ -350,7 +364,7 @@ FUNC_DEF void Stage2()
             //
         }
 
-        if (isqCFW)
+        if (isqCFW || isqCFW_jig)
             sc_led_static_yellow();
         else
             sc_led_static_green();
@@ -369,7 +383,7 @@ FUNC_DEF void Stage2()
 
 __attribute__((section("main2"))) void stage2_main(uint64_t in_r3)
 {
-    sc_puts_init();
+    real_sc_puts_init();
 
     if (sc_read_hdd_key_dumper_flag() == 0x2)
         Stage2_HDDKeyDumper(in_r3);

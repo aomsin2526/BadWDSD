@@ -133,7 +133,7 @@ echo Copying dtbImage.ps3.zfself to outros/lv2_kernel.self...
 cp -a dtbImage.ps3.zfself outros/lv2_kernel.self || exit 1
 
 echo Creating outros/qcfw
-echo "qcfw_petitboot" > outros/qcfw
+echo "qcfw_petitboot" > outros/qcfw || exit 1
 
 read -p "Modify outros now then press ENTER to continue"
 

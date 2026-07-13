@@ -255,8 +255,6 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
 {
     sc_led_short_red_long_yellow();
 
-    real_sc_puts_init();
-
     puts("Stage2_HDDKeyDumper()\n");
 
     puts("spu_id = ");

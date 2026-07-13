@@ -121,7 +121,7 @@ echo Copying myappldr.elf to outros/myappldr.elf...
 cp -a ../spu/myappldr/myappldr.elf outros/myappldr.elf || exit 1
 
 echo Creating outros/qcfw
-echo "qcfw_lv2zfself" > outros/qcfw
+echo "qcfw_lv2zfself" > outros/qcfw || exit 1
 
 read -p "Modify outros now then press ENTER to continue"
 

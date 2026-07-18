@@ -770,6 +770,8 @@ FUNC_DEF uint8_t SPU_FindMFCContextEntryByLS(uint64_t spu_id, uint64_t ls, uint3
     return 0;
 }
 
+#if 0
+
 FUNC_DEF void SPU_PrintMFCContextEntry(uint64_t spu_id, uint32_t entryIdx)
 {
     struct SPU_MFCContextEntry_s entry;
@@ -793,3 +795,5 @@ FUNC_DEF void SPU_PrintAllMFCContextEntry(uint64_t spu_id)
     for (uint32_t i = 0; i < 16; ++i)
         SPU_PrintMFCContextEntry(spu_id, i);
 }
+
+#endif

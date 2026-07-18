@@ -20,6 +20,18 @@ FUNC_DEF void SpuAux_Uninit(uint64_t spu_id, uint64_t spu_old_mfc_sr1)
         }
     }
 
+    status = SPU_PS_Read32(spu_id, 0x04024);
+    if ((status & SPU_STATUS_ISOLATED_MASK) != 0)
+    {
+        // iso exit request
+        SPU_PS_Write32(spu_id, 0x0401C, 0x2);
+
+        while ((status & SPU_STATUS_ISOLATED_MASK) != 0)
+        {
+            status = SPU_PS_Read32(spu_id, 0x04024);
+        }
+    }
+
     SPU_P1_Write64(spu_id, 0x0, spu_old_mfc_sr1);
     eieio();
 
@@ -128,8 +140,6 @@ FUNC_DEF void spu_aes128_decrypt_ctr(uint64_t spu_id, const uint8_t* in, uint64_
     if (size == 0)
         return;
 
-    //SpuAux_Init(spu_id);
-
     // clear jobDone
     SPU_LS_Write64(spu_id, 0xf08, 0);
     eieio();
@@ -175,9 +185,78 @@ FUNC_DEF void spu_aes128_decrypt_ctr(uint64_t spu_id, const uint8_t* in, uint64_
         //puts("\n");
     }
 
-    //SpuAux_Uninit(spu_id);
-
     puts("spu_aes128_decrypt_ctr() done.\n");
+}
+
+struct __attribute__((aligned(8))) Stagex_spu_job_aes_decrypt_cbc_context_s
+{
+    uint8_t key[32];
+    uint32_t key_size;
+
+    uint8_t iv[16];
+
+    uint64_t in_ea;
+    uint64_t out_ea;
+
+    uint64_t size; // size to decrypt
+};
+
+// key_size in bits
+FUNC_DEF void spu_aes_decrypt_cbc(uint64_t spu_id, const uint8_t* in, uint64_t size, uint8_t* out, const uint8_t* keys, uint32_t key_size, const uint8_t* iv)
+{
+    puts("spu_aes_decrypt_cbc()\n");
+
+    if (size == 0)
+        return;
+
+    // clear jobDone
+    SPU_LS_Write64(spu_id, 0xf08, 0);
+    eieio();
+
+    {
+        {
+            struct Stagex_spu_context_s context;
+            context.jobType = 6;
+
+            memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &context, sizeof(context));
+        }
+
+        {
+            struct Stagex_spu_job_aes_decrypt_cbc_context_s job_context;
+
+            memcpy(job_context.key, keys, (key_size / 8));
+            job_context.key_size = key_size;
+
+            memcpy(job_context.iv, iv, 16);
+
+            job_context.in_ea = (uint64_t)in;
+            job_context.out_ea = (uint64_t)out;
+
+            job_context.size = size;
+
+            memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x200), &job_context, sizeof(job_context));
+        }
+
+        eieio();
+    }
+
+    // set jobStart
+    SPU_LS_Write64(spu_id, 0xf00, 1);
+    eieio();
+
+    // wait for jobDone to be 1
+    while (SPU_LS_Read64(spu_id, 0xf08) != 1)
+    {
+        //WaitInMs(1000);
+
+        //uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
+
+        //puts("status = ");
+        //print_hex(status);
+        //puts("\n");
+    }
+
+    puts("spu_aes_decrypt_cbc() done.\n");
 }
 
 struct __attribute__((aligned(8))) Stagex_spu_job_zlib_decompress_context_s

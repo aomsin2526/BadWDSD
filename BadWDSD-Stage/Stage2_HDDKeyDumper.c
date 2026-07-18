@@ -1,5 +1,8 @@
 struct HDDKeyDumper_Context_s
 {
+    uint64_t spu_id;
+    uint64_t myspu_id;
+
     uint8_t sbFix1[24];
     uint8_t sbFix2[24];
 
@@ -26,9 +29,19 @@ struct HDDKeyDumper_Context_s
     uint8_t encdecTweakKey[64];
 };
 
-FUNC_DEF void HDDKeyDumper_Init(struct HDDKeyDumper_Context_s* ctx)
+FUNC_DEF void HDDKeyDumper_Init(struct HDDKeyDumper_Context_s* ctx, uint64_t spu_id)
 {
     puts("HDDKeyDumper_Init()\n");
+
+    ctx->spu_id = spu_id;
+
+    ctx->myspu_id = calc_myspu_id_exclude(ctx->spu_id);
+
+    puts("myspu_id = ");
+    print_decimal(ctx->myspu_id);
+    puts("\n");
+
+    SpuAux_Init(ctx->myspu_id);
 
     const uint32_t* sbVersionPtr = (const uint32_t*)0x24000087000;
     uint32_t sbVersion = *sbVersionPtr;
@@ -152,9 +165,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
         {
             //puts("Computing host rnd...\n");
 
-            WORD aes_key[60];
-            aes_key_setup(ctx->sbFix1, aes_key, 192);
-            aes_decrypt_cbc(ctx->hostRndData, 32, ctx->hostRndData, aes_key, 192, ctx->iv);
+            spu_aes_decrypt_cbc(ctx->myspu_id, ctx->hostRndData, 32, ctx->hostRndData, ctx->sbFix1, 192, ctx->iv);
 
             //hexdump(ctx->hostRndData, 32);
             //puts("\n");
@@ -183,9 +194,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
         {
             //puts("Computing encdec rnd...\n");
 
-            WORD aes_key[60];
-            aes_key_setup(ctx->sbFix2, aes_key, 192);
-            aes_decrypt_cbc(ctx->encdecRndData, 32, ctx->encdecRndData, aes_key, 192, ctx->iv);
+            spu_aes_decrypt_cbc(ctx->myspu_id, ctx->encdecRndData, 32, ctx->encdecRndData, ctx->sbFix2, 192, ctx->iv);
 
             //hexdump(ctx->encdecRndData, 32);
             //puts("\n");
@@ -202,10 +211,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
             dead();
 
         memcpy(ctx->ataDataKey, dataBuf, 64);
-
-        WORD aes_key[60];
-        aes_key_setup(ctx->sessionKey, aes_key, 192);
-        aes_decrypt_cbc(ctx->ataDataKey, 64, ctx->ataDataKey, aes_key, 192, ctx->iv);
+        spu_aes_decrypt_cbc(ctx->myspu_id, ctx->ataDataKey, 64, ctx->ataDataKey, ctx->sessionKey, 192, ctx->iv);
     }
 
     // ata tweak key
@@ -215,10 +221,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
             dead();
 
         memcpy(ctx->ataTweakKey, dataBuf, 64);
-
-        WORD aes_key[60];
-        aes_key_setup(ctx->sessionKey, aes_key, 192);
-        aes_decrypt_cbc(ctx->ataTweakKey, 64, ctx->ataTweakKey, aes_key, 192, ctx->iv);
+        spu_aes_decrypt_cbc(ctx->myspu_id, ctx->ataTweakKey, 64, ctx->ataTweakKey, ctx->sessionKey, 192, ctx->iv);
     }
 
     // encdec data key
@@ -228,10 +231,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
             dead();
 
         memcpy(ctx->encdecDataKey, dataBuf, 64);
-
-        WORD aes_key[60];
-        aes_key_setup(ctx->sessionKey, aes_key, 192);
-        aes_decrypt_cbc(ctx->encdecDataKey, 64, ctx->encdecDataKey, aes_key, 192, ctx->iv);
+        spu_aes_decrypt_cbc(ctx->myspu_id, ctx->encdecDataKey, 64, ctx->encdecDataKey, ctx->sessionKey, 192, ctx->iv);
     }
 
     // encdec tweak key
@@ -241,10 +241,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
             dead();
 
         memcpy(ctx->encdecTweakKey, dataBuf, 64);
-
-        WORD aes_key[60];
-        aes_key_setup(ctx->sessionKey, aes_key, 192);
-        aes_decrypt_cbc(ctx->encdecTweakKey, 64, ctx->encdecTweakKey, aes_key, 192, ctx->iv);
+        spu_aes_decrypt_cbc(ctx->myspu_id, ctx->encdecTweakKey, 64, ctx->encdecTweakKey, ctx->sessionKey, 192, ctx->iv);
 
         // finishing...
         HDDKeyDumper_Finalize(ctx);
@@ -262,7 +259,7 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
     puts("\n");
 
     struct HDDKeyDumper_Context_s context;
-    HDDKeyDumper_Init(&context);
+    HDDKeyDumper_Init(&context, spu_id);
 
     SPU_Write_SPU_RUNCNTL(spu_id, 0x3);
 

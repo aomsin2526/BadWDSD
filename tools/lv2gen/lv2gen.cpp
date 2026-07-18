@@ -120,7 +120,7 @@ void lv2diff(const char *inFilePath1, const char *inFilePath2, const char *outFi
 
             val |= (uint8_t)inData2[i]; // new
             val <<= 8;
-            val |= (uint8_t)inData1[i]; // orig
+            //val |= (uint8_t)inData1[i]; // orig
 
             // shitty code
 

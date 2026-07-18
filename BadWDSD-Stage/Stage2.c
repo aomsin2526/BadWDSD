@@ -82,6 +82,8 @@ FUNC_DEF void Stage2()
     uint16_t fwVersion = CoreOS_Bank_GetFWVersion(os_bank_indicator);
 
     {
+#if 0
+
         uint64_t lv1FileAddress;
         uint64_t lv1FileSize;
 
@@ -140,6 +142,8 @@ FUNC_DEF void Stage2()
             puts("Loading lv1...\n");
             LoadElf(lv1FileAddress, 0x0, 1);
         }
+
+#endif
 
         {
             uint64_t lv1DiffFileAddress = 0;
@@ -295,6 +299,7 @@ FUNC_DEF void Stage2()
 
 #endif
 
+        if (isqCFW || (qcfw_lite_flag == 0x1))
         {
             struct Stagex_Context_s* ctx = GetStagexContext();
 
@@ -347,7 +352,8 @@ FUNC_DEF void Stage2()
 
             ctx->cached_mymetldrElfAddress = 0;
 
-            CoreOS_FindFileEntry_Aux("mymetldr.elf", &ctx->cached_mymetldrElfAddress, NULL);
+            if (!CoreOS_FindFileEntry_Bank(os_bank_indicator, "mymetldr.elf", &ctx->cached_mymetldrElfAddress, NULL))
+                CoreOS_FindFileEntry_Aux("mymetldr.elf", &ctx->cached_mymetldrElfAddress, NULL);
 
             puts("cached_mymetldrElfAddress = ");
             print_hex(ctx->cached_mymetldrElfAddress);
@@ -379,15 +385,19 @@ FUNC_DEF void Stage2()
     }
 }
 
+#if HDDKEYDUMPER_ENABLED
 #include "Stage2_HDDKeyDumper.c"
+#endif
 
 __attribute__((section("main2"))) void stage2_main(uint64_t in_r3)
 {
     real_sc_puts_init();
 
+#if HDDKEYDUMPER_ENABLED
     if (sc_read_hdd_key_dumper_flag() == 0x2)
         Stage2_HDDKeyDumper(in_r3);
     else
+#endif
         Stage2();
 
     dead();

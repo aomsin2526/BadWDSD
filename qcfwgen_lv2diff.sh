@@ -103,6 +103,9 @@ cp -a lv1.diff outros/lv1.diff || exit 1
 echo Copying lv2_kernel.diff to outros/lv2_kernel.diff...
 cp -a lv2_kernel.diff outros/lv2_kernel.diff || exit 1
 
+echo Copying mymetldr.elf to outros/mymetldr.elf...
+cp -a $ROOT_DIR/BadWDSD-Stage/Aux/mymetldr.elf outros/mymetldr.elf || exit 1
+
 echo Copying myappldr.elf to outros/myappldr.elf...
 cp -a ../spu/myappldr/myappldr.elf outros/myappldr.elf || exit 1
 

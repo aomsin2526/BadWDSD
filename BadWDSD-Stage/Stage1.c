@@ -1,5 +1,199 @@
 #define ENTRY_WAIT_IN_MS 100 // 1000
 
+#if STAGEX_DEBUG_ENABLED
+
+#if 0
+
+Sc_Rx: #!0x0 = 25 2b 29 3b 39 37 35 27:1
+Sc_Rx: #!0x8 = 31 23 3d 21 2d 2f 3f 33:7
+Sc_Rx: #!0x10 = 07 1f 0f 1d 13 09 11 03:6
+Sc_Rx: #!0x18 = 1b 19 01 15 05 0b 0d 17:6
+Sc_Rx: #!0x20 = 24 2a 28 3a 38 36 34 26:4
+Sc_Rx: #!0x28 = 30 22 3c 20 2c 2e 3e 32:9
+Sc_Rx: #!0x30 = 06 1e 0e 1c 12 08 10 02:5
+Sc_Rx: #!0x38 = 1a 18 00 14 04 0a 0c 16:6
+Sc_Rx: #!0x40 = 25 2b 29 3b 39 37 35 27:4
+Sc_Rx: #!0x48 = 31 23 3d 21 2d 2f 3f 33:A
+Sc_Rx: #!0x50 = 07 1f 0f 1d 13 09 11 03:6
+Sc_Rx: #!0x58 = 1b 19 01 15 05 0b 0d 17:6
+Sc_Rx: #!0x60 = 24 2a 28 3a 38 36 34 26:4
+Sc_Rx: #!0x68 = 30 22 3c 20 2c 2e 3e 32:9
+Sc_Rx: #!0x70 = 06 1e 0e 1c 12 08 10 02:6
+Sc_Rx: #!0x78 = 1a 18 00 14 04 0a 0c 16:6
+Sc_Rx: #!0x80 = 7f 69 65 79 7b 75 6f 67:A
+Sc_Rx: #!0x88 = 71 61 7d 63 6d 77 6b 73:9
+Sc_Rx: #!0x90 = 4f 5d 4d 5f 53 51 4b 43:E
+Sc_Rx: #!0x98 = 5b 55 59 45 47 49 41 57:3
+Sc_Rx: #!0xa0 = 7e 68 64 78 7a 74 6e 66:C
+Sc_Rx: #!0xa8 = 70 60 7c 62 6c 76 6a 72:B
+Sc_Rx: #!0xb0 = 4e 5c 4c 5e 52 50 4a 42:0
+Sc_Rx: #!0xb8 = 5a 54 58 44 46 48 40 56:5
+Sc_Rx: #!0xc0 = 7f 69 65 79 7b 75 6f 67:D
+Sc_Rx: #!0xc8 = 71 61 7d 63 6d 77 6b 73:C
+Sc_Rx: #!0xd0 = 4f 5d 4d 5f 53 51 4b 43:0
+Sc_Rx: #!0xd8 = 5b 55 59 45 47 49 41 57:6
+Sc_Rx: #!0xe0 = 7e 68 64 78 7a 74 6e 66:C
+Sc_Rx: #!0xe8 = 70 60 7c 62 6c 76 6a 72:B
+Sc_Rx: #!0xf0 = 4e 5c 4c 5e 52 50 4a 42:0
+Sc_Rx: #!0xf8 = 5a 54 58 44 46 48 40 56:6
+
+#endif
+
+FUNC_DEF void WDSDTest_1()
+{
+    uint8_t* data0 = (uint8_t*)(0x1000 + 0); // [64]
+    uint8_t* wdslData0 = (uint8_t*)(0x1000 + 64); // [64]
+
+    uint8_t* data1 = (uint8_t*)(0x1000 + 128); // [64]
+    uint8_t* wdslData1 = (uint8_t*)(0x1000 + 192); // [64]
+
+    for (uint8_t i = 0; i < 64; ++i)
+        data0[i] = (0x0 + i); // 0x0 - 0x3f
+
+    for (uint8_t i = 0; i < 64; ++i)
+        data1[i] = (0x40 + i); // 0x40 - 0x7f
+
+    Xdr_ConvertDataToWDSLData_x32(data0, wdslData0);
+    Xdr_ConvertDataToWDSLData_x32(data1, wdslData1);
+
+    uint32_t* cmd0 = (uint32_t*)(0x2000); // [64]
+    uint32_t* cmd1 = (uint32_t*)(0x3000); // [64]
+
+    for (uint8_t i = 0; i < 64; ++i)
+        cmd0[i] = (XDR_SCMD(XDR_SCMD_SDW, 0, XDR_WDSL) | wdslData0[i]);
+
+    for (uint8_t i = 0; i < 64; ++i)
+        cmd1[i] = (XDR_SCMD(XDR_SCMD_SDW, 0, XDR_WDSL) | wdslData1[i]);
+}
+
+FUNC_DEF void WDSDTest_2()
+{
+    uint32_t* cmd0 = (uint32_t*)(0x2000); // [64]
+    uint32_t* cmd1 = (uint32_t*)(0x3000); // [64]
+
+    Xdr_Ch0_SendScmd(XDR_SCMD(XDR_SCMD_SDW, 0, XDR_CFG) | XDR_SLE_ENABLED_X32);
+    Xdr_Ch1_SendScmd(XDR_SCMD(XDR_SCMD_SDW, 0, XDR_CFG) | XDR_SLE_ENABLED_X32);
+
+    for (uint8_t i = 0; i < 64; ++i)
+        Xdr_Ch0_SendScmd(cmd0[i]);
+
+    for (uint8_t i = 0; i < 64; ++i)
+        Xdr_Ch1_SendScmd(cmd1[i]);
+
+    {
+        register uint64_t r3 asm("r3");
+        register uint64_t r4 asm("r4");
+        register uint64_t r5 asm("r5");
+
+        for (r5 = 0; r5 < 256; ++r5)
+        {
+            r3 = (0x100 + r5);
+            r4 = 0;
+
+            asm volatile("stb %0, 0(%1)"::"r"(r4),"r"(r3):);
+            asm volatile("dcbf %0, %1"::"r"(r4),"r"(r3):);
+            eieio();
+        }
+    }
+
+    Xdr_Ch0_SendScmd(XDR_SCMD(XDR_SCMD_SDW, 0, XDR_CFG) | XDR_SLE_DISABLED_X32);
+    Xdr_Ch1_SendScmd(XDR_SCMD(XDR_SCMD_SDW, 0, XDR_CFG) | XDR_SLE_DISABLED_X32);
+}
+
+FUNC_DEF void WDSDTest_3()
+{
+    for (uint64_t i = 0; i < 256; i += 8)
+    {
+        uint64_t addr = (0x100 + i);
+
+        real_print_hex(i);
+        real_puts(" = ");
+        real_hexdump((const void*)addr, 8);
+        real_puts("\n");
+    }
+}
+
+FUNC_DEF void WDSDTest()
+{
+    WDSDTest_1();
+    WDSDTest_2();
+    WDSDTest_3();
+
+    dead();
+}
+
+FUNC_DEF void Stage0_emmc_test()
+{
+    // r10 = sb_uart_stat
+
+    asm volatile("lis %r10, 0x240");
+    asm volatile("ori %r10, %r10, 0xff");
+    asm volatile("sldi %r10, %r10, 16");
+    asm volatile("ori %r10, %r10, 0xf308"); // sb_uart_stat
+
+    asm volatile("li %r3, 0x7a"); // 'z'
+    asm volatile("stw %r3, 20(%r10)"); // sb_uart_putchar('z')
+
+    // r9 = cur addr
+    asm volatile("li %r9, 0x1000");
+
+    asm volatile("loop1:");
+    // read stat
+    asm volatile("lwz %r3, 0(%r10)");
+    asm volatile("andi. %r3, %r3, 0x1f");
+    asm volatile("beq loop1");
+
+    // getc
+    asm volatile("lwz %r3, 24(%r10)");
+
+    // write lowest 8 bit of r3 to address at r9
+    asm volatile("stb %r3, 0(%r9)");
+    asm volatile("addi %r9, %r9, 1"); // r9 += 1
+
+    // loop if r9 < 0x2000
+    asm volatile("cmpi 0, 0, %r9, 0x2000");
+    asm volatile("bne loop1");
+
+    // jump to 0x1000
+    asm volatile("li %r3, 0x1000");
+    asm volatile("mtctr %r3");
+    asm volatile("bctr");
+
+    while (1) {}
+}
+
+FUNC_DEF void Stagex_RelocateTest(const void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)
+{
+    static const uint64_t stagex_size = (48 * 1024);
+
+    memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
+
+    volatile uint64_t* toc = (volatile uint64_t*)(new_stagex_addr + 0x900);
+    *toc -= old_stagex_addr;
+    *toc += new_stagex_addr;
+
+    volatile uint64_t* toc1_addr = (volatile uint64_t*)(new_stagex_addr + 0x910);
+    const volatile uint64_t* toc1_size = (const volatile uint64_t*)(new_stagex_addr + 0x918);
+
+    *toc1_addr -= old_stagex_addr;
+    *toc1_addr += new_stagex_addr;
+
+    volatile uint64_t* toc1 = (volatile uint64_t*)(*toc1_addr);
+
+    for (uint64_t i = 0; i < (*toc1_size / 8); ++i)
+    {
+        toc1[i] -= old_stagex_addr;
+        toc1[i] += new_stagex_addr;
+    }
+
+    // jump to stage1_entry
+
+    asm volatile("mtctr %0" ::"r"(new_stagex_addr):);
+    asm volatile("bctr");
+}
+
+#endif
+
 FUNC_DEF void Stage1()
 {
     //
@@ -21,6 +215,22 @@ FUNC_DEF void Stage1()
 
     uint64_t myspu_id = calc_myspu_id();
     HW_Init_SPU(myspu_id);
+
+    //
+
+#if STAGEX_DEBUG_ENABLED
+    uint64_t pc = get_pc();
+
+    real_puts("pc = ");
+    real_print_hex(pc);
+    real_puts("\n");
+
+    uint8_t stagex_debug_flag = sc_read_stagex_debug_flag();
+
+    real_puts("stagex_debug_flag = ");
+    real_print_hex(stagex_debug_flag);
+    real_puts("\n");
+#endif
 
     //
 
@@ -50,7 +260,7 @@ FUNC_DEF void Stage1()
     //
 
     uint8_t real_os_bank_indicator = sc_read_os_bank_indicator();
-    
+
     puts("real_os_bank_indicator = ");
     print_hex(real_os_bank_indicator);
     puts("\n");
@@ -63,7 +273,7 @@ FUNC_DEF void Stage1()
     puts("\n");
 
     uint8_t os_bank_indicator = get_os_bank_indicator();
-    
+
     puts("os_bank_indicator = ");
     print_hex(os_bank_indicator);
     puts("\n");
@@ -124,6 +334,17 @@ FUNC_DEF void Stage1()
 
     //
 
+#if STAGEX_DEBUG_ENABLED
+    if (stagex_debug_flag == 0x1)
+        WDSDTest();
+    else if (stagex_debug_flag == 0x2)
+        Stage0_emmc_test();
+    else if (stagex_debug_flag == 0x3)
+        Stagex_RelocateTest((const void*)0x2401F031000, 0x2401F031000, 0x10000);
+#endif
+
+    //
+
     memset((void*)0, 0, (16 * 1024 * 1024));
 
     // clear lv2
@@ -138,10 +359,12 @@ FUNC_DEF void Stage1()
 
     //
 
+#if HDDKEYDUMPER_ENABLED
     uint8_t hdd_key_dumper_flag = sc_read_hdd_key_dumper_flag();
 
     if ((hdd_key_dumper_flag != 0x1) && (hdd_key_dumper_flag != 0xfe))
         sc_write_hdd_key_dumper_flag(0xff);
+#endif
 
     //
 
@@ -151,6 +374,8 @@ FUNC_DEF void Stage1()
 
         {
             uint8_t found = 0;
+
+#if 0
 
             if (found == 0)
             {
@@ -190,6 +415,8 @@ FUNC_DEF void Stage1()
                     puts("File not found!\n");
             }
 
+#endif
+
             if (found == 0)
             {
                 puts("Searching for lv0 self...\n");
@@ -225,6 +452,7 @@ FUNC_DEF void Stage1()
                     DecryptLv0Self((void*)lv0FileAddress, (const void*)lv0SelfFileAddress, 1);
 #endif
 
+#if HDDKEYDUMPER_ENABLED
                     if ((hdd_key_dumper_flag == 0x1) && ((fwVersion >= 470) || isqCFW)) // dump request
                     {
                         sc_write_hdd_key_dumper_flag(0x2); // will dump soon
@@ -240,6 +468,7 @@ FUNC_DEF void Stage1()
                             dead_beep();
                         }
                     }
+#endif
 
                     // ANTI BRICK!!!
                     // isqCFW!!!

@@ -39,7 +39,7 @@ cp $ROOT_DIR/tools/coreos_tools/coreos_tools temp/coreos_tools || exit 1
 
 mkdir temp/Stagex_aux || exit 1
 cp Stagex_spu.elf temp/Stagex_aux || exit 1
-cp mymetldr.elf temp/Stagex_aux || exit 1
+#cp mymetldr.elf temp/Stagex_aux || exit 1
 
 ###
 

@@ -10,6 +10,7 @@
 # lv1.elf.orig (OFW)
 # lv1.elf (OFW or patched)
 
+# lv2_kernel.elf.orig (OFW)
 # lv2_kernel.elf (OFW or patched)
 
 if [[ $# -eq 0 ]] ; then
@@ -35,10 +36,10 @@ cd $ROOT_DIR/tools/coreos_tools || exit 1
 cd $ROOT_DIR/tools/lv1gen || exit 1
 ./build.sh || exit 1
 
-cd $ROOT_DIR/tools/zgen || exit 1
+cd $ROOT_DIR/tools/lv2gen || exit 1
 ./build.sh || exit 1
 
-cd $ROOT_DIR/tools/dtbImage_ps3_bin_to_elf || exit 1
+cd $ROOT_DIR/tools/zgen || exit 1
 ./build.sh || exit 1
 
 cd $ROOT_DIR || exit 1
@@ -49,17 +50,8 @@ rm -rf temp
 
 rm lv1.stage3j3ja4j5j6j.elf
 
-rm lv2_kernel.zelf
-rm lv2_kernel.zzelf
-
-rm outros.bin
-rm CoreOS.bin
-
 echo Delete workdir inros...
 rm -rf inros
-
-echo Delete workdir outros...
-rm -rf outros
 
 echo Copying needed files to temp...
 mkdir temp || exit 1
@@ -73,8 +65,8 @@ cp $ROOT_DIR/BadWDSD-Stage/Stage6j.bin temp/Stage6j.bin || exit 1
 
 cp $ROOT_DIR/tools/coreos_tools/coreos_tools temp/coreos_tools || exit 1
 cp $ROOT_DIR/tools/lv1gen/lv1gen temp/lv1gen || exit 1
+cp $ROOT_DIR/tools/lv2gen/lv2gen temp/lv2gen || exit 1
 cp $ROOT_DIR/tools/zgen/zgen temp/zgen || exit 1
-cp $ROOT_DIR/tools/dtbImage_ps3_bin_to_elf/dtbImage_ps3_bin_to_elf temp/dtbImage_ps3_bin_to_elf || exit 1
 
 echo Extracting inros.bin...
 mkdir inros
@@ -87,48 +79,8 @@ temp/lv1gen lv1gen_4j lv1.elf lv1.stage3j3ja4j5j6j.elf temp/Stage3j.bin temp/Sta
 echo Generate lv1.diff
 temp/lv1gen lv1diff lv1.elf.orig lv1.stage3j3ja4j5j6j.elf lv1.diff || exit 1
 
-echo Copying inros to outros...
-cp -a inros outros || exit 1
+echo Generate lv2_kernel.diff
+temp/lv2gen lv2diff lv2_kernel.elf.orig lv2_kernel.elf lv2_kernel.diff || exit 1
 
-echo Renaming lv1.self to lv1.qelf...
-mv outros/lv1.self outros/lv1.qelf || exit 1
-
-echo Deleting creserved_0...
-rm outros/creserved_0
-
-#echo Deleting hdd_copy.self...
-#rm outros/hdd_copy.self
-
-echo Deleting lv2_kernel.self...
-rm outros/lv2_kernel.self
-
-echo Copying lv1.diff to outros/lv1.diff...
-cp -a lv1.diff outros/lv1.diff || exit 1
-
-echo Generate lv2_kernel.zelf
-temp/zgen zelf_gen lv2_kernel.elf lv2_kernel.zelf || exit 1
-
-echo Generate lv2_kernel.zzelf
-temp/dtbImage_ps3_bin_to_elf lv2_kernel.zelf lv2_kernel.zzelf || exit 1
-
-echo Generate lv2_kernel.zfself using this command: make_fself -u lv2_kernel.zzelf lv2_kernel.zfself
-read -p "then press ENTER to continue"
-
-echo Copying lv2_kernel.zfself to outros/lv2_kernel.self...
-cp -a lv2_kernel.zfself outros/lv2_kernel.self || exit 1
-
-echo Copying mymetldr.elf to outros/mymetldr.elf...
-cp -a $ROOT_DIR/BadWDSD-Stage/Aux/mymetldr.elf outros/mymetldr.elf || exit 1
-
-echo Copying myappldr.elf to outros/myappldr.elf...
-cp -a ../spu/myappldr/myappldr.elf outros/myappldr.elf || exit 1
-
-echo Creating outros/qcfw
-echo "qcfw_lv2zfself" > outros/qcfw || exit 1
-
-read -p "Modify outros now then press ENTER to continue"
-
-echo Generate CoreOS.bin...
-temp/coreos_tools create_coreos outros CoreOS.bin || exit 1
-
-../qcfwgen_finalize.sh || exit 1
+echo Generate lv2_kernel.zdiff
+temp/zgen zelf_gen lv2_kernel.diff lv2_kernel.zdiff || exit 1

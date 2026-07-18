@@ -58,6 +58,60 @@ void Stagex_spu_job_aes128_decrypt_ctr(const volatile struct Stagex_spu_job_aes1
     }
 }
 
+struct __attribute__((aligned(8))) Stagex_spu_job_aes_decrypt_cbc_context_s
+{
+    uint8_t key[32];
+    uint32_t key_size;
+
+    uint8_t iv[16];
+
+    uint64_t in_ea;
+    uint64_t out_ea;
+
+    uint64_t size; // size to decrypt
+};
+
+void Stagex_spu_job_aes_decrypt_cbc(const volatile struct Stagex_spu_job_aes_decrypt_cbc_context_s *job_context, uint8_t *tmpBuf, uint32_t tmpBufSize)
+{
+    if ((job_context->size == 0) || ((job_context->size % 16) != 0))
+        stop(4);
+
+    // 0x10000 - 0x2FFFF = temp mem
+
+    WORD aes_key[60];
+    aes_key_setup((const uint8_t *)job_context->key, aes_key, job_context->key_size);
+
+    struct aes_decrypt_cbc_stream_context_s aes_ctx;
+    aes_decrypt_cbc_stream_init(&aes_ctx, job_context->size, aes_key, job_context->key_size, job_context->iv);
+
+    // static const uint32_t tmpBufSize = (128 * 1024);
+    // uint8_t *tmpBuf = (uint8_t *)0x10000;
+
+    uint64_t left = job_context->size;
+
+    uint64_t cur_in_ea = job_context->in_ea;
+    uint64_t cur_out_ea = job_context->out_ea;
+
+    while (1)
+    {
+        uint32_t chunkSize = (left > tmpBufSize) ? tmpBufSize : (uint32_t)left;
+
+        DMARead(tmpBuf, cur_in_ea, chunkSize);
+
+        aes_decrypt_cbc_stream(&aes_ctx, tmpBuf, chunkSize);
+
+        DMAWrite(tmpBuf, cur_out_ea, chunkSize);
+
+        cur_in_ea += chunkSize;
+        cur_out_ea += chunkSize;
+
+        left -= chunkSize;
+
+        if (left == 0)
+            break;
+    }
+}
+
 #include "../uzlib/adler32.c"
 #include "../uzlib/crc32.c"
 #include "../uzlib/tinflate.c"
@@ -951,6 +1005,8 @@ void main()
                 Stagex_spu_job_DecryptLv0Self((const volatile struct Stagex_spu_job_DecryptLv0Self_context_s *)0x200);
             else if (context->jobType == 5)
                 Stagex_spu_job_stage2((const volatile struct Stagex_spu_job_stage2_context_s *)0x200);
+            else if (context->jobType == 6)
+                Stagex_spu_job_aes_decrypt_cbc((const volatile struct Stagex_spu_job_aes_decrypt_cbc_context_s *)0x200, (uint8_t *)0x10000, (128 * 1024));
             else
                 stop(3);
 

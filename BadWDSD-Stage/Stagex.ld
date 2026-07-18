@@ -19,6 +19,13 @@ SECTIONS
     .toc : { *(.toc) }
 
     . = 0x2401F031910;
+    tocinfo : 
+    {
+        QUAD(LOADADDR(.toc1))
+        QUAD(SIZEOF(.toc1))
+    }
+
+    . = 0x2401F031920;
     bcode : { *(bcode) }
 
     main1 : { *(main1) }
@@ -29,6 +36,7 @@ SECTIONS
 
     code : { *(code) }
 
+    .rodata : { *(.rodata) }
     .text : { *(.text) }
 
     .opd : { *(.opd) }

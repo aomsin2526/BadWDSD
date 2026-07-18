@@ -40,6 +40,11 @@ extern void memcpy(void *dest, const void *src, uint64_t count);
 
 #include "Aes.h"
 
+void Aes_dead()
+{
+	while (1) {}
+}
+
 /****************************** MACROS ******************************/
 // The least significant byte of the word is rotated to the end.
 #define KE_ROTWORD(x) (((x) << 8) | ((x) >> 24))
@@ -320,6 +325,60 @@ int aes_decrypt_cbc(const BYTE in[], size_t in_len, BYTE out[], const WORD key[]
 	return(TRUE);
 }
 
+struct aes_decrypt_cbc_stream_context_s
+{
+	WORD key[60];
+	int keysize;
+
+	BYTE iv_buf[AES_BLOCK_SIZE];
+
+	size_t total_block_count;
+
+	size_t cur_block_idx;
+	size_t total_block_left;
+};
+
+void aes_decrypt_cbc_stream_init(struct aes_decrypt_cbc_stream_context_s* ctx, size_t len, const WORD key[], int keysize, const BYTE iv[])
+{
+	if ((len == 0) || (len % AES_BLOCK_SIZE) != 0)
+		Aes_dead();
+
+	memcpy(ctx->key, key, sizeof(WORD) * 60);
+	ctx->keysize = keysize;
+
+	memcpy(ctx->iv_buf, iv, AES_BLOCK_SIZE);
+
+	ctx->total_block_count = (len / AES_BLOCK_SIZE);
+
+	ctx->cur_block_idx = 0;
+	ctx->total_block_left = ctx->total_block_count;
+}
+
+void aes_decrypt_cbc_stream(struct aes_decrypt_cbc_stream_context_s* ctx, BYTE inout[], size_t inout_len)
+{
+	if ((inout_len == 0) || (inout_len % AES_BLOCK_SIZE) != 0)
+		Aes_dead();
+
+	size_t block_count = (inout_len / AES_BLOCK_SIZE);
+
+	if ((ctx->cur_block_idx + block_count) > ctx->total_block_count)
+		Aes_dead();
+
+	BYTE buf_in[AES_BLOCK_SIZE], buf_out[AES_BLOCK_SIZE];
+
+	for (size_t idx = 0; idx < block_count; ++idx)
+	{
+		memcpy(buf_in, &inout[idx * AES_BLOCK_SIZE], AES_BLOCK_SIZE);
+		aes_decrypt(buf_in, buf_out, ctx->key, ctx->keysize);
+		xor_buf(ctx->iv_buf, buf_out, AES_BLOCK_SIZE);
+		memcpy(&inout[idx * AES_BLOCK_SIZE], buf_out, AES_BLOCK_SIZE);
+		memcpy(ctx->iv_buf, buf_in, AES_BLOCK_SIZE);
+
+		++ctx->cur_block_idx;
+		--ctx->total_block_left;
+	}
+}
+
 /*******************
 * AES - CTR
 *******************/
@@ -383,6 +442,9 @@ struct aes_decrypt_ctr_stream_context_s
 
 void aes_decrypt_ctr_stream_init(struct aes_decrypt_ctr_stream_context_s* ctx, size_t len, const WORD key[], int keysize, const BYTE iv[])
 {
+	if (len == 0)
+		Aes_dead();
+
 	memcpy(ctx->key, key, sizeof(WORD) * 60);
 	ctx->keysize = keysize;
 
@@ -402,6 +464,11 @@ void aes_decrypt_ctr_stream(struct aes_decrypt_ctr_stream_context_s* ctx, BYTE i
 
 	size_t old_ctx_idx = ctx->idx;
 
+	// bad
+	if ((inout_len == 0) || ((old_ctx_idx + inout_len) > ctx->len))
+		Aes_dead();
+
+	uint8_t ok = 0;
 	size_t idx = 0;
 
 	if (ctx->len_left > AES_BLOCK_SIZE)
@@ -414,6 +481,8 @@ void aes_decrypt_ctr_stream(struct aes_decrypt_ctr_stream_context_s* ctx, BYTE i
 
 			idx += AES_BLOCK_SIZE;
 			ctx->idx += AES_BLOCK_SIZE;
+
+			ok = 1;
 
 			if (idx == inout_len)
 				break;
@@ -429,7 +498,12 @@ void aes_decrypt_ctr_stream(struct aes_decrypt_ctr_stream_context_s* ctx, BYTE i
 	{
 		aes_encrypt(ctx->iv_buf, out_buf, ctx->key, ctx->keysize);
 		xor_buf(out_buf, &inout[idx], (ctx->len - ctx->idx));
+
+		ok = 1;
 	}
+
+	if (!ok)
+		Aes_dead();
 }
 
 #if 0

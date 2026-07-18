@@ -60,6 +60,9 @@ FUNC_DEF void Stage4()
     uint64_t srcAddr = 0xC000000;
     LoadLv2(srcAddr, loadme_addr);
 
+    if (IsLv2(loadme_addr))
+        ApplyLv2Diff(loadme_addr, 1, 0);
+
     lv1_puts("Stage4 done.\n");
 
     eieio();

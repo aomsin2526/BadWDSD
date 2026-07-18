@@ -10,7 +10,7 @@
 
 #define SC_PUTS_BUFFER_ENABLED 1
 
-//#define LOGGING_ENABLED 1
+#define LOGGING_ENABLED 1
 //#define SC_LV1_LOGGING_ENABLED 1
 
 //#define STAGE5_LOG_ENABLED 1
@@ -18,11 +18,14 @@
 #define ZLIB_SPU_ONLY_ENABLED 1
 #define STAGE0_DECRYPTLV0SELF_SPU_ENABLED 1
 
-//#define DECRYPTLV2SELF_ENABLED 1
+#define DECRYPTLV2SELF_ENABLED 1
+#define HDDKEYDUMPER_ENABLED 1
 
-#if DECRYPTLV2SELF_ENABLED || 1
-#define AES_ENABLED 1
-#endif
+//#if DECRYPTLV2SELF_ENABLED || HDDKEYDUMPER_ENABLED
+//#define AES_ENABLED 1
+//#endif
+
+//#define STAGEX_DEBUG_ENABLED 1
 
 typedef char int8_t;
 typedef unsigned char uint8_t;
@@ -386,6 +389,19 @@ FUNC_DEF void dead()
     while (1)
     {
     }
+}
+
+// get program counter for debugging
+FUNC_DEF uint64_t get_pc()
+{
+    register uint64_t r3 asm("r3");
+
+    asm volatile("mflr %r4");
+    asm volatile("bl 4");
+    asm volatile("mflr %r3");
+    asm volatile("mtlr %r4");
+
+    return r3;
 }
 
 // timebase = 79800000
@@ -1383,6 +1399,13 @@ FUNC_DEF void sc_write_fsm_toggle_flag(uint8_t val)
     sc_write_eeprom8(0x20, 0x5, val);
 }
 
+FUNC_DEF uint8_t sc_read_stagex_debug_flag()
+{
+    // block id (0x3000)
+    // offset (0x3006)
+    return sc_read_eeprom8(0x20, 0x6);
+}
+
 // in[32]
 FUNC_DEF void sc_write_ata_data_key(const uint8_t* in)
 {
@@ -1625,9 +1648,10 @@ FUNC_DEF void dead_beep()
 #define XDR_WDSL 0x04 /* Write data serial load control */
 #define XDR_DLY 0x1f  /* Delay control */
 
+#define XDR_SLE_ENABLED_X32 0x15
 #define XDR_SLE_DISABLED_X32 0x5
 
-#define XDR_SCMD(CMD, SSID, REG) (((CMD) << 28) | 0x04000000 | ((SSID) << 16) | ((REG) << 8))
+#define XDR_SCMD(CMD, SSID, REG) (uint32_t)(((CMD) << 28) | 0x04000000 | ((SSID) << 16) | ((REG) << 8))
 
 //#define BE_MMIO_BASE 0x20000000000
 //#define MMIO_BE_MIC (0x50A000 | BE_MMIO_BASE)
@@ -1643,14 +1667,77 @@ FUNC_DEF void dead_beep()
 #define XDR_CH0_SCMD ((volatile uint32_t*)0x2000050A108)
 #define XDR_CH0_SCMD_STAT ((volatile uint32_t*)0x2000050A110)
 
+#define XDR_CH1_SCMD ((volatile uint32_t*)0x2000050A148)
+#define XDR_CH1_SCMD_STAT ((volatile uint32_t*)0x2000050A150)
+
 FUNC_DEF void Xdr_Ch0_SendScmd(uint32_t data)
 {
-    *XDR_CH0_SCMD = data;
+    //*XDR_CH0_SCMD = data;
+    //eieio();
+
+    //volatile uint32_t yyy = *XDR_CH0_SCMD_STAT;
+    //++yyy;
+    //eieio();
+
+    asm volatile("lis %r4, 0x200");
+    asm volatile("ori %r4, %r4, 0x50");
+    asm volatile("sldi %r4, %r4, 16");
+    asm volatile("ori %r4, %r4, 0xA108");
+
+    asm volatile("stw %r3, 0(%r4)");
     eieio();
 
-    volatile uint32_t yyy = *XDR_CH0_SCMD_STAT;
-    ++yyy;
+    asm volatile("lwz %r5, 8(%r4)");
     eieio();
+}
+
+FUNC_DEF void Xdr_Ch1_SendScmd(uint32_t data)
+{
+    //*XDR_CH1_SCMD = data;
+    //eieio();
+
+    //volatile uint32_t yyy = *XDR_CH1_SCMD_STAT;
+    //++yyy;
+    //eieio();
+
+    asm volatile("lis %r4, 0x200");
+    asm volatile("ori %r4, %r4, 0x50");
+    asm volatile("sldi %r4, %r4, 16");
+    asm volatile("ori %r4, %r4, 0xA148");
+
+    asm volatile("stw %r3, 0(%r4)");
+    eieio();
+
+    asm volatile("lwz %r5, 8(%r4)");
+    eieio();
+}
+
+FUNC_DEF uint16_t Xdr_ConvertToWDSLWord(uint16_t inData)
+{
+    uint16_t result;
+    uint8_t bit_order[16] =
+        {15, 11, 7, 3, 14, 10, 6, 2, 13, 9, 5, 1, 12, 8, 4, 0};
+
+    result = 0;
+    for (uint32_t n = 0; n < 16; ++n)
+    {
+        if ((inData >> bit_order[n]) & 0x0001)
+        {
+            result |= (0x8000 >> n);
+        }
+    }
+
+    return result;
+}
+
+// [64]
+FUNC_DEF void Xdr_ConvertDataToWDSLData_x32(const uint8_t *inData, uint8_t *outWDSLData)
+{
+    const uint16_t *data = (const uint16_t *)inData;
+    uint16_t *wdslData = (uint16_t *)outWDSLData;
+
+    for (uint32_t i = 0; i < 32; ++i)
+        wdslData[i] = Xdr_ConvertToWDSLWord(data[i]);
 }
 
 FUNC_DEF uint64_t calc_myspu_id()
@@ -1675,6 +1762,37 @@ FUNC_DEF uint64_t calc_myspu_id()
     if (!found)
     {
         puts("calc_myspu_id failed!!\n");
+        dead_beep();
+    }
+
+    return myspu_id;
+}
+
+FUNC_DEF uint64_t calc_myspu_id_exclude(uint64_t exclude_spu_id)
+{
+    uint8_t found = 0;
+    uint64_t myspu_id = 0;
+
+    uint32_t spu_avail = *((const volatile uint32_t*)0x20000509C38);
+
+    for (uint32_t i = 0; i < 8; ++i)
+    {
+        if ((7 - i) == exclude_spu_id)
+            continue;
+
+        uint32_t mask = (1U << i);
+
+        if ((spu_avail & mask) != 0)
+        {
+            found = 1;
+            myspu_id = (7 - i);
+            break;
+        }
+    }
+
+    if (!found)
+    {
+        puts("calc_myspu_id_exclude failed!!\n");
         dead_beep();
     }
 
@@ -2419,6 +2537,12 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
     print_hex((uint64_t)decryptBuf);
     puts("\n");
 
+    uint64_t spu_id = calc_myspu_id();
+    uint64_t spu_old_mfc_sr1 = 0;
+
+    if (use_spu)
+        spu_old_mfc_sr1 = SpuAux_Init(spu_id);
+
     uint8_t *dest = (uint8_t *)inDest;
     const uint8_t *src = (const uint8_t *)inSrc;
 
@@ -2466,13 +2590,6 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
     meta_iv[0] = (0x9B79374722AD888E);
     meta_iv[1] = (0xB6A35A2DF25A8B3E);
 
-    //puts("2\n");
-
-    WORD meta_aes_key[60];
-    aes_key_setup((const uint8_t *)meta_key, meta_aes_key, 256);
-
-    //puts("3\n");
-
     //curSrcOffset = 0x200;
 
     for (uint64_t i = 0; i < 0x1000; i += 0x10)
@@ -2487,17 +2604,43 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
     }
 
     struct SceMetaInfo_s metaInfo;
-    aes_decrypt_cbc(
 
-        &src[curSrcOffset],
-        sizeof(struct SceMetaInfo_s),
+    if (use_spu)
+    {
+        spu_aes_decrypt_cbc(
+            spu_id,
 
-        (uint8_t *)&metaInfo,
+            &src[curSrcOffset],
+            sizeof(struct SceMetaInfo_s),
 
-        meta_aes_key,
-        256,
+            (uint8_t *)&metaInfo,
 
-        (const uint8_t *)meta_iv);
+            (const uint8_t*)meta_key,
+            256,
+
+            (const uint8_t *)meta_iv);
+    }
+    else
+    {
+#if AES_ENABLED
+        WORD meta_aes_key[60];
+        aes_key_setup((const uint8_t *)meta_key, meta_aes_key, 256);
+
+        aes_decrypt_cbc(
+
+            &src[curSrcOffset],
+            sizeof(struct SceMetaInfo_s),
+
+            (uint8_t *)&metaInfo,
+
+            meta_aes_key,
+            256,
+
+            (const uint8_t *)meta_iv);
+#else
+        dead_beep();
+#endif
+    }
 
     //puts("4\n");
 
@@ -2521,9 +2664,6 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
     //print_hex(metaInfo.iv[1]);
     //puts("\n");
 
-    WORD meta_header_key[60];
-    aes_key_setup((const uint8_t *)metaInfo.key, meta_header_key, 128);
-
     uint64_t metasSize = (sceHeader.file_offset) - sizeof(struct SceHeader_s) + (sceHeader.ext_header_size) + sizeof(struct SceMetaInfo_s);
 
     //puts("metasSize = ");
@@ -2532,19 +2672,43 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
 
     uint8_t metasBuf[4096];
 
-    aes_decrypt_ctr(
+    if (use_spu)
+    {
+        spu_aes128_decrypt_ctr(
+            spu_id,
 
-        &src[curSrcOffset],
-        metasSize,
+            &src[curSrcOffset],
+            metasSize,
 
-        metasBuf,
+            metasBuf,
 
-        meta_header_key,
-        128,
+            (const uint8_t *)metaInfo.key,
+            (const uint8_t *)metaInfo.iv
+        );
+    }
+    else
+    {
+#if AES_ENABLED
+        WORD meta_header_key[60];
+        aes_key_setup((const uint8_t *)metaInfo.key, meta_header_key, 128);
 
-        (const uint8_t *)metaInfo.iv
+        aes_decrypt_ctr(
 
-    );
+            &src[curSrcOffset],
+            metasSize,
+
+            metasBuf,
+
+            meta_header_key,
+            128,
+
+            (const uint8_t *)metaInfo.iv
+
+        );
+#else
+        dead_beep();
+#endif
+    }
 
     struct SceMetaHeader_s *metaHeader = (struct SceMetaHeader_s *)&metasBuf[0];
 
@@ -2623,12 +2787,6 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
 
     struct ElfPhdr_s *elfPhdrs = (struct ElfPhdr_s *)(dest + (elfHeader->e_phoff));
 
-    uint64_t spu_id = calc_myspu_id();
-    uint64_t spu_old_mfc_sr1;
-
-    if (use_spu)
-        spu_old_mfc_sr1 = SpuAux_Init(spu_id);
-
     for (uint16_t i = 0; i < (elfHeader->e_phnum); ++i)
     {
         struct ElfPhdr_s *phdr = &elfPhdrs[i];
@@ -2679,6 +2837,7 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
         }
         else
         {
+#if AES_ENABLED
             WORD aes_key[60];
             aes_key_setup((const uint8_t *)key->key, aes_key, 128);
 
@@ -2695,6 +2854,9 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
                 (const uint8_t *)iv->key
 
             );
+#else
+            dead_beep();
+#endif
         }
 
         if (h->comp_algorithm == 2)

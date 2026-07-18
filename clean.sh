@@ -9,6 +9,9 @@ rm -rf BadWDSD-Stage/.vscode
 rm BadWDSD-Stage/Stage0.bin
 rm BadWDSD-Stage/Stage0.elf
 
+rm BadWDSD-Stage/Stage0_emmc.bin
+rm BadWDSD-Stage/Stage0_emmc.elf
+
 rm BadWDSD-Stage/Stage2j.bin
 rm BadWDSD-Stage/Stage2j.elf
 

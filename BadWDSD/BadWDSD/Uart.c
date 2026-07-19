@@ -1,28 +1,29 @@
 #include "Include.h"
 
-void Uart_Init(uart_inst_t *uartId, uint32_t baud, bool rxEnabled, uint32_t rxPinId, bool txEnabled, uint32_t txPinId, void *rxFn)
+void Uart_Init(uart_inst_t *uartId, uint32_t baud, bool rxEnabled, uint32_t rxPinId, bool txEnabled, uint32_t txPinId)
 {
-    uart_init(uartId, baud);
-
     if (txEnabled)
         gpio_set_function(txPinId, UART_FUNCSEL_NUM(uartId, txPinId));
 
     if (rxEnabled)
         gpio_set_function(rxPinId, UART_FUNCSEL_NUM(uartId, rxPinId));
 
+    uart_init(uartId, baud);
+
     uart_set_hw_flow(uartId, false, false);
     uart_set_format(uartId, 8, 1, UART_PARITY_NONE);
     uart_set_fifo_enabled(uartId, true);
+}
 
-    if (rxEnabled && (rxFn != NULL))
-    {
-        uint32_t irq = (uartId == uart0) ? UART0_IRQ : UART1_IRQ;
+void Uart_Uninit(uart_inst_t* uartId, bool rxEnabled, uint32_t rxPinId, bool txEnabled, uint32_t txPinId)
+{
+    uart_deinit(uartId);
 
-        irq_set_exclusive_handler(irq, rxFn);
+    if (txEnabled)
+        gpio_set_function(txPinId, GPIO_FUNC_NULL);
 
-        irq_set_enabled(irq, true);
-        uart_set_irq_enables(uartId, true, false);
-    }
+    if (rxEnabled)
+        gpio_set_function(rxPinId, GPIO_FUNC_NULL);
 }
 
 void Uart_Putc(uart_inst_t* uartId, char c)

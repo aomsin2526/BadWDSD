@@ -49,15 +49,16 @@ void DebugUart_Thread()
     if (!DebugUart_IsInited())
         return;
 
+    recursive_mutex_enter_blocking(&debugUartMutex);
     DebugUart_RxFn();
-
-    // doesn't work in putty, because it send every input without buffering
-    //if ((get_time_in_ms() - debugUartContext.lastRxTimeInMs) > 100)
-    //    DebugUart_Flush();
+    recursive_mutex_exit(&debugUartMutex);
 }
 
 void DebugUart_Init()
 {
+    if (DebugUart_IsInited())
+        return;
+
     recursive_mutex_init(&debugUartMutex);
 
     debugUartContext.uartId = uart1;
@@ -67,24 +68,23 @@ void DebugUart_Init()
 
     debugUartContext.lastRxTimeInMs = 0;
 
-    Uart_Init(debugUartContext.uartId, DEBUG_UART_BAUD, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID, NULL);
+    Uart_Init(debugUartContext.uartId, DEBUG_UART_BAUD, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID);
 
     debugUartIsInited = true;
     sync();
+}
 
-    PrintLog("Debug Uart ready.\n");
+void DebugUart_Uninit()
+{
+    if (!DebugUart_IsInited())
+        return;
 
-    PrintLog("BadWDSD Pico By Kafuu(aomsin2526) (Build date: %s %s)\n", __DATE__, __TIME__);
+    recursive_mutex_enter_blocking(&debugUartMutex);
+    debugUartIsInited = false;
+    sync();
+    recursive_mutex_exit(&debugUartMutex);
 
-#if PICO_TYPE == PICO_TYPE_E_PICO
-    PrintLog("Pico\n");
-#elif PICO_TYPE == PICO_TYPE_E_PICO_W
-    PrintLog("Pico W\n");
-#elif PICO_TYPE == PICO_TYPE_E_RP2040_ZERO
-    PrintLog("RP2040-Zero\n");
-#else
-#error bad!!!
-#endif
+    Uart_Uninit(debugUartContext.uartId, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID);
 }
 
 void DebugUart_Putc(char c)

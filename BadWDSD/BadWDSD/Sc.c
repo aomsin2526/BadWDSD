@@ -215,7 +215,7 @@ void Sc_Init()
 
     scContext.lastScTxTimeInMs = 0;
 
-    Uart_Init(scContext.uartId, SC_UART_BAUD, true, SC_UART_RX_PIN_ID, true, SC_UART_TX_PIN_ID, NULL);
+    Uart_Init(scContext.uartId, SC_UART_BAUD, true, SC_UART_RX_PIN_ID, true, SC_UART_TX_PIN_ID);
 
     scIsInited = true;
     sync();

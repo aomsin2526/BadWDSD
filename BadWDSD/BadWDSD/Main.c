@@ -88,9 +88,191 @@ void XdrInitFail_Watchdog()
     }
 }
 
-void Sc_Thread_x16_Stage0()
+#if IS_EMMC
+
+#include "../Stage0_emmc.bin.c"
+#include "../Stage0b_emmc.bin.c"
+
+#include "../Stagexldr_emmc.bin.c"
+
+void Sc_Thread_x32_Stage0_emmc()
 {
-    PrintLog("Sc_Thread_x16_Stage0()\n");
+    PrintLog("Sc_Thread_x32_Stage0_emmc()\n");
+
+    Led_SetBlinkIntervalInMs(1000);
+    Led_SetStatus(LED_STATUS_BLINK);
+
+    Sc_Init();
+    Hold_Init();
+
+    uint8_t wdslData0[64];
+    uint8_t data[64];
+
+    if (sizeof(bin2c_Stage0_emmc_bin) > 64)
+    {
+        PrintLog("bin2c_Stage0_emmc_bin size is bad!!!\n");
+        dead();
+    }
+
+    if (sizeof(bin2c_Stage0b_emmc_bin) > 128)
+    {
+        PrintLog("bin2c_Stage0b_emmc_bin size is bad!!!\n");
+        dead();
+    }
+
+    memcpy(data, bin2c_Stage0_emmc_bin, sizeof(bin2c_Stage0_emmc_bin));
+    Xdr_GenerateReadyWDSLData_x32(data, wdslData0);
+
+    Led_SetStatus(LED_STATUS_ON);
+
+    while (1)
+    {
+        if (Sc_GetTrigger())
+        {
+            //
+
+            Sc_ClearSuccess();
+            Sc_ClearNeedReboot();
+
+            //
+
+            Xdr_SendEnableSLE_x32_PerDevice(0);
+            Xdr_SendWDSD_x32_PerDevice(0, wdslData0);
+
+            //
+
+            Led_SetBlinkIntervalInMs(100);
+            Led_SetStatus(LED_STATUS_BLINK);
+
+            //
+
+            busy_wait_ms(600);
+
+            //
+
+            DebugUart_Uninit();
+            Sb_Init();
+
+            for (size_t i = 0; i < sizeof(bin2c_Stage0b_emmc_bin); ++i)
+                Sb_Putc(bin2c_Stage0b_emmc_bin[i]);
+
+            busy_wait_ms(1);
+
+            for (size_t i = 0; i < sizeof(bin2c_Stagexldr_emmc_bin); ++i)
+            {
+                Sb_Putc(bin2c_Stagexldr_emmc_bin[i]);
+                busy_wait_us(100);
+            }
+
+            Sb_Uninit();
+            DebugUart_Init();
+
+            //
+
+            Led_SetStatus(LED_STATUS_ON);
+
+            //
+
+            //Watchdog();
+
+            //
+
+            Sc_ClearTrigger();
+
+            //
+        }
+
+        XdrInitFail_Watchdog();
+    }
+}
+
+#elif XDR_IS_X32
+
+void Sc_Thread_x32_Stage0_nor()
+{
+    PrintLog("Sc_Thread_x32_Stage0_nor()\n");
+
+    Led_SetBlinkIntervalInMs(1000);
+    Led_SetStatus(LED_STATUS_BLINK);
+
+    Sc_Init();
+    Hold_Init();
+
+    uint8_t wdslData0[64];
+
+    uint8_t data[64];
+    memset(data, 0x0, 64);
+
+    {
+        // stage0
+
+        uint64_t *d = (uint64_t *)data;
+
+        d[0] = swap_uint64(0x480000057C6802A6);
+        d[1] = swap_uint64(0x3863FFFCE8830018);
+        d[2] = swap_uint64(0x7C8903A64E800420);
+        d[3] = swap_uint64(0x000002401F031000);
+    }
+
+    Xdr_GenerateReadyWDSLData_x32(data, wdslData0);
+
+    Led_SetStatus(LED_STATUS_ON);
+
+    while (1)
+    {
+        if (Sc_GetTrigger())
+        {
+            //
+
+            Sc_ClearSuccess();
+            Sc_ClearNeedReboot();
+
+            //
+
+            Xdr_SendEnableSLE_x32_PerDevice(0);
+            Xdr_SendWDSD_x32_PerDevice(0, wdslData0);
+
+            //
+
+            Led_SetBlinkIntervalInMs(100);
+            Led_SetStatus(LED_STATUS_BLINK);
+
+            //
+
+            busy_wait_ms(200);
+
+            //
+
+            //Xdr_SendDisableSLE_x32_PerDevice(0);
+
+            //
+            
+            busy_wait_ms(300);
+
+            //
+
+            Led_SetStatus(LED_STATUS_ON);
+
+            //
+
+            Watchdog();
+
+            //
+
+            Sc_ClearTrigger();
+
+            //
+        }
+
+        XdrInitFail_Watchdog();
+    }
+}
+
+#else
+
+void Sc_Thread_x16_Stage0_nor()
+{
+    PrintLog("Sc_Thread_x16_Stage0_nor()\n");
 
     Led_SetBlinkIntervalInMs(1000);
     Led_SetStatus(LED_STATUS_BLINK);
@@ -167,89 +349,15 @@ void Sc_Thread_x16_Stage0()
             //
 
             Sc_ClearTrigger();
+
+            //
         }
 
         XdrInitFail_Watchdog();
     }
 }
 
-void Sc_Thread_x32_Stage0()
-{
-    PrintLog("Sc_Thread_x32_Stage0()\n");
-
-    Led_SetBlinkIntervalInMs(1000);
-    Led_SetStatus(LED_STATUS_BLINK);
-
-    Sc_Init();
-    Hold_Init();
-
-    uint8_t wdslData0[64];
-
-    uint8_t data[32];
-    memset(data, 0x0, 32);
-
-    {
-        // stage0
-
-        uint64_t *d = (uint64_t *)data;
-
-        d[0] = swap_uint64(0x480000057C6802A6);
-        d[1] = swap_uint64(0x3863FFFCE8830018);
-        d[2] = swap_uint64(0x7C8903A64E800420);
-        d[3] = swap_uint64(0x000002401F031000);
-    }
-
-    Xdr_GenerateReadyWDSLData_x32(data, wdslData0);
-
-    Led_SetStatus(LED_STATUS_ON);
-
-    while (1)
-    {
-        if (Sc_GetTrigger())
-        {
-            //
-
-            Sc_ClearSuccess();
-            Sc_ClearNeedReboot();
-
-            //
-
-            Xdr_SendEnableSLE_x32_PerDevice(0);
-            Xdr_SendWDSD_x32_PerDevice(0, wdslData0);
-
-            //
-
-            Led_SetBlinkIntervalInMs(100);
-            Led_SetStatus(LED_STATUS_BLINK);
-
-            //
-
-            busy_wait_ms(200);
-
-            //
-
-            //Xdr_SendDisableSLE_x32_PerDevice(0);
-
-            //
-            
-            busy_wait_ms(300);
-
-            //
-
-            Led_SetStatus(LED_STATUS_ON);
-
-            //
-
-            Watchdog();
-
-            //
-
-            Sc_ClearTrigger();
-        }
-
-        XdrInitFail_Watchdog();
-    }
-}
+#endif
 
 void Core1_Thread()
 {
@@ -286,13 +394,37 @@ void main()
     DebugUart_Init();
 #endif
 
+    //
+
+    PrintLog("BadWDSD Pico By Kafuu(aomsin2526) (Build date: %s %s)\n", __DATE__, __TIME__);
+
+#if PICO_TYPE == PICO_TYPE_E_PICO
+    PrintLog("Pico\n");
+#elif PICO_TYPE == PICO_TYPE_E_PICO_W
+    PrintLog("Pico W\n");
+#elif PICO_TYPE == PICO_TYPE_E_RP2040_ZERO
+    PrintLog("RP2040-Zero\n");
+#else
+#error bad!!!
+#endif
+
+#if IS_EMMC
+    PrintLog("Flash is emmc\n");
+#else
+    PrintLog("Flash is nor\n");
+#endif
+
+    //
+
     Led_Init();
     multicore_launch_core1(Core1_Thread);
 
-#if XDR_IS_X32
-    Sc_Thread_x32_Stage0();
+#if IS_EMMC
+    Sc_Thread_x32_Stage0_emmc();
+#elif XDR_IS_X32
+    Sc_Thread_x32_Stage0_nor();
 #else
-    Sc_Thread_x16_Stage0();
+    Sc_Thread_x16_Stage0_nor();
 #endif
 
     dead();

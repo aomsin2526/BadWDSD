@@ -227,7 +227,7 @@ extern void Xdr_ConvertDataToWDSLData_x32(const uint8_t* inData, uint8_t* outWDS
 // inData[32], outWDSLData0[32], outWDSLData1[32]
 extern void Xdr_GenerateReadyWDSLData_x16(const uint8_t* inData, uint8_t* outWDSLData0, uint8_t* outWDSLData1);
 
-// inData[32], outWDSLData0[64]
+// inData[64], outWDSLData0[64]
 extern void Xdr_GenerateReadyWDSLData_x32(const uint8_t* inData, uint8_t* outWDSLData0);
 
 //
@@ -249,7 +249,8 @@ extern uint64_t swap_uint64(uint64_t val);
 
 //
 
-extern void Uart_Init(uart_inst_t* uartId, uint32_t baud, bool rxEnabled, uint32_t rxPinId, bool txEnabled, uint32_t txPinId, void* rxFn);
+extern void Uart_Init(uart_inst_t* uartId, uint32_t baud, bool rxEnabled, uint32_t rxPinId, bool txEnabled, uint32_t txPinId);
+extern void Uart_Uninit(uart_inst_t* uartId, bool rxEnabled, uint32_t rxPinId, bool txEnabled, uint32_t txPinId);
 
 extern void Uart_Putc(uart_inst_t* uartId, char c);
 extern void Uart_Puts(uart_inst_t* uartId, const char* buf);
@@ -374,11 +375,30 @@ extern void DebugUart_Thread();
 extern bool DebugUart_IsInited();
 
 extern void DebugUart_Init();
+extern void DebugUart_Uninit();
 
 extern void DebugUart_Putc(char c);
 extern void DebugUart_Puts(const char* buf);
 
 #define PrintLog(...) { if (DebugUart_IsInited()) { char* ___buf = (char*)malloc(16384); if (___buf == NULL) { dead(); } sprintf(___buf, __VA_ARGS__); DebugUart_Puts(___buf); free(___buf); } }
+
+//
+
+static const uint32_t SB_UART_TX_PIN_ID = 8; // original pico
+
+static const uint32_t SB_UART_BAUD = 115200;
+
+struct SbContext_s
+{
+    uart_inst_t* uartId;
+};
+
+extern bool Sb_IsInited();
+
+extern void Sb_Init();
+extern void Sb_Uninit();
+
+extern void Sb_Putc(char c);
 
 // aes
 

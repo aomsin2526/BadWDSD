@@ -590,6 +590,10 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
 
         asm volatile("stw 3, 0(4)");
         eieio();
+
+        // wait for it to finish
+        asm volatile("lwz 3, 8(4)");
+        eieio();
     }
 
     // set stage_sp to 0xE000000

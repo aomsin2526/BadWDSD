@@ -380,7 +380,7 @@ void Xdr_GenerateReadyWDSLData_x16(const uint8_t *inData, uint8_t *outWDSLData0,
     Xdr_ConvertDataToWDSLData_x16(tmpData1, outWDSLData1);
 }
 
-// inData[32], outWDSLData0[64]
+// inData[64], outWDSLData0[64]
 void Xdr_GenerateReadyWDSLData_x32(const uint8_t* inData, uint8_t* outWDSLData0)
 {
     uint8_t tmpData0[64];
@@ -390,15 +390,15 @@ void Xdr_GenerateReadyWDSLData_x32(const uint8_t* inData, uint8_t* outWDSLData0)
     {
         uint64_t *m = (uint64_t *)map;
 
-        m[0] = swap_uint64(0x353b394b49474537);
-        m[1] = swap_uint64(0x41334d313d3f4f43);
-        m[2] = swap_uint64(0x172f1f2d23192113);
-        m[3] = swap_uint64(0x2b291125151b1d27);
+        m[0] = swap_uint64(0x343a384a48464436);
+        m[1] = swap_uint64(0x40324c303c3e4e42);
+        m[2] = swap_uint64(0x162e1e2c22182012);
+        m[3] = swap_uint64(0x2a281024141a1c26);
 
-        m[4] = swap_uint64(0x343a384a48464436);
-        m[5] = swap_uint64(0x40324c303c3e4e42);
-        m[6] = swap_uint64(0x162e1e2c22182012);
-        m[7] = swap_uint64(0x2a281024141a1c26);
+        m[4] = swap_uint64(0x353b394b49474537);
+        m[5] = swap_uint64(0x41334d313d3f4f43);
+        m[6] = swap_uint64(0x172f1f2d23192113);
+        m[7] = swap_uint64(0x2b291125151b1d27);
     }
 
     for (uint32_t i = 0; i < 64; ++i)
@@ -408,7 +408,7 @@ void Xdr_GenerateReadyWDSLData_x32(const uint8_t* inData, uint8_t* outWDSLData0)
     {
         uint8_t o = map[i];
 
-        tmpData0[o] = inData[(i % 32)];
+        tmpData0[o] = inData[i];
     }
 
     Xdr_ConvertDataToWDSLData_x32(tmpData0, outWDSLData0);

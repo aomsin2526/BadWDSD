@@ -18,7 +18,7 @@ pico_sdk_init()
 # rest of your project
 
 add_executable(BadWDSD
-    Main.c Hold.c Led.c Timer.c Xdr.c Gpio.c Uart.c Sc.c DebugUart.c Aes.c
+    Main.c Hold.c Led.c Timer.c Xdr.c Gpio.c Uart.c Sc.c Sb.c DebugUart.c Aes.c
 )
 
 # Add pico_stdlib library which aggregates commonly used features

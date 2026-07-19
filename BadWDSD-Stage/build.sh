@@ -1,9 +1,7 @@
 #!/bin/bash
 
 export FLAGS="-g -O1 -fno-jump-tables -Wall -mcpu=cell -mabi=elfv1 -ffreestanding -mtoc -nostdlib -Wl,--build-id=none -static"
-
-export FLAGS="$FLAGS"
-echo $FLAGS
+echo FLAGS = $FLAGS
 
 export CC=powerpc64-linux-gnu-gcc
 export OBJCOPY=powerpc64-linux-gnu-objcopy
@@ -12,10 +10,13 @@ $CC $FLAGS -T Stage0.ld Stage0.S -o Stage0.elf || exit 1
 $CC $FLAGS -T Stage0.ld Stage0.S -o Stage0.bin -Wl,--oformat=binary || exit 1
 
 export STAGEX_FLAGS="-estage_link_entry -ffunction-sections -fdata-sections -Wl,--gc-sections"
+echo STAGEX_FLAGS = $STAGEX_FLAGS
 
 $CC $FLAGS $STAGEX_FLAGS -T Stagex.ld Stagex.c -o Stagex.elf || exit 1
-$OBJCOPY --remove-section .opd Stagex.elf
-$OBJCOPY -O binary Stagex.elf Stagex.bin || exit 1
+cp -a Stagex.elf Stagex.elf.tmp || exit 1
+$OBJCOPY --remove-section .opd Stagex.elf.tmp || exit 1
+$OBJCOPY -O binary Stagex.elf.tmp Stagex.bin || exit 1
+rm Stagex.elf.tmp || exit 1
 
 $CC $FLAGS -T Stage2j.ld Stage2j.S -o Stage2j.elf || exit 1
 $CC $FLAGS -T Stage2j.ld Stage2j.S -o Stage2j.bin -Wl,--oformat=binary || exit 1

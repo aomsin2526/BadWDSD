@@ -869,8 +869,6 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
     {
         uint16_t tag = (uint16_t)GetTimeInMs();
 
-#if 1
-
         {
             uint8_t buf[512] __attribute__((aligned(8)));
             memset(buf, 0, 512);
@@ -934,22 +932,6 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
                     send_packet_data[i] = p[i];
             }
         }
-
-#else
-
-        {
-            tag = 0x1620;
-
-            send_packet_data[0] = 0x16011620;
-            send_packet_data[1] = 0x0000804d;
-            send_packet_data[2] = 0x00000001;
-            send_packet_data[3] = 0x00080008;
-            send_packet_data[4] = 0x20290a00;
-            send_packet_data[5] = 0x000001b6;
-            send_packet_data[6] = 0x0000fdcb;
-        }
-
-#endif
 
         {
             uint32_t value = *send_packet_counter_cell;
@@ -1519,9 +1501,6 @@ FUNC_DEF void real_print_decimal(uint64_t v)
         ++curOutBufLen;
     }
 
-    // outBuf[curOutBufLen] = '\n';
-    //++curOutBufLen;
-
     outBuf[curOutBufLen] = 0;
     real_puts(outBuf);
 }
@@ -1886,7 +1865,7 @@ FUNC_DEF uint8_t CoreOS_Bank_IsqCFW_jig(uint8_t os_bank_indicator)
 
 FUNC_DEF uint8_t calc_os_bank_indicator()
 {
-    return sc_read_os_bank_indicator();
+    return (sc_read_shadow_os_bank_indicator() == 0x1) ? 0xff : 0x00;
 }
 
 FUNC_DEF uint8_t get_os_bank_indicator()

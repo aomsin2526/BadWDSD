@@ -357,9 +357,6 @@ FUNC_DEF void sb_print_decimal(uint64_t v)
         ++curOutBufLen;
     }
 
-    // outBuf[curOutBufLen] = '\n';
-    //++curOutBufLen;
-
     outBuf[curOutBufLen] = 0;
     sb_puts(outBuf);
 }
@@ -478,7 +475,7 @@ FUNC_DEF uint32_t qcfw_crc32c(uint32_t crc, const uint8_t* buf, uint64_t len)
 
 FUNC_DEF void Stagexldr()
 {
-    puts("\nHello from Stagexldr!!\n");
+    puts("\nStagexldr by Kafuu(aomsin2526)" " (Build Date: " __DATE__ " " __TIME__ ")\n");
 
     {
         uint32_t payload_size = *((const volatile uint32_t*)0xff8);
@@ -508,6 +505,9 @@ FUNC_DEF void Stagexldr()
 
         puts("crc32 check ok!\n");
     }
+
+    // todo check is_emmc()
+    
 
     dead();
 }

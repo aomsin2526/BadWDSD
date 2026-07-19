@@ -1,20 +1,21 @@
 #!/bin/bash
 
 export FLAGS="-g -O1 -fno-jump-tables -Wall -mcpu=cell -mabi=elfv1 -ffreestanding -mtoc -nostdlib -Wl,--build-id=none -static"
-
-export FLAGS="$FLAGS"
 echo FLAGS = $FLAGS
 
 export CC=powerpc64-linux-gnu-gcc
 export OBJCOPY=powerpc64-linux-gnu-objcopy
 
 export STAGEXLDR_FLAGS="-estagexldr_link_entry -ffunction-sections -fdata-sections -Wl,--gc-sections"
+echo STAGEXLDR_FLAGS = $STAGEXLDR_FLAGS
 
 #
 
 $CC $FLAGS $STAGEXLDR_FLAGS -T Stagexldr_emmc.ld Stagexldr_emmc.c -o Stagexldr_emmc.orig.elf || exit 1
-$OBJCOPY --remove-section .opd Stagexldr_emmc.orig.elf
-$OBJCOPY -O binary Stagexldr_emmc.orig.elf Stagexldr_emmc.orig.bin || exit 1
+cp -a Stagexldr_emmc.orig.elf Stagexldr_emmc.orig.elf.tmp || exit 1
+$OBJCOPY --remove-section .opd Stagexldr_emmc.orig.elf.tmp || exit 1
+$OBJCOPY -O binary Stagexldr_emmc.orig.elf.tmp Stagexldr_emmc.orig.bin || exit 1
+rm Stagexldr_emmc.orig.elf.tmp || exit 1
 
 STAGEXLDR_EMMC_ORIG_BIN_SIZE=`stat --printf="%s" Stagexldr_emmc.orig.bin`
 echo STAGEXLDR_EMMC_ORIG_BIN_SIZE = $STAGEXLDR_EMMC_ORIG_BIN_SIZE

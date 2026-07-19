@@ -168,22 +168,33 @@ FUNC_DEF void Stagex_RelocateTest(const void* stagex_data, uint64_t old_stagex_a
 
     memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
 
-    volatile uint64_t* toc = (volatile uint64_t*)(new_stagex_addr + 0x900);
-    *toc -= old_stagex_addr;
-    *toc += new_stagex_addr;
+    const volatile uint64_t* signature = (const volatile uint64_t*)(new_stagex_addr + 0x908);
+
+    if (*signature != 0x5446072c5516c2c6)
+    {
+        real_puts("bad signature!\n");
+        dead();
+    }
 
     volatile uint64_t* toc1_addr = (volatile uint64_t*)(new_stagex_addr + 0x910);
     const volatile uint64_t* toc1_size = (const volatile uint64_t*)(new_stagex_addr + 0x918);
 
-    *toc1_addr -= old_stagex_addr;
-    *toc1_addr += new_stagex_addr;
-
-    volatile uint64_t* toc1 = (volatile uint64_t*)(*toc1_addr);
-
-    for (uint64_t i = 0; i < (*toc1_size / 8); ++i)
+    if (*toc1_size > 0)
     {
-        toc1[i] -= old_stagex_addr;
-        toc1[i] += new_stagex_addr;
+        volatile uint64_t* toc = (volatile uint64_t*)(new_stagex_addr + 0x900);
+        *toc -= old_stagex_addr;
+        *toc += new_stagex_addr;
+
+        *toc1_addr -= old_stagex_addr;
+        *toc1_addr += new_stagex_addr;
+
+        volatile uint64_t* toc1 = (volatile uint64_t*)(*toc1_addr);
+
+        for (uint64_t i = 0; i < (*toc1_size / 8); ++i)
+        {
+            toc1[i] -= old_stagex_addr;
+            toc1[i] += new_stagex_addr;
+        }
     }
 
     // jump to stage1_entry
@@ -234,43 +245,48 @@ FUNC_DEF void Stage1()
 
     //
 
-    uint8_t request_os_bank_indicator = sc_read_request_os_bank_indicator();
-
-    puts("request_os_bank_indicator = ");
-    print_hex(request_os_bank_indicator);
-    puts("\n");
-
-    if (request_os_bank_indicator == 0x1)
+    //if (!is_emmc())
     {
-        puts("Switching to ros0...\n");
+        uint8_t request_os_bank_indicator = sc_read_request_os_bank_indicator();
 
-        sc_write_os_bank_indicator(0xff);
-        sc_write_recovery_mode_flag(0xff);
-    }
-    else if (request_os_bank_indicator == 0x2)
-    {
-        puts("Switching to ros1...\n");
-        
-        sc_write_os_bank_indicator(0x00);
-        sc_write_recovery_mode_flag(0xff);
-    }
+        puts("request_os_bank_indicator = ");
+        print_hex(request_os_bank_indicator);
+        puts("\n");
 
-    sc_write_request_os_bank_indicator(0xff);
+        if (request_os_bank_indicator == 0x1)
+        {
+            puts("Switching to ros0...\n");
+
+            sc_write_os_bank_indicator(0xff);
+            sc_write_recovery_mode_flag(0xff);
+        }
+        else if (request_os_bank_indicator == 0x2)
+        {
+            puts("Switching to ros1...\n");
+            
+            sc_write_os_bank_indicator(0x00);
+            sc_write_recovery_mode_flag(0xff);
+        }
+
+        sc_write_request_os_bank_indicator(0xff);
+
+        //
+
+        uint8_t real_os_bank_indicator = sc_read_os_bank_indicator();
+
+        puts("real_os_bank_indicator = ");
+        print_hex(real_os_bank_indicator);
+        puts("\n");
+
+        uint8_t shadow_os_bank_indicator = ((real_os_bank_indicator == 0xFF) ? 0x1 : 0x2); // ros0 or ros1
+        sc_write_shadow_os_bank_indicator(shadow_os_bank_indicator);
+
+        puts("shadow_os_bank_indicator = ");
+        print_hex(shadow_os_bank_indicator);
+        puts("\n");
+    }
 
     //
-
-    uint8_t real_os_bank_indicator = sc_read_os_bank_indicator();
-
-    puts("real_os_bank_indicator = ");
-    print_hex(real_os_bank_indicator);
-    puts("\n");
-
-    uint8_t shadow_os_bank_indicator = ((real_os_bank_indicator == 0xFF) ? 0x1 : 0x2); // ros0 or ros1
-    sc_write_shadow_os_bank_indicator(shadow_os_bank_indicator);
-
-    puts("shadow_os_bank_indicator = ");
-    print_hex(shadow_os_bank_indicator);
-    puts("\n");
 
     uint8_t os_bank_indicator = get_os_bank_indicator();
 

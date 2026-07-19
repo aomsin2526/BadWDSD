@@ -18,8 +18,14 @@ SECTIONS
     . = 0x2401F031900;
     .toc : { *(.toc) }
 
+    . = 0x2401F031908;
+    signature :
+    {
+        QUAD(0x5446072c5516c2c6)
+    }
+
     . = 0x2401F031910;
-    tocinfo : 
+    tocinfo :
     {
         QUAD(LOADADDR(.toc1))
         QUAD(SIZEOF(.toc1))

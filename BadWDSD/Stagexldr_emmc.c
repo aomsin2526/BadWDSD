@@ -489,7 +489,7 @@ FUNC_DEF void Stagexldr()
         print_hex(payload_crc32);
         puts("\n");
 
-        if ((payload_size > (1 * 1024 * 1024)) || (payload_crc32 == 0))
+        if ((payload_size == 0) || (payload_size > (1 * 1024 * 1024)))
         {
             puts("bad!!!\n");
             dead();
@@ -507,7 +507,7 @@ FUNC_DEF void Stagexldr()
     }
 
     // todo check is_emmc()
-    
+
 
     dead();
 }

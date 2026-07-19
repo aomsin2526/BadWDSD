@@ -462,9 +462,59 @@ FUNC_DEF void sb_hexdump(const void* ptr, uint64_t sz)
 #define hexdump(...)
 #endif
 
+// initial crc should be 0
+FUNC_DEF uint32_t qcfw_crc32c(uint32_t crc, const uint8_t* buf, uint64_t len)
+{
+    int32_t k;
+
+    crc = ~crc;
+    while (len--) {
+        crc ^= *buf++;
+        for (k = 0; k < 8; k++)
+            crc = crc & 1 ? (crc >> 1) ^ 0xedb88320 : crc >> 1;
+    }
+    return ~crc;
+}
+
+FUNC_DEF void Stagexldr()
+{
+    puts("\nHello from Stagexldr!!\n");
+
+    {
+        uint32_t payload_size = *((const volatile uint32_t*)0xff8);
+        uint32_t payload_crc32 = *((const volatile uint32_t*)0xffc);
+
+        puts("payload_size = ");
+        print_decimal(payload_size);
+        puts("\n");
+
+        puts("payload_crc32 = ");
+        print_hex(payload_crc32);
+        puts("\n");
+
+        if ((payload_size > (1 * 1024 * 1024)) || (payload_crc32 == 0))
+        {
+            puts("bad!!!\n");
+            dead();
+        }
+
+        uint32_t crc32 = qcfw_crc32c(0, (const uint8_t*)0x1000, payload_size);
+
+        if (crc32 != payload_crc32)
+        {
+            puts("bad crc!!!\n");
+            dead();
+        }
+
+        puts("crc32 check ok!\n");
+    }
+
+    dead();
+}
+
 __attribute__((section("main"))) void stagexldr_main()
 {
-    puts("\nHello from stagexldr!!\n");
+    Stagexldr();
 
     dead();
 }
@@ -478,7 +528,7 @@ __attribute__((noreturn, section("entry"))) void stagexldr_entry()
     asm volatile("addi %r2, %r2, 0x7fff");
     asm volatile("addi %r2, %r2, 1");
 
-    // set stack to 0x2000000
+    // set sp to 0x2000000
     asm volatile("lis %r1, 0x200");
 
     // init ppu

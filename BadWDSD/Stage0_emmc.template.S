@@ -1,6 +1,6 @@
-.global stage0_emmc_entry
-
 #define JUMP_ADDRESS 0x180
+
+.global stage0_emmc_entry
 
 #if 1
 

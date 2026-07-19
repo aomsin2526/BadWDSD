@@ -1,9 +1,10 @@
 // run at 0x180 (second ch)
 // max size = 128
 
-.global stage0b_emmc_entry
-
+#define PAYLOAD_HEADER_SIZE 8
 #define JUMP_ADDRESS 0x1000
+
+.global stage0b_emmc_entry
 
 stage0b_emmc_entry:
     // restore XDR
@@ -51,7 +52,7 @@ loop1:
     andi. %r3, %r3, 0xff
 
     // write lowest 8 bit of r3 to address at r9
-    stb %r3, 0(%r9)
+    stb %r3, -PAYLOAD_HEADER_SIZE(%r9)
     addi %r9, %r9, 1 // r9 += 1
 
     // loop if r9 < (JUMP_ADDRESS + PAYLOAD_SIZE)

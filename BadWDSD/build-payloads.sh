@@ -12,8 +12,23 @@ export STAGEXLDR_FLAGS="-estagexldr_link_entry -ffunction-sections -fdata-sectio
 
 #
 
-$CC $FLAGS $STAGEXLDR_FLAGS -T Stagexldr_emmc.ld Stagexldr_emmc.c -o Stagexldr_emmc.elf || exit 1
-$OBJCOPY -O binary Stagexldr_emmc.elf Stagexldr_emmc.bin || exit 1
+$CC $FLAGS $STAGEXLDR_FLAGS -T Stagexldr_emmc.ld Stagexldr_emmc.c -o Stagexldr_emmc.orig.elf || exit 1
+$OBJCOPY --remove-section .opd Stagexldr_emmc.orig.elf
+$OBJCOPY -O binary Stagexldr_emmc.orig.elf Stagexldr_emmc.orig.bin || exit 1
+
+STAGEXLDR_EMMC_ORIG_BIN_SIZE=`stat --printf="%s" Stagexldr_emmc.orig.bin`
+echo STAGEXLDR_EMMC_ORIG_BIN_SIZE = $STAGEXLDR_EMMC_ORIG_BIN_SIZE
+
+STAGEXLDR_EMMC_ORIG_BIN_SIZE_HEX=$(printf '%08x' $STAGEXLDR_EMMC_ORIG_BIN_SIZE)
+echo STAGEXLDR_EMMC_ORIG_BIN_SIZE_HEX = $STAGEXLDR_EMMC_ORIG_BIN_SIZE_HEX
+
+STAGEXLDR_EMMC_ORIG_BIN_CRC32=$(crc32 Stagexldr_emmc.orig.bin)
+echo STAGEXLDR_EMMC_ORIG_BIN_CRC32 = $STAGEXLDR_EMMC_ORIG_BIN_CRC32
+
+rm Stagexldr_emmc.bin
+echo -n $STAGEXLDR_EMMC_ORIG_BIN_SIZE_HEX | xxd -r -p >> Stagexldr_emmc.bin || exit 1
+echo -n $STAGEXLDR_EMMC_ORIG_BIN_CRC32 | xxd -r -p >> Stagexldr_emmc.bin || exit 1
+cat Stagexldr_emmc.orig.bin >> Stagexldr_emmc.bin
 
 STAGEXLDR_EMMC_BIN_SIZE=`stat --printf="%s" Stagexldr_emmc.bin`
 echo STAGEXLDR_EMMC_BIN_SIZE = $STAGEXLDR_EMMC_BIN_SIZE

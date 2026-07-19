@@ -453,6 +453,7 @@ FUNC_DEF void Stage1()
 #endif
 
 #if HDDKEYDUMPER_ENABLED
+                    // todo adjust patch for emmc
                     if ((hdd_key_dumper_flag == 0x1) && ((fwVersion >= 470) || isqCFW)) // dump request
                     {
                         sc_write_hdd_key_dumper_flag(0x2); // will dump soon
@@ -472,6 +473,7 @@ FUNC_DEF void Stage1()
 
                     // ANTI BRICK!!!
                     // isqCFW!!!
+                    // todo adjust patch for emmc
                     if ((fwVersion >= 470) || isqCFW || isqCFW_jig)
                     {
                         uint8_t searchData[] = {0x38, 0x60, 0x01, 0x00, 0x7C, 0x69, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x60, 0x00, 0x00, 0x00};

@@ -15,6 +15,10 @@
 // 0x1000000 = lv2 (ofw)
 // 0x8000000 = lv2 (cfw) / otheros
 
+// Stagexldr_emmc:
+// runs at 0x1000
+// 0x2000000 = sp
+
 // Stagex:
 // 0xA00 - 0xBFF = Stagex_Context_s
 // 0xD000000 = sc_puts_buffer

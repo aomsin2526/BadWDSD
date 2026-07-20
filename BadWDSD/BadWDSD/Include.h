@@ -384,7 +384,7 @@ extern void DebugUart_Puts(const char* buf);
 
 //
 
-static const uint32_t SB_UART_TX_PIN_ID = 8; // original pico
+static const uint32_t SB_UART_TX_PIN_ID = 8;
 
 static const uint32_t SB_UART_BAUD = 115200;
 

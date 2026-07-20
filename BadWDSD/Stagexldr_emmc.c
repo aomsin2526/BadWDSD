@@ -28,6 +28,12 @@ typedef uint64_t uintptr_t;
 
 #define NULL 0
 
+#define eieio()                \
+    {                          \
+        asm volatile("eieio"); \
+        asm volatile("sync");  \
+    }
+
 #define sync()                 \
     {                          \
         asm volatile("eieio"); \
@@ -460,7 +466,7 @@ FUNC_DEF void sb_hexdump(const void* ptr, uint64_t sz)
 #endif
 
 // initial crc should be 0
-FUNC_DEF uint32_t qcfw_crc32c(uint32_t crc, const uint8_t* buf, uint64_t len)
+FUNC_DEF uint32_t crc32c(uint32_t crc, const uint8_t* buf, uint64_t len)
 {
     int32_t k;
 
@@ -472,6 +478,8 @@ FUNC_DEF uint32_t qcfw_crc32c(uint32_t crc, const uint8_t* buf, uint64_t len)
     }
     return ~crc;
 }
+
+#include "Stagexldr_emmc_critical.c"
 
 FUNC_DEF void Stagexldr()
 {
@@ -495,7 +503,7 @@ FUNC_DEF void Stagexldr()
             dead();
         }
 
-        uint32_t crc32 = qcfw_crc32c(0, (const uint8_t*)0x1000, payload_size);
+        uint32_t crc32 = crc32c(0, (const uint8_t*)0x1000, payload_size);
 
         if (crc32 != payload_crc32)
         {
@@ -506,7 +514,13 @@ FUNC_DEF void Stagexldr()
         puts("crc32 check ok!\n");
     }
 
-    // todo check is_emmc()
+    if (!is_emmc())
+    {
+        puts("flash is not emmc!!!\n");
+        dead();
+    }
+
+    puts("flash is emmc\n");
 
 
     dead();

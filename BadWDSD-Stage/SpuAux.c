@@ -6,31 +6,8 @@ FUNC_DEF void SpuAux_Uninit(uint64_t spu_id, uint64_t spu_old_mfc_sr1)
     //print_decimal(spu_id);
     //puts("\n");
 
-    uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
-
-    if ((status & SPU_STATUS_RUN_MASK) != 0)
-    {
-        // stop request
-        SPU_PS_Write32(spu_id, 0x0401C, 0x0);
-        eieio();
-
-        while ((status & SPU_STATUS_RUN_MASK) != 0)
-        {
-            status = SPU_PS_Read32(spu_id, 0x04024);
-        }
-    }
-
-    status = SPU_PS_Read32(spu_id, 0x04024);
-    if ((status & SPU_STATUS_ISOLATED_MASK) != 0)
-    {
-        // iso exit request
-        SPU_PS_Write32(spu_id, 0x0401C, 0x2);
-
-        while ((status & SPU_STATUS_ISOLATED_MASK) != 0)
-        {
-            status = SPU_PS_Read32(spu_id, 0x04024);
-        }
-    }
+    SPU_StopRequest(spu_id);
+    SPU_IsoExitRequest(spu_id);
 
     SPU_P1_Write64(spu_id, 0x0, spu_old_mfc_sr1);
     eieio();
@@ -91,7 +68,7 @@ FUNC_DEF uint64_t SpuAux_Init(uint64_t spu_id)
     {
         //WaitInMs(1000);
 
-        //status = SPU_PS_Read32(spu_id, 0x04024);
+        //uint32_t status = SPU_Read_SPU_STATUS(spu_id);
 
         //puts("status = ");
         //print_hex(status);
@@ -178,7 +155,7 @@ FUNC_DEF void spu_aes128_decrypt_ctr(uint64_t spu_id, const uint8_t* in, uint64_
     {
         //WaitInMs(1000);
 
-        //uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
+        //uint32_t status = SPU_Read_SPU_STATUS(spu_id);
 
         //puts("status = ");
         //print_hex(status);
@@ -249,7 +226,7 @@ FUNC_DEF void spu_aes_decrypt_cbc(uint64_t spu_id, const uint8_t* in, uint64_t s
     {
         //WaitInMs(1000);
 
-        //uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
+        //uint32_t status = SPU_Read_SPU_STATUS(spu_id);
 
         //puts("status = ");
         //print_hex(status);
@@ -327,7 +304,7 @@ FUNC_DEF void spu_zlib_decompress(uint64_t spu_id, const void* inCompressedData,
 
         WaitInMs(1000);
 
-        uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
+        uint32_t status = SPU_Read_SPU_STATUS(spu_id);
 
         puts("status = ");
         print_hex(status);

@@ -439,8 +439,31 @@ void Sc_Init()
             // Sc_Rx: # addr=00001211 num=01 val=03:B1
             // Sc_Rx: OK 00000000:3A
 
+            // flash_type
+            {
+#if IS_EMMC
+                sprintf(cmdCtx.cmd, "w f07 67"); // emmc
+#else
+                sprintf(cmdCtx.cmd, "w f07 ff"); // nor
+#endif
+                sprintf(cmdCtx.expectedResponse, "OK 00000000");
+
+                Sc_SendCommand(&cmdCtx);
+            }
+
             if (banksel)
             {
+#if IS_EMMC
+
+                {
+                    sprintf(cmdCtx.cmd, "w f02 02");
+                    sprintf(cmdCtx.expectedResponse, "OK 00000000");
+
+                    Sc_SendCommand(&cmdCtx);
+                }
+
+#else
+
                 // clear request_os_bank_indicator
                 {
                     sprintf(cmdCtx.cmd, "w f02 ff");
@@ -455,6 +478,8 @@ void Sc_Init()
 
                     Sc_SendCommand(&cmdCtx);
                 }
+
+#endif
             }
 
             {
@@ -504,6 +529,14 @@ void Sc_Init()
 
             {
                 sprintf(cmdCtx.cmd, "w 3000 %s", lite ? "01" : "00");
+                sprintf(cmdCtx.expectedResponse, "w complete!");
+
+                Sc_SendCommand(&cmdCtx);
+            }
+
+            // flash_type
+            {
+                sprintf(cmdCtx.cmd, "w 3007 ff"); // nor
                 sprintf(cmdCtx.expectedResponse, "w complete!");
 
                 Sc_SendCommand(&cmdCtx);

@@ -455,8 +455,15 @@ void create_coreos(const char *inDir, const char *rosPath)
 
         size_t inFileSize = get_file_size(inFile);
 
-        size_t tmpBufSize = (inFileSize + 0x1000);
+        if (inFileSize > 0x6FFFF0)
+        {
+            abort();
+            return;
+        }
+
+        size_t tmpBufSize = 0x6FFFF0;
         uint8_t* tmpBuf = (uint8_t*)malloc(tmpBufSize);
+        memset(tmpBuf, 0xff, tmpBufSize);
 
         size_t outFileSize = inFileSize;
 
@@ -473,6 +480,8 @@ void create_coreos(const char *inDir, const char *rosPath)
                 return;
             }
         }
+        else
+            outFileSize = tmpBufSize;
 
         fwrite(tmpBuf, 1, outFileSize, outFile);
         fclose(outFile);

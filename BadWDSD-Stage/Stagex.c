@@ -1756,7 +1756,9 @@ FUNC_DEF uint64_t calc_myspu_id_exclude(uint64_t exclude_spu_id)
 
     for (uint32_t i = 0; i < 8; ++i)
     {
-        if ((7 - i) == exclude_spu_id)
+        uint32_t spu_id = (7 - i);
+
+        if (spu_id == exclude_spu_id)
             continue;
 
         uint32_t mask = (1U << i);
@@ -1764,7 +1766,7 @@ FUNC_DEF uint64_t calc_myspu_id_exclude(uint64_t exclude_spu_id)
         if ((spu_avail & mask) != 0)
         {
             found = 1;
-            myspu_id = (7 - i);
+            myspu_id = spu_id;
             break;
         }
     }

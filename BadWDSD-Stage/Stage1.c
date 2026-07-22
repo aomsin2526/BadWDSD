@@ -225,7 +225,12 @@ FUNC_DEF void Stage1()
 #endif
 
     uint64_t myspu_id = calc_myspu_id();
-    HW_Init_SPU(myspu_id);
+
+    puts("myspu_id = ");
+    print_decimal(myspu_id);
+    puts("\n");
+
+    HW_Init_SPU();
 
     //
 

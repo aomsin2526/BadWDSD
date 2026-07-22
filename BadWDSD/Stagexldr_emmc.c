@@ -240,6 +240,97 @@ FUNC_DEF void dead()
     }
 }
 
+#define SYS_TIMEBASE_GET(tb)                          \
+    do                                                \
+    {                                                 \
+        __asm__ volatile("1: mftb %[current_tb];"     \
+                         "cmpwi 7, %[current_tb], 0;" \
+                         "beq-  7, 1b;"               \
+                         : [current_tb] "=r"(tb) :    \
+                         : "cr7");                    \
+    } while (0)
+
+FUNC_DEF uint64_t GetTimeInNs()
+{
+    uint64_t my_timebase = 79800000;
+    uint64_t MUL_NS = 1000000000;
+
+    uint64_t cur_tb_ns;
+    SYS_TIMEBASE_GET(cur_tb_ns);
+
+    cur_tb_ns *= MUL_NS;
+
+    return (cur_tb_ns / my_timebase);
+}
+
+FUNC_DEF void WaitInNs(uint64_t ns)
+{
+    uint64_t start = GetTimeInNs();
+    uint64_t end = start + ns;
+
+    while (1)
+    {
+        uint64_t cur = GetTimeInNs();
+
+        if (cur >= end)
+            return;
+    }
+}
+
+FUNC_DEF uint64_t GetTimeInUs()
+{
+    uint64_t my_timebase = 79800000;
+    uint64_t MUL_US = 1000000;
+
+    uint64_t cur_tb_us;
+    SYS_TIMEBASE_GET(cur_tb_us);
+
+    cur_tb_us *= MUL_US;
+
+    return (cur_tb_us / my_timebase);
+}
+
+FUNC_DEF void WaitInUs(uint64_t us)
+{
+    uint64_t start = GetTimeInUs();
+    uint64_t end = start + us;
+
+    while (1)
+    {
+        uint64_t cur = GetTimeInUs();
+
+        if (cur >= end)
+            return;
+    }
+}
+
+FUNC_DEF uint64_t GetTimeInMs()
+{
+    uint64_t my_timebase = 79800000;
+    uint64_t MUL_MS = 1000;
+
+    uint64_t cur_tb_ms;
+    SYS_TIMEBASE_GET(cur_tb_ms);
+
+    cur_tb_ms *= MUL_MS;
+
+    return (cur_tb_ms / my_timebase);
+}
+
+FUNC_DEF void WaitInMs(uint64_t ms)
+{
+    uint64_t start = GetTimeInMs();
+    uint64_t end = start + ms;
+
+    while (1)
+    {
+        uint64_t cur = GetTimeInMs();
+
+        if (cur >= end)
+            return;
+    }
+}
+
 FUNC_DEF void memset(void *buf, uint8_t v, uint64_t count)
 {
     uint8_t *buff = (uint8_t *)buf;
@@ -479,6 +570,309 @@ FUNC_DEF uint32_t crc32c(uint32_t crc, const uint8_t* buf, uint64_t len)
     return ~crc;
 }
 
+struct sc_packet_s
+{
+    uint8_t service_id;
+    uint32_t communication_tag;
+    uint16_t payload_size;
+
+    uint8_t data[256] __attribute__((aligned(8)));
+};
+
+struct sc_real_packet_header_s
+{
+    uint8_t service_id;
+    uint8_t version;
+    uint16_t tag;
+    uint8_t res[2];
+    uint16_t cksum;
+    uint32_t communication_tag;
+    uint16_t payload_size[2];
+};
+
+FUNC_DEF uint16_t sc_real_packet_header_calc_cksum(const struct sc_real_packet_header_s *pkt_hdr)
+{
+    uint8_t *ptr;
+    uint32_t sum;
+
+    ptr = (uint8_t *)pkt_hdr;
+    sum = 0;
+
+    for (int32_t i = 0; i < 6; i++)
+        sum += *ptr++;
+
+    sum += 0x8000;
+
+    return (sum & 0xffff);
+}
+
+FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *out)
+{
+    if (in->payload_size > 256)
+    {
+        // printf("payload too big!\n");
+        dead();
+    }
+
+    // 0x24000000000
+    uint64_t sb_base_addr = 0x24;
+    sb_base_addr <<= 36;
+
+    //
+    uint64_t send_packet_counter_addr[2];
+
+    // cell
+    // 0x2400008DFF0
+    send_packet_counter_addr[0] = sb_base_addr;
+    send_packet_counter_addr[0] |= 0x8DFF0;
+
+    // sc
+    // 0x2400008CFF4
+    send_packet_counter_addr[1] = sb_base_addr;
+    send_packet_counter_addr[1] |= 0x8CFF4;
+
+    // 0x2400008D000
+    uint64_t send_packet_data_addr = sb_base_addr;
+    send_packet_data_addr |= 0x8D000;
+
+    // 0x2400008E100
+    uint64_t send_packet_kick_addr = sb_base_addr;
+    send_packet_kick_addr |= 0x8E100;
+
+    //
+    uint64_t recieve_packet_counter_addr[2];
+
+    // sc
+    // 0x2400008CFF0
+    recieve_packet_counter_addr[0] = sb_base_addr;
+    recieve_packet_counter_addr[0] |= 0x8CFF0;
+
+    // cell
+    // 0x2400008DFF4
+    recieve_packet_counter_addr[1] = sb_base_addr;
+    recieve_packet_counter_addr[1] |= 0x8DFF4;
+
+    // 0x2400008E000
+    uint64_t recieve_packet_test_addr = sb_base_addr;
+    recieve_packet_test_addr |= 0x8E000;
+
+    // 0x2400008C000
+    uint64_t recieve_packet_data_addr = sb_base_addr;
+    recieve_packet_data_addr |= 0x8C000;
+
+    //
+
+    volatile uint32_t *send_packet_counter_cell = (volatile uint32_t *)send_packet_counter_addr[0];
+
+    volatile uint32_t *send_packet_data = (volatile uint32_t *)send_packet_data_addr;
+    volatile uint32_t *send_packet_kick = (volatile uint32_t *)send_packet_kick_addr;
+
+    //
+
+    volatile uint32_t *recieve_packet_counter_sc = (volatile uint32_t *)recieve_packet_counter_addr[0];
+    volatile uint32_t *recieve_packet_counter_cell = (volatile uint32_t *)recieve_packet_counter_addr[1];
+
+    volatile uint32_t *recieve_packet_test = (volatile uint32_t *)recieve_packet_test_addr;
+
+    volatile uint32_t *recieve_packet_data = (volatile uint32_t *)recieve_packet_data_addr;
+
+    //
+
+    {
+        uint16_t tag = (uint16_t)GetTimeInMs();
+
+        {
+            uint8_t buf[512] __attribute__((aligned(8)));
+            memset(buf, 0, 512);
+
+            struct sc_real_packet_header_s in_real_pkt_hdr;
+
+            in_real_pkt_hdr.service_id = in->service_id;
+            in_real_pkt_hdr.version = 1;
+
+            in_real_pkt_hdr.tag = tag;
+
+            in_real_pkt_hdr.res[0] = 0;
+            in_real_pkt_hdr.res[1] = 0;
+
+            in_real_pkt_hdr.cksum = sc_real_packet_header_calc_cksum(&in_real_pkt_hdr);
+
+            in_real_pkt_hdr.communication_tag = in->communication_tag;
+
+            in_real_pkt_hdr.payload_size[0] = in->payload_size;
+            in_real_pkt_hdr.payload_size[1] = in->payload_size;
+
+            uint64_t curSize = 0;
+
+            memcpy(&buf[curSize], &in_real_pkt_hdr, sizeof(struct sc_real_packet_header_s));
+            curSize += sizeof(struct sc_real_packet_header_s);
+
+            uint64_t payload_size = in_real_pkt_hdr.payload_size[0];
+
+            memcpy(&buf[curSize], &in->data[0], payload_size);
+            curSize += payload_size;
+
+            // padding...
+
+            uint64_t align = 4;
+            uint64_t zz = (payload_size % align);
+
+            if (zz != 0)
+            {
+                uint64_t y = (align - zz);
+
+                memset(&buf[curSize], 0, y);
+                curSize += y;
+            }
+
+            // cksum...
+
+            uint32_t cksum = 0;
+
+            for (int32_t i = 0; i < curSize; i++)
+                cksum -= buf[i];
+
+            cksum = cksum & 0xffff;
+
+            memcpy(&buf[curSize], &cksum, sizeof(uint32_t));
+            curSize += sizeof(uint32_t);
+
+            {
+                uint32_t *p = (uint32_t *)buf;
+
+                for (uint32_t i = 0; i < (512 / 4); ++i)
+                    send_packet_data[i] = p[i];
+            }
+        }
+
+        {
+            uint32_t value = *send_packet_counter_cell;
+
+            value = value + 1;
+            value &= 0xffff;
+            value = (value << 16) | value;
+
+            *send_packet_counter_cell = value;
+        }
+
+        uint32_t old_recieve_packet_counter_sc = *recieve_packet_counter_sc;
+
+        eieio();
+        *send_packet_kick = 0x1;
+        eieio();
+
+        *recieve_packet_test |= 0xFFFFFFFD;
+        eieio();
+
+        while (1)
+        {
+            if (*recieve_packet_counter_sc != old_recieve_packet_counter_sc)
+                break;
+        }
+
+        {
+            uint32_t value = *recieve_packet_counter_cell;
+
+            value = value + 1;
+            value &= 0xffff;
+            value = (value << 16) | value;
+
+            *recieve_packet_counter_cell = value;
+        }
+
+        struct sc_real_packet_header_s out_real_pkt_hdr;
+
+        {
+            uint32_t *p = (uint32_t *)&out_real_pkt_hdr;
+
+            for (uint32_t i = 0; i < 4; i++)
+                p[i] = recieve_packet_data[i];
+        }
+
+        if (out_real_pkt_hdr.tag != tag)
+            dead();
+
+        if (out != NULL)
+        {
+            out->service_id = out_real_pkt_hdr.service_id;
+            out->communication_tag = out_real_pkt_hdr.communication_tag;
+
+            out->payload_size = out_real_pkt_hdr.payload_size[0];
+
+            {
+                uint32_t *p = (uint32_t *)out->data;
+
+                for (uint32_t i = 0; i < (256 / 4); ++i)
+                    p[i] = recieve_packet_data[i + 4];
+            }
+        }
+    }
+}
+
+FUNC_DEF void sc_triple_beep()
+{
+    struct sc_packet_s pkt;
+
+    pkt.service_id = 0x16;
+    pkt.communication_tag = 1;
+
+    pkt.payload_size = 8;
+
+    pkt.data[0] = 0x20;
+    pkt.data[1] = 0x29;
+    pkt.data[2] = 0x0a;
+    pkt.data[3] = 0x00;
+
+    pkt.data[4] = 0x00;
+    pkt.data[5] = 0x00;
+
+    pkt.data[6] = 0x01;
+    pkt.data[7] = 0xb6;
+
+    sc_send_packet(&pkt, NULL);
+}
+
+FUNC_DEF void sc_continuous_beep()
+{
+    struct sc_packet_s pkt;
+
+    pkt.service_id = 0x16;
+    pkt.communication_tag = 1;
+
+    pkt.payload_size = 8;
+
+    pkt.data[0] = 0x20;
+    pkt.data[1] = 0x29;
+    pkt.data[2] = 0x0a;
+    pkt.data[3] = 0x00;
+
+    pkt.data[4] = 0x00;
+    pkt.data[5] = 0x00;
+
+    pkt.data[6] = 0x0f;
+    pkt.data[7] = 0xff;
+
+    sc_send_packet(&pkt, NULL);
+}
+
+FUNC_DEF void sc_soft_restart()
+{
+    struct sc_packet_s pkt;
+
+    pkt.service_id = 0x13;
+    pkt.communication_tag = 1;
+
+    pkt.payload_size = 4;
+
+    pkt.data[0] = 0x11;
+    pkt.data[1] = 0x00;
+    pkt.data[2] = 0x00;
+    pkt.data[3] = 0x01;
+
+    sc_send_packet(&pkt, NULL);
+    dead();
+}
+
 #include "Stagexldr_emmc_critical.c"
 
 FUNC_DEF void Stagexldr()
@@ -522,6 +916,9 @@ FUNC_DEF void Stagexldr()
 
     puts("flash is emmc\n");
 
+    sc_continuous_beep();
+    WaitInMs(5000);
+    sc_triple_beep();
 
     dead();
 }

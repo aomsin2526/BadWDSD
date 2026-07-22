@@ -12,8 +12,6 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
     //lv1_print_decimal(spu_id);
     //lv1_puts("\n");
 
-    uint32_t status;
-
     struct Stagex_Context_s* ctx = GetStagexContext();
 
     //
@@ -63,29 +61,8 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
         dead_beep();
     }
 
-    status = SPU_PS_Read32(spu_id, 0x04024);
-    if ((status & SPU_STATUS_RUN_MASK) != 0)
-    {
-        // stop request
-        SPU_PS_Write32(spu_id, 0x0401C, 0x0);
-
-        while ((status & SPU_STATUS_RUN_MASK) != 0)
-        {
-            status = SPU_PS_Read32(spu_id, 0x04024);
-        }
-    }
-
-    status = SPU_PS_Read32(spu_id, 0x04024);
-    if ((status & SPU_STATUS_ISOLATED_MASK) != 0)
-    {
-        // iso exit request
-        SPU_PS_Write32(spu_id, 0x0401C, 0x2);
-
-        while ((status & SPU_STATUS_ISOLATED_MASK) != 0)
-        {
-            status = SPU_PS_Read32(spu_id, 0x04024);
-        }
-    }
+    SPU_StopRequest(spu_id);
+    SPU_IsoExitRequest(spu_id);
 
     //lv1_puts("Loading mymetldr.elf...\n");
     LoadElfSpu(mymetldrElfAddress, spu_id, 1);
@@ -127,7 +104,7 @@ FUNC_DEF uint32_t Stage6_GetSpuStatus(uint64_t spu_id)
     //lv1_print_decimal(spu_id);
     //lv1_puts("\n");
 
-    uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
+    uint32_t status = SPU_Read_SPU_STATUS(spu_id);
 
     if (((status & SPU_STATUS_ISOLATED_MASK) == 0) && (SPU_LS_Read64(spu_id, 0x39100) == 0x123456789))
         status |= SPU_STATUS_ISOLATED_MASK;
@@ -176,7 +153,7 @@ FUNC_DEF void Stage6_RequestExitIsolation(uint64_t spu_id)
     //lv1_puts("Stage6_RequestExitIsolation()\n");
 
     {
-        uint32_t status = SPU_PS_Read32(spu_id, 0x04024);
+        uint32_t status = SPU_Read_SPU_STATUS(spu_id);
 
         if (((status & SPU_STATUS_ISOLATED_MASK) == 0) && (SPU_LS_Read64(spu_id, 0x39100) == 0x123456789))
         {

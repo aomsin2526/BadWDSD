@@ -517,6 +517,34 @@ FUNC_DEF uint64_t SPU_SetTLB(uint64_t spu_id, uint64_t va, uint64_t ra)
     return tlbIndex;
 }
 
+FUNC_DEF void SPU_StopRequest(uint64_t spu_id)
+{
+    uint32_t status = SPU_Read_SPU_STATUS(spu_id);
+
+    if ((status & SPU_STATUS_RUN_MASK) != 0)
+    {
+        // stop request
+        SPU_PS_Write32(spu_id, 0x0401C, 0x0);
+
+        while ((status & SPU_STATUS_RUN_MASK) != 0)
+            status = SPU_Read_SPU_STATUS(spu_id);
+    }
+}
+
+FUNC_DEF void SPU_IsoExitRequest(uint64_t spu_id)
+{
+    uint32_t status = SPU_Read_SPU_STATUS(spu_id);
+    
+    if ((status & SPU_STATUS_ISOLATED_MASK) != 0)
+    {
+        // iso exit request
+        SPU_PS_Write32(spu_id, 0x0401C, 0x2);
+
+        while ((status & SPU_STATUS_ISOLATED_MASK) != 0)
+            status = SPU_Read_SPU_STATUS(spu_id);
+    }
+}
+
 FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet)
 {
     if (!quiet)
@@ -604,28 +632,32 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet
         puts("LoadElfSpu() done.\n");
 }
 
-FUNC_DEF void HW_Init_SPU(uint64_t myspu_id)
+FUNC_DEF void HW_Init_SPU()
 {
     puts("HW_Init_SPU()\n");
-
-    puts("myspu_id = ");
-    print_hex(myspu_id);
-    puts("\n");
 
     {
         uint64_t mfc_sr1_value = 0x21;
 
-        // disabled spu may not always 3?
+        {
+            uint32_t spu_avail = *((const volatile uint32_t*)0x20000509C38);
 
-        //SPU_P1_Write64(0, 0x0, mfc_sr1_value);
-        //SPU_P1_Write64(1, 0x0, mfc_sr1_value);
-        //SPU_P1_Write64(2, 0x0, mfc_sr1_value);
-        //SPU_P1_Write64(4, 0x0, mfc_sr1_value);
-        //SPU_P1_Write64(5, 0x0, mfc_sr1_value);
-        //SPU_P1_Write64(6, 0x0, mfc_sr1_value);
-        //SPU_P1_Write64(7, 0x0, mfc_sr1_value);
+            for (uint32_t i = 0; i < 8; ++i)
+            {
+                uint32_t mask = (1U << i);
 
-        SPU_P1_Write64(myspu_id, 0x0, mfc_sr1_value);
+                if ((spu_avail & mask) != 0)
+                {
+                    uint32_t spu_id = (7 - i);
+
+                    puts("Enabling spu ");
+                    print_decimal(spu_id);
+                    puts("...\n");
+
+                    SPU_P1_Write64(spu_id, 0x0, mfc_sr1_value);
+                }
+            }
+        }
 
         eieio();
     }

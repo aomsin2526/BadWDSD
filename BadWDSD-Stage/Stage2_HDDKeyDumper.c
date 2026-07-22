@@ -35,6 +35,10 @@ FUNC_DEF void HDDKeyDumper_Init(struct HDDKeyDumper_Context_s* ctx, uint64_t spu
 
     ctx->spu_id = spu_id;
 
+    puts("spu_id = ");
+    print_decimal(ctx->spu_id);
+    puts("\n");
+
     ctx->myspu_id = calc_myspu_id_exclude(ctx->spu_id);
 
     puts("myspu_id = ");
@@ -253,10 +257,6 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
     sc_led_short_red_long_yellow();
 
     puts("Stage2_HDDKeyDumper()\n");
-
-    puts("spu_id = ");
-    print_decimal(spu_id);
-    puts("\n");
 
     struct HDDKeyDumper_Context_s context;
     HDDKeyDumper_Init(&context, spu_id);

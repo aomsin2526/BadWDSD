@@ -301,7 +301,7 @@ FUNC_DEF void Stage2()
 
         if (isqCFW || (qcfw_lite_flag == 0x1))
         {
-            struct Stagex_Context_s* ctx = GetStagexContext();
+            struct Stagex_Context_s* ctx = GetStagexContext_Unchecked();
 
             //
 
@@ -366,6 +366,10 @@ FUNC_DEF void Stage2()
             puts("cached_fwVersion = ");
             print_decimal(ctx->cached_fwVersion);
             puts("\n");
+
+            //
+
+            ctx->magic = 0xca8fe91729035026;
 
             //
         }

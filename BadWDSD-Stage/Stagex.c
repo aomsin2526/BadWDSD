@@ -140,6 +140,8 @@ register uint64_t stage_zero asm("r22");
 
 struct Stagex_Context_s
 {
+    uint64_t magic; // 0xca8fe91729035026
+
     uint64_t cached_myappldrElfAddress;
     uint64_t cached_mylv2ldrElfAddress;
     uint64_t cached_mymetldrElfAddress;
@@ -157,10 +159,10 @@ struct Stagex_Context_s
     uint8_t stage6_spu_id; // 0xff = unknown
 };
 
-FUNC_DEF struct Stagex_Context_s* GetStagexContext()
-{
-    return (struct Stagex_Context_s*)0xA00;
-}
+FUNC_DECL struct Stagex_Context_s* GetStagexContext_Unchecked();
+FUNC_DECL struct Stagex_Context_s* GetStagexContext();
+
+//
 
 FUNC_DEF uint8_t IsLv1()
 {
@@ -1611,6 +1613,8 @@ FUNC_DEF void real_hexdump(const void* ptr, uint64_t sz)
 #define lv1_print_hex(...)
 #endif
 
+//
+
 FUNC_DEF void dead_beep()
 {
     WaitInMs(2000);
@@ -1618,6 +1622,28 @@ FUNC_DEF void dead_beep()
     sc_continuous_beep();
     dead();
 }
+
+//
+
+FUNC_DEF struct Stagex_Context_s* GetStagexContext_Unchecked()
+{
+    return (struct Stagex_Context_s*)0xA00;
+}
+
+FUNC_DEF struct Stagex_Context_s* GetStagexContext()
+{
+    struct Stagex_Context_s* ctx = GetStagexContext_Unchecked();
+
+    if (ctx->magic != 0xca8fe91729035026)
+    {
+        puts("Stagex context not inited!!!\n");
+        dead();
+    }
+
+    return ctx;
+}
+
+//
 
 #define XDR_SCMD_SBW 0x1 /* Serial Broadcast Write */
 #define XDR_SCMD_SDW 0x0 /* Serial Device Write */
@@ -1867,7 +1893,16 @@ FUNC_DEF uint8_t CoreOS_Bank_IsqCFW_jig(uint8_t os_bank_indicator)
 
 FUNC_DEF uint8_t calc_os_bank_indicator()
 {
-    return (sc_read_shadow_os_bank_indicator() == 0x1) ? 0xff : 0x00;
+    uint8_t v = sc_read_shadow_os_bank_indicator();
+
+    if (v == 0x1)
+        return 0xff; // ros0
+    else if (v == 0x2)
+        return 0x00; // ros1
+
+    puts("bad shadow value!\n");
+    dead();
+    return 0;
 }
 
 FUNC_DEF uint8_t get_os_bank_indicator()

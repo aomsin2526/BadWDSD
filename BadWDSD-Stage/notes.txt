@@ -17,19 +17,19 @@
 
 // Stagexldr_emmc:
 // runs at 0x1000
-// 0x2000000 = sp
+// 0x1FFFF00 = sp
 
 // Stagex:
 // 0xA00 - 0xBFF = Stagex_Context_s
 // 0xD000000 = sc_puts_buffer
 
 // Stage1:
-// 0xE000000 = stage_sp
+// 0xDFFFF00 = stage_sp
 // 0xC000000 = temp lv0FileAddress
 
 // Stage2:
 // 0xA000000 = tmpEa (HDDKeyDumper)
-// 0xE000000 = stage_sp
+// 0xDFFFF00 = stage_sp
 // 0xC000000 = temp lv1FileAddress
 
 // Stage3:

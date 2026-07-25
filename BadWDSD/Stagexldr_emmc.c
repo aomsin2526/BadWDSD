@@ -939,8 +939,9 @@ __attribute__((noreturn, section("entry"))) void stagexldr_entry()
     asm volatile("addi %r2, %r2, 0x7fff");
     asm volatile("addi %r2, %r2, 1");
 
-    // set sp to 0x2000000
+    // set sp to 0x1FFFF00
     asm volatile("lis %r1, 0x200");
+    asm volatile("addi %r1, %r1, -0x100");
 
     // init ppu
     asm volatile("bl HW_Init");

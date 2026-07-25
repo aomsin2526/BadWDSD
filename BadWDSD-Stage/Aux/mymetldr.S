@@ -1,8 +1,8 @@
 .global start
 
 start:
-    // sp = 0x11F00
-    ila sp, 0x11F00
+    // sp = 0x10000 - 0x11EFF
+    ila sp, 0x11E00
 
     // jump to main
     br main

@@ -619,8 +619,8 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
         eieio();
     }
 
-    // set stage_sp to 0xE000000
-    stage_sp = 0xE000000;
+    // set stage_sp to 0xDFFFF00
+    stage_sp = 0xDFFFF00;
 
     // set r1 to stage_sp
     asm volatile("mr 1, %0" ::"r"(stage_sp) :);

@@ -13,7 +13,7 @@ Stagex_spu memory mapping:
 
 0x1000 - 0xFFFF = codes
 0x10000 - 0x2FFFF = temp mem
-0x30000 - 0x3CF00 = sp
+0x30000 - 0x3CEFF = sp
 
 stop code:
 1 = start exited
@@ -33,7 +33,7 @@ mymetldr memory mapping:
 0x100 = mymetldr_params_s
 
 0x600 - 0xFFFF = must zero before jump to ldr
-0x10000 - 0x11F00 = sp
+0x10000 - 0x11EFF = sp
 
 0x12C00 - 0x38FFF = ldr code/entry
 

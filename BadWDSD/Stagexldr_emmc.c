@@ -946,7 +946,10 @@ __attribute__((noreturn, section("entry"))) void stagexldr_entry()
     // init ppu
     asm volatile("bl HW_Init");
 
-    //
+    // push stack
+    asm volatile("addi %r1, %r1, -128");
+
+    // jump to stagexldr_main
     asm volatile("b stagexldr_main");
 
     //

@@ -1,4 +1,4 @@
-#define PAYLOAD_SIZE 5496
+#define PAYLOAD_SIZE 5584
 
 // run at 0x180 (second ch)
 // max size = 128

@@ -374,9 +374,28 @@ void lv1gen(bool is4j, const char *inFilePath, const char *outFilePath, const ch
 
     {
         uint8_t searchData[] = { 0xE9, 0x22, 0xCF, 0x08, 0x7C, 0x60, 0x1B, 0x78, 0x7C, 0x8B, 0x23, 0x78, 0x7C, 0xAA, 0x2B, 0x78, 0x7C, 0xC7, 0x33, 0x78 };
-        
+
         printf("Installing stage5j (lv2ldr)...\n");
         stage5jData[3] = 0x2;
+
+        if (!SearchAndReplace(outData, inFileSize, searchData, sizeof(searchData), stage5jData, stage5jFileSize))
+        {
+            printf("install failed!\n");
+        
+            abort();
+            return;
+        }
+    }
+
+#endif
+
+#if 1
+
+    {
+        uint8_t searchData[] = { 0xE9, 0x22, 0xCF, 0x08, 0x7C, 0x85, 0x23, 0x78, 0x7C, 0x64, 0x1B, 0x78, 0xE8, 0x69, 0x00, 0x00, 0x48, 0x00, 0x1D, 0xF8 };
+
+        printf("Installing stage5j (lv2ldr_rvk)...\n");
+        stage5jData[3] = 0x3;
 
         if (!SearchAndReplace(outData, inFileSize, searchData, sizeof(searchData), stage5jData, stage5jFileSize))
         {

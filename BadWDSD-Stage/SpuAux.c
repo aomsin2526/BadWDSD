@@ -1,3 +1,23 @@
+FUNC_DEF void SpuAux_CopyElfToMem(void* elfFileData, uint64_t elfFileData_MaxSize)
+{
+    uint32_t fileFlashOffset = 0;
+    uint32_t fileSize = 0;
+
+    if (!CoreOS2_FindFileEntry_Aux("Stagex_spu.elf", &fileFlashOffset, &fileSize))
+    {
+        puts("Stagex_spu.elf not found!\n");
+        dead();
+    }
+
+    if (fileSize > elfFileData_MaxSize)
+    {
+        puts("Stagex_spu.elf too big!\n");
+        dead();
+    }
+
+    FlashRead(fileFlashOffset, elfFileData, fileSize);
+}
+
 FUNC_DEF void SpuAux_Uninit(uint64_t spu_id, uint64_t spu_old_mfc_sr1)
 {
     //puts("SpuAux_Uninit()\n");
@@ -15,9 +35,12 @@ FUNC_DEF void SpuAux_Uninit(uint64_t spu_id, uint64_t spu_old_mfc_sr1)
     //puts("SpuAux_Uninit() done.\n");
 }
 
-FUNC_DEF uint64_t SpuAux_Init(uint64_t spu_id)
+FUNC_DEF uint64_t SpuAux_Init(uint64_t spu_id, const void* elfFileData)
 {
     //puts("SpuAux_Init()\n");
+
+    if (elfFileData == NULL)
+        dead_beep();
 
     //puts("spu_id = ");
     //print_decimal(spu_id);
@@ -33,26 +56,7 @@ FUNC_DEF uint64_t SpuAux_Init(uint64_t spu_id)
 
     //
 
-    uint64_t elfFileAddress = 0;
-    uint64_t elfFileSize = 0;
-
-    if (CoreOS_FindFileEntry_Aux("Stagex_spu.elf", &elfFileAddress, &elfFileSize))
-    {
-        //puts("elfFileAddress = ");
-        //print_hex(elfFileAddress);
-
-        //puts(", elfFileSize = ");
-        //print_decimal(elfFileSize);
-
-        //puts("\n");
-
-        LoadElfSpu(elfFileAddress, spu_id, 1);
-    }
-    else
-    {
-        puts("Stagex_spu.elf not found!\n");
-        dead_beep();
-    }
+    LoadElfSpu((uint64_t)elfFileData, spu_id, 1);
 
     // clear spuReady
     SPU_LS_Write64(spu_id, 0xf10, 0);

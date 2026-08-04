@@ -147,7 +147,7 @@ FUNC_DEF void Stage3()
 
     {
         uint64_t spu_id = calc_myspu_id();
-        uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id);
+        uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id, GetStagexContext()->cached_StagexSpuElf);
         spu_stage3(spu_id);
         SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
     }
@@ -256,26 +256,27 @@ FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal, uint8_t veri
 {
     lv1_puts("ApplyLv2Diff()\n");
 
-    uint8_t isqCFW = CoreOS_CurrentBank_IsqCFW();
+    uint8_t isqCFW = CoreOS2_CurrentBank_IsqCFW();
     uint8_t qcfw_lite_flag = get_qcfw_lite_flag();
 
-    uint16_t fwVersion = CoreOS_CurrentBank_GetFWVersion();
+    uint16_t fwVersion = CoreOS2_CurrentBank_GetFWVersion();
 
     {
-        uint64_t lv2DiffFileAddress = 0;
-        uint64_t lv2DiffFileSize;
+        uint32_t lv2DiffFileFlashOffset = 0;
+        uint64_t lv2DiffFileAddress = 0xC000000;
+        uint32_t lv2DiffFileSize = 0;
 
         if (!isqCFW && (qcfw_lite_flag == 0x1))
         {
             if (fwVersion == 492)
             {
                 lv1_puts("Searching for qcfwlite492cex_lv2_kernel.zdiff...\n");
-                CoreOS_FindFileEntry_Aux("qcfwlite492cex_lv2_kernel.zdiff", &lv2DiffFileAddress, &lv2DiffFileSize);
+                CoreOS2_FindFileEntry_Aux("qcfwlite492cex_lv2_kernel.zdiff", &lv2DiffFileFlashOffset, &lv2DiffFileSize);
             }
             else if (fwVersion == 493)
             {
                 lv1_puts("Searching for qcfwlite493cex_lv2_kernel.zdiff...\n");
-                CoreOS_FindFileEntry_Aux("qcfwlite493cex_lv2_kernel.zdiff", &lv2DiffFileAddress, &lv2DiffFileSize);
+                CoreOS2_FindFileEntry_Aux("qcfwlite493cex_lv2_kernel.zdiff", &lv2DiffFileFlashOffset, &lv2DiffFileSize);
             }
             else
             {
@@ -283,7 +284,7 @@ FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal, uint8_t veri
                 dead_beep();
             }
 
-            if (lv2DiffFileAddress == 0)
+            if (lv2DiffFileFlashOffset == 0)
             {
                 lv1_puts("File not found!\n");
                 dead_beep();
@@ -292,24 +293,29 @@ FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal, uint8_t veri
         else
         {
             lv1_puts("Searching for lv2_kernel.diff...\n");
-            CoreOS_FindFileEntry_CurrentBank("lv2_kernel.diff", &lv2DiffFileAddress, &lv2DiffFileSize);
+            CoreOS2_FindFileEntry_CurrentBank("lv2_kernel.diff", &lv2DiffFileFlashOffset, &lv2DiffFileSize);
 
-            if (lv2DiffFileAddress == 0)
+            if (lv2DiffFileFlashOffset == 0)
             {
                 lv1_puts("Searching for lv2_kernel.zdiff...\n");
-                CoreOS_FindFileEntry_CurrentBank("lv2_kernel.zdiff", &lv2DiffFileAddress, &lv2DiffFileSize);
+                CoreOS2_FindFileEntry_CurrentBank("lv2_kernel.zdiff", &lv2DiffFileFlashOffset, &lv2DiffFileSize);
             }
         }
 
-        if (lv2DiffFileAddress != 0)
+        if (lv2DiffFileFlashOffset != 0)
         {
-            lv1_puts("lv2DiffFileAddress = ");
+            lv1_puts("lv2DiffFileFlashOffset = ");
+            lv1_print_hex(lv2DiffFileFlashOffset);
+
+            lv1_puts(", lv2DiffFileAddress = ");
             lv1_print_hex(lv2DiffFileAddress);
 
             lv1_puts(", lv2DiffFileSize = ");
             lv1_print_decimal(lv2DiffFileSize);
 
             lv1_puts("\n");
+
+            FlashRead(lv2DiffFileFlashOffset, (void*)lv2DiffFileAddress, lv2DiffFileSize);
 
             uint64_t zelf_magic = *((const uint64_t *)lv2DiffFileAddress);
 
@@ -318,7 +324,7 @@ FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal, uint8_t veri
                 lv1_puts("ZELF/ZELF2 detected\n");
 
                 uint64_t sz = (16 * 1024 * 1024);
-                ZelfDecompress(lv2DiffFileAddress, (void *)0xB000000, &sz, 1);
+                ZelfDecompress(lv2DiffFileAddress, (void *)0xB000000, &sz, 1, GetStagexContext()->cached_StagexSpuElf);
 
                 lv2DiffFileAddress = 0xB000000;
                 lv2DiffFileSize = sz;
@@ -429,7 +435,7 @@ FUNC_DEF void LoadLv2(uint64_t srcAddr, uint64_t loadme_addr)
                 lv1_puts("ZELF/ZELF2 detected\n");
 
                 uint64_t sz = (16 * 1024 * 1024);
-                ZelfDecompress(file_data, (void *)0xB000000, &sz, 1);
+                ZelfDecompress(file_data, (void *)0xB000000, &sz, 1, GetStagexContext()->cached_StagexSpuElf);
 
                 lv1_puts("Loading elf...\n");
 
@@ -499,6 +505,8 @@ __attribute__((section("main3"))) void stage3_main(
 )
 {
     //lv1_puts("stage3_main()\n");
+
+    is_emmc = FetchIsEmmc();
 
     // r5 = options
     // peek: r6 = addr, r4 = outValue

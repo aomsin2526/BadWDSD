@@ -250,7 +250,15 @@ FUNC_DEF void Stage1()
 
     //
 
-    //if (!is_emmc())
+    is_emmc = FetchIsEmmc();
+
+    puts("is_emmc = ");
+    print_decimal(is_emmc);
+    puts("\n");
+
+    //
+
+    if (!is_emmc)
     {
         uint8_t request_os_bank_indicator = sc_read_request_os_bank_indicator();
 
@@ -299,7 +307,7 @@ FUNC_DEF void Stage1()
     print_hex(os_bank_indicator);
     puts("\n");
 
-    uint16_t fwVersion = CoreOS_Bank_GetFWVersion(os_bank_indicator);
+    uint16_t fwVersion = CoreOS2_Bank_GetFWVersion(os_bank_indicator);
 
     puts("fwVersion = ");
     print_decimal(fwVersion);
@@ -311,13 +319,13 @@ FUNC_DEF void Stage1()
     print_hex(tid);
     puts("\n");
 
-    uint8_t isqCFW = CoreOS_Bank_IsqCFW(os_bank_indicator);
+    uint8_t isqCFW = CoreOS2_Bank_IsqCFW(os_bank_indicator);
 
     puts("isqCFW = ");
     print_decimal(isqCFW);
     puts("\n");
 
-    uint8_t isqCFW_jig = CoreOS_Bank_IsqCFW_jig(os_bank_indicator);
+    uint8_t isqCFW_jig = CoreOS2_Bank_IsqCFW_jig(os_bank_indicator);
 
     puts("isqCFW_jig = ");
     print_decimal(isqCFW_jig);
@@ -442,20 +450,28 @@ FUNC_DEF void Stage1()
             {
                 puts("Searching for lv0 self...\n");
 
+                uint32_t lv0SelfFileFlashOffset;
                 uint64_t lv0SelfFileAddress;
-                uint64_t lv0SelfFileSize;
+                uint32_t lv0SelfFileSize;
 
-                if (CoreOS_FindFileEntry_Bank(os_bank_indicator, "lv0", &lv0SelfFileAddress, &lv0SelfFileSize))
+                if (CoreOS2_FindFileEntry_Bank(os_bank_indicator, "lv0", &lv0SelfFileFlashOffset, &lv0SelfFileSize))
                 {
                     found = 1;
 
-                    puts("lv0SelfFileAddress = ");
+                    lv0SelfFileAddress = 0xB000000;
+
+                    puts("lv0SelfFileFlashOffset = ");
+                    print_hex(lv0SelfFileFlashOffset);
+
+                    puts(", lv0SelfFileAddress = ");
                     print_hex(lv0SelfFileAddress);
 
                     puts(", lv0SelfFileSize = ");
                     print_decimal(lv0SelfFileSize);
 
                     puts("\n");
+
+                    FlashRead(lv0SelfFileFlashOffset, (void*)lv0SelfFileAddress, lv0SelfFileSize);
 
                     lv0FileAddress = 0xC000000;
                     lv0FileSize = (4 * 1024 * 1024);
@@ -464,14 +480,24 @@ FUNC_DEF void Stage1()
 
 #if STAGE0_DECRYPTLV0SELF_SPU_ENABLED
                     {
+                        static const uint64_t stagexSpuElf_MaxSize = (64 * 1024);
+                        __attribute__((aligned(8))) uint8_t stagexSpuElf[stagexSpuElf_MaxSize];
+
+                        SpuAux_CopyElfToMem(stagexSpuElf, stagexSpuElf_MaxSize);
+
                         uint64_t spu_id = myspu_id;
-                        uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id);
+                        uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id, stagexSpuElf);
                         SPU_DecryptLv0Self(spu_id, (void*)lv0FileAddress, (const void*)lv0SelfFileAddress);
                         SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
                     }
 #else
                     DecryptLv0Self((void*)lv0FileAddress, (const void*)lv0SelfFileAddress, 1);
 #endif
+
+                    uint64_t new_stagex_addr = 0x1000000;
+
+                    if (!is_emmc)
+                        Stagex_Relocate((const void*)0x2401F031000, 0x2401F031000, new_stagex_addr);
 
 #if HDDKEYDUMPER_ENABLED
                     // todo adjust patch for emmc
@@ -481,6 +507,8 @@ FUNC_DEF void Stage1()
 
                         uint8_t searchData[] = {0xE9, 0x22, 0x8C, 0x88, 0x78, 0x63, 0x9B, 0x24, 0x38, 0x00, 0x00, 0x03, 0xE9, 0x29, 0x00, 0x00, 0x3D, 0x29, 0x00, 0x04, 0x39, 0x29, 0x40, 0x1C, 0x7C, 0x03, 0x49, 0x2E, 0x4E, 0x80, 0x00, 0x20};
                         uint8_t stage2jData[] = {0x48, 0x00, 0x00, 0x05, 0x7C, 0xA8, 0x02, 0xA6, 0x38, 0xA5, 0xFF, 0xFC, 0xE8, 0xA5, 0x00, 0x18, 0x7C, 0xA9, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x00, 0x00, 0x02, 0x40, 0x1F, 0x03, 0x11, 0x00};
+
+                        *((uint64_t*)(&stage2jData[sizeof(stage2jData) - 8])) = (new_stagex_addr + 0x100);
 
                         puts("Installing stage2j... (HDDKeyDumper)\n");
 
@@ -500,8 +528,10 @@ FUNC_DEF void Stage1()
                         uint8_t searchData[] = {0x38, 0x60, 0x01, 0x00, 0x7C, 0x69, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x60, 0x00, 0x00, 0x00};
                         uint8_t stage2jData[] = {0x48, 0x00, 0x00, 0x05, 0x7C, 0xA8, 0x02, 0xA6, 0x38, 0xA5, 0xFF, 0xFC, 0xE8, 0xA5, 0x00, 0x18, 0x7C, 0xA9, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x00, 0x00, 0x02, 0x40, 0x1F, 0x03, 0x11, 0x00};
 
+                        *((uint64_t*)(&stage2jData[sizeof(stage2jData) - 8])) = (new_stagex_addr + 0x100);
+
                         puts("Installing stage2j...\n");
-                
+
                         if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, sizeof(searchData), stage2jData, sizeof(stage2jData)))
                         {
                             puts("Install failed!\n");

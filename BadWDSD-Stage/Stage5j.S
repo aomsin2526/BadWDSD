@@ -52,10 +52,37 @@ seg002:00000000002B30B0 # End of function SPE_load_request_lv2ldr_2
 
 #endif
 
+#if 0
+
+// for rvk
+
+seg002:00000000002B2B58
+seg002:00000000002B2B58 # __int64 __fastcall SPE_load_request_lv2ldr_1(unsigned __int64, __int64)
+seg002:00000000002B2B58 SPE_load_request_lv2ldr_1:              # CODE XREF: sub_315FA0+420↓p
+seg002:00000000002B2B58                                         # DATA XREF: .opd:0000000000341A80↓o
+seg002:00000000002B2B58                 ld        r9, __obj_spu_qa # _obj_spu_qa
+seg002:00000000002B2B5C                 mr        r5, r4
+seg002:00000000002B2B60                 mr        r4, r3
+seg002:00000000002B2B64                 ld        r3, (_obj_spu_qa - 0x361110)(r9) # obj_spu_qa
+seg002:00000000002B2B68                 b         .CodeVerifier__install_revoke_list # r3
+seg002:00000000002B2B68 # End of function SPE_load_request_lv2ldr_1 # r4
+seg002:00000000002B2B68                                         # r5
+
+seg002:00000000002B2FE0 sub_2B2FE0:                             # CODE XREF: sub_316428+420↓p
+seg002:00000000002B2FE0                 ld        r9, -0x30F8(r2)
+seg002:00000000002B2FE4                 mr        r5, r4
+seg002:00000000002B2FE8                 mr        r4, r3
+seg002:00000000002B2FEC                 ld        r3, 0(r9)
+seg002:00000000002B2FF0                 b         sub_2B4DE8
+
+// E9 22 CF 08 7C 85 23 78 7C 64 1B 78 E8 69 00 00 48 00 1D F8
+
+#endif
+
 // 0x2401F031400
 
 stage_entry:
-    li %r10, 0x0 // 1 = appldr, 2 = lv2ldr
+    li %r10, 0x0 // 1 = appldr, 2 = lv2ldr, 3 = lv2ldr_rvk
 
     li %r11, 0x210
     ld %r11, 0(%r11)

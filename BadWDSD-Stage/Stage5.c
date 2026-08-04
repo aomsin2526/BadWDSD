@@ -48,6 +48,12 @@ FUNC_DEF void Stage5(uint64_t type)
 
         //lv1_puts("lv2ldr\n");
     }
+    else if (type == 0x3)
+    {
+        ctx->stage6_isLv2ldr_rvk = 1;
+
+        //lv1_puts("lv2ldr_rvk\n");
+    }
 
     //lv1_puts("Stage5 done.\n");
 }
@@ -56,7 +62,9 @@ __attribute__((section("main5"))) void stage5_main(
     uint64_t in_r3, uint64_t in_r4, uint64_t in_r5, uint64_t in_r6, uint64_t in_r7, uint64_t in_r8, uint64_t in_r9, uint64_t in_r10
 )
 {
+    is_emmc = FetchIsEmmc();
     sc_puts_init();
+
     Stage5(in_r10);
 }
 
@@ -266,6 +274,30 @@ __attribute__((noreturn, section("entry5"))) void stage5_entry()
         asm volatile("li 11, 0x2B40");
         asm volatile("sldi 11, 11, 8");
         asm volatile("addi 11, 11, 0xEA8");
+
+        // push stack
+        asm volatile("addi 1, 1, -128");
+
+        //
+        asm volatile("mtctr 11");
+        asm volatile("bctrl");
+        //
+
+        // pop stack
+        asm volatile("addi 1, 1, 128");
+    }
+    else if (r10 == 0x3)
+    {
+        asm volatile("ld 9, -0x30f8(2)");
+        asm volatile("mr 5, 4");
+        asm volatile("mr 4, 3");
+        asm volatile("ld 3, 0(9)");
+
+        // call 0x2B4DE8
+
+        asm volatile("li 11, 0x2B40");
+        asm volatile("sldi 11, 11, 8");
+        asm volatile("addi 11, 11, 0xDE8");
 
         // push stack
         asm volatile("addi 1, 1, -128");

@@ -72,14 +72,22 @@ FUNC_DEF void Stage2()
     puts(__TIME__);
     puts(")\n");
 
+#if STAGEX_DEBUG_ENABLED
+    uint64_t pc = get_pc();
+
+    real_puts("pc = ");
+    real_print_hex(pc);
+    real_puts("\n");
+#endif
+
     uint8_t os_bank_indicator = get_os_bank_indicator();
 
-    uint8_t isqCFW = CoreOS_Bank_IsqCFW(os_bank_indicator);
-    uint8_t isqCFW_jig = CoreOS_Bank_IsqCFW_jig(os_bank_indicator);
+    uint8_t isqCFW = CoreOS2_Bank_IsqCFW(os_bank_indicator);
+    uint8_t isqCFW_jig = CoreOS2_Bank_IsqCFW_jig(os_bank_indicator);
 
     uint8_t qcfw_lite_flag = get_qcfw_lite_flag();
 
-    uint16_t fwVersion = CoreOS_Bank_GetFWVersion(os_bank_indicator);
+    uint16_t fwVersion = CoreOS2_Bank_GetFWVersion(os_bank_indicator);
 
     {
 #if 0
@@ -146,20 +154,24 @@ FUNC_DEF void Stage2()
 #endif
 
         {
-            uint64_t lv1DiffFileAddress = 0;
-            uint64_t lv1DiffFileSize = 0;
+            static const uint64_t lv1DiffFileBuf_MaxSize = (64 * 1024);
+            __attribute__((aligned(8))) uint8_t lv1DiffFileBuf[lv1DiffFileBuf_MaxSize];
+
+            uint32_t lv1DiffFileFlashOffset = 0;
+            uint64_t lv1DiffFileAddress = (uint64_t)lv1DiffFileBuf;
+            uint32_t lv1DiffFileSize = 0;
 
             if (!(isqCFW || isqCFW_jig) && (qcfw_lite_flag == 0x1))
             {
                 if (fwVersion == 492)
                 {
                     puts("Searching for qcfwlite492cex_lv1.diff...\n");
-                    CoreOS_FindFileEntry_Aux("qcfwlite492cex_lv1.diff", &lv1DiffFileAddress, &lv1DiffFileSize);
+                    CoreOS2_FindFileEntry_Aux("qcfwlite492cex_lv1.diff", &lv1DiffFileFlashOffset, &lv1DiffFileSize);
                 }
                 else if (fwVersion == 493)
                 {
                     puts("Searching for qcfwlite493cex_lv1.diff...\n");
-                    CoreOS_FindFileEntry_Aux("qcfwlite493cex_lv1.diff", &lv1DiffFileAddress, &lv1DiffFileSize);
+                    CoreOS2_FindFileEntry_Aux("qcfwlite493cex_lv1.diff", &lv1DiffFileFlashOffset, &lv1DiffFileSize);
                 }
                 else
                 {
@@ -167,7 +179,7 @@ FUNC_DEF void Stage2()
                     dead_beep();
                 }
 
-                if (lv1DiffFileAddress == 0)
+                if (lv1DiffFileFlashOffset == 0)
                 {
                     puts("File not found!\n");
                     dead_beep();
@@ -176,18 +188,29 @@ FUNC_DEF void Stage2()
             else
             {
                 puts("Searching for lv1.diff...\n");
-                CoreOS_FindFileEntry_Bank(os_bank_indicator, "lv1.diff", &lv1DiffFileAddress, &lv1DiffFileSize);
+                CoreOS2_FindFileEntry_Bank(os_bank_indicator, "lv1.diff", &lv1DiffFileFlashOffset, &lv1DiffFileSize);
             }
 
-            if (lv1DiffFileAddress != 0)
+            if (lv1DiffFileFlashOffset != 0)
             {
-                puts("lv1DiffFileAddress = ");
+                puts("lv1DiffFileFlashOffset = ");
+                print_hex(lv1DiffFileFlashOffset);
+
+                puts(", lv1DiffFileAddress = ");
                 print_hex(lv1DiffFileAddress);
 
                 puts(", lv1DiffFileSize = ");
                 print_decimal(lv1DiffFileSize);
 
                 puts("\n");
+
+                if (lv1DiffFileSize > lv1DiffFileBuf_MaxSize)
+                {
+                    puts("File too big!\n");
+                    dead_beep();
+                }
+
+                FlashRead(lv1DiffFileFlashOffset, (void*)lv1DiffFileAddress, lv1DiffFileSize);
 
                 ApplyLv1Diff(lv1DiffFileAddress, 1);
             }
@@ -212,7 +235,7 @@ FUNC_DEF void Stage2()
 
                 if (isqCFW)
                 {
-                    if (CoreOS_FindFileEntry_CurrentBank("lv2Rkernel.self", NULL, NULL))
+                    if (CoreOS2_FindFileEntry_CurrentBank("lv2Rkernel.self", NULL, NULL))
                     {
                         uint8_t tid = read_targetid();
 
@@ -274,10 +297,17 @@ FUNC_DEF void Stage2()
                 }
             }
 
-            uint64_t spu_id = calc_myspu_id();
-            uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id);
-            spu_stage2(spu_id, &job_context);
-            SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
+            {
+                static const uint64_t stagexSpuElf_MaxSize = (64 * 1024);
+                __attribute__((aligned(8))) uint8_t stagexSpuElf[stagexSpuElf_MaxSize];
+
+                SpuAux_CopyElfToMem(stagexSpuElf, stagexSpuElf_MaxSize);
+
+                uint64_t spu_id = calc_myspu_id();
+                uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id, stagexSpuElf);
+                spu_stage2(spu_id, &job_context);
+                SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
+            }
         }
 
 #if 0
@@ -305,6 +335,14 @@ FUNC_DEF void Stage2()
 
             //
 
+            ctx->cached_is_emmc = is_emmc;
+
+            puts("cached_is_emmc = ");
+            print_decimal(ctx->cached_is_emmc);
+            puts("\n");
+
+            //
+
             ctx->cached_os_bank_indicator = os_bank_indicator;
 
             puts("cached_os_bank_indicator = ");
@@ -325,39 +363,170 @@ FUNC_DEF void Stage2()
 
             ctx->stage6_isAppldr = 0;
             ctx->stage6_isLv2ldr = 0;
+            ctx->stage6_isLv2ldr_rvk = 0;
 
             ctx->stage6_spu_id = 0xff; // unknown
 
             //
 
-            ctx->cached_myappldrElfAddress = 0;
+            // 0 = lv1ldr
+            // 1 = metldr
+            // 2 = lv2ldr
+            // 3 = isoldr
+            // 4 = appldr
+            // 5 = eid0
+            // 6 = is_qa_flag
+            // 7 = qa_token_bin
+            // 8 = trace_level
 
-            CoreOS_FindFileEntry_Bank(os_bank_indicator, "myappldr.elf", &ctx->cached_myappldrElfAddress, NULL);
+            static const uint8_t lv1ldr_idx = 0;
+            //static const uint8_t metldr_idx = 1;
+            static const uint8_t lv2ldr_idx = 2;
+            //static const uint8_t isoldr_idx = 3;
+            static const uint8_t appldr_idx = 4;
+            //static const uint8_t eid0_idx = 5;
+            //static const uint8_t is_qa_flag_idx = 6;
+            //static const uint8_t qa_token_bin_idx = 7;
+            //static const uint8_t trace_level_idx = 8;
 
-            puts("cached_myappldrElfAddress = ");
-            print_hex(ctx->cached_myappldrElfAddress);
-            puts("\n");
+            // heap:
+            // ptr: 0x10190
+            // size: 0x66000
 
-            //
+            uint64_t heapAddr = 0x10190;
+            uint64_t heapSize = 0x66000;
 
-            ctx->cached_mylv2ldrElfAddress = 0;
+            uint64_t tmpHeapAddr = 0x2000000;
 
-            CoreOS_FindFileEntry_Bank(os_bank_indicator, "mylv2ldr.elf", &ctx->cached_mylv2ldrElfAddress, NULL);
- 
-            puts("cached_mylv2ldrElfAddress = ");
-            print_hex(ctx->cached_mylv2ldrElfAddress);
-            puts("\n");
+            static const uint64_t comp_count = 9;
+            struct comp_entry_s* comps = (struct comp_entry_s*)0x10100;
 
-            //
+            struct comp_entry_s tmp_comps[comp_count];
 
-            ctx->cached_mymetldrElfAddress = 0;
+            for (uint64_t i = 0; i < comp_count; ++i)
+            {
+                if (i == lv1ldr_idx)
+                    continue;
 
-            if (!CoreOS_FindFileEntry_Bank(os_bank_indicator, "mymetldr.elf", &ctx->cached_mymetldrElfAddress, NULL))
-                CoreOS_FindFileEntry_Aux("mymetldr.elf", &ctx->cached_mymetldrElfAddress, NULL);
+                struct comp_entry_s* dest = &tmp_comps[i];
+                const struct comp_entry_s* src = &comps[i];
 
-            puts("cached_mymetldrElfAddress = ");
-            print_hex(ctx->cached_mymetldrElfAddress);
-            puts("\n");
+                dest->ptr = src->ptr;
+                dest->ptr += tmpHeapAddr;
+                dest->ptr -= heapAddr;
+
+                dest->size = src->size;
+
+                memcpy(dest->ptr, src->ptr, dest->size);
+            }
+
+            struct SimpleHeap_s heap;
+            SimpleHeap_Init(&heap, (void*)heapAddr, heapSize);
+
+            for (uint64_t i = 0; i < comp_count; ++i)
+            {
+                if (i == lv1ldr_idx)
+                    continue;
+                if (i == lv2ldr_idx)
+                    continue;
+                if (i == appldr_idx)
+                    continue;
+
+                uint8_t isldr = (i <= 4) ? 1 : 0;
+
+                struct comp_entry_s* dest = &comps[i];
+                const struct comp_entry_s* src = &tmp_comps[i];
+
+                dest->size = src->size;
+                dest->ptr = SimpleHeap_Alloc(&heap, dest->size, isldr ? 0x80 : 0x10);
+
+                puts("comp ");
+                print_decimal(i);
+                puts(", ptr = ");
+                print_hex((uint64_t)dest->ptr);
+                puts(", size = ");
+                print_decimal(dest->size);
+                puts("\n");
+
+                memcpy(dest->ptr, src->ptr, dest->size);
+            }
+
+            {
+                static const uint64_t stagex_size = (48 * 1024);
+                uint64_t old_stagex_addr = 0x1000000;
+
+                ctx->cached_Stagex = SimpleHeap_Alloc(&heap, stagex_size, 32);
+                uint64_t new_stagex_addr = (uint64_t)ctx->cached_Stagex;
+
+                Stagex_Relocate((const void*)old_stagex_addr, old_stagex_addr, new_stagex_addr);
+
+                puts("cached_Stagex = ");
+                print_hex((uint64_t)ctx->cached_Stagex);
+                puts("\n");
+
+                {
+                    *((uint64_t*)0x120) = (new_stagex_addr + 0x200);
+                    *((uint64_t*)0x210) = (new_stagex_addr + 0x400);
+                    *((uint64_t*)0x220) = (new_stagex_addr + 0x700);
+                }
+            }
+
+            {
+                ctx->cached_StagexSpuElf = NULL;
+
+                {
+                    uint32_t fileFlashOffset = 0;
+                    uint32_t fileSize = 0;
+
+                    if (CoreOS2_FindFileEntry_Aux("Stagex_spu.elf", &fileFlashOffset, &fileSize))
+                    {
+                        ctx->cached_StagexSpuElf = SimpleHeap_Alloc(&heap, fileSize, 32);
+                        FlashRead(fileFlashOffset, ctx->cached_StagexSpuElf, fileSize);
+                    }
+                }
+
+                puts("cached_StagexSpuElf = ");
+                print_hex((uint64_t)ctx->cached_StagexSpuElf);
+                puts("\n");
+            }
+
+            {
+                ctx->cached_mymetldrElf = NULL;
+
+                {
+                    uint32_t fileFlashOffset = 0;
+                    uint32_t fileSize = 0;
+
+                    if (CoreOS2_FindFileEntry_Bank(os_bank_indicator, "mymetldr.elf", &fileFlashOffset, &fileSize))
+                    {
+                        ctx->cached_mymetldrElf = SimpleHeap_Alloc(&heap, fileSize, 32);
+                        FlashRead(fileFlashOffset, ctx->cached_mymetldrElf, fileSize);
+                    }
+                }
+
+                puts("cached_mymetldrElf = ");
+                print_hex((uint64_t)ctx->cached_mymetldrElf);
+                puts("\n");
+            }
+
+            {
+                ctx->cached_myappldrElf = NULL;
+
+                {
+                    uint32_t fileFlashOffset = 0;
+                    uint32_t fileSize = 0;
+
+                    if (CoreOS2_FindFileEntry_Bank(os_bank_indicator, "myappldr.elf", &fileFlashOffset, &fileSize))
+                    {
+                        ctx->cached_myappldrElf = SimpleHeap_Alloc(&heap, fileSize, 32);
+                        FlashRead(fileFlashOffset, ctx->cached_myappldrElf, fileSize);
+                    }
+                }
+
+                puts("cached_myappldrElf = ");
+                print_hex((uint64_t)ctx->cached_myappldrElf);
+                puts("\n");
+            }
 
             //
 
@@ -395,6 +564,8 @@ FUNC_DEF void Stage2()
 
 __attribute__((section("main2"))) void stage2_main(uint64_t in_r3)
 {
+    is_emmc = FetchIsEmmc();
+
     real_sc_puts_init();
 
 #if HDDKEYDUMPER_ENABLED

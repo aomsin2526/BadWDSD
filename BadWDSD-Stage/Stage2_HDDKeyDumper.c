@@ -45,7 +45,14 @@ FUNC_DEF void HDDKeyDumper_Init(struct HDDKeyDumper_Context_s* ctx, uint64_t spu
     print_decimal(ctx->myspu_id);
     puts("\n");
 
-    SpuAux_Init(ctx->myspu_id);
+    {
+        static const uint64_t stagexSpuElf_MaxSize = (64 * 1024);
+        __attribute__((aligned(8))) uint8_t stagexSpuElf[stagexSpuElf_MaxSize];
+
+        SpuAux_CopyElfToMem(stagexSpuElf, stagexSpuElf_MaxSize);
+
+        SpuAux_Init(ctx->myspu_id, stagexSpuElf);
+    }
 
     const uint32_t* sbVersionPtr = (const uint32_t*)0x24000087000;
     uint32_t sbVersion = *sbVersionPtr;

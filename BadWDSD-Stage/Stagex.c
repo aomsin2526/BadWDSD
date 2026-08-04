@@ -10,7 +10,7 @@
 
 #define SC_PUTS_BUFFER_ENABLED 1
 
-#define LOGGING_ENABLED 1
+//#define LOGGING_ENABLED 1
 //#define SC_LV1_LOGGING_ENABLED 1
 
 //#define STAGE5_LOG_ENABLED 1
@@ -122,10 +122,11 @@ FUNC_DECL void print_hex(uint64_t v);
 //register uint64_t r13 asm("r13");
 //register uint64_t r14 asm("r14");
 //register uint64_t r15 asm("r15");
-//register uint64_t r16 asm("r16");
 
 //register uint64_t r23 asm("r23");
 //register uint64_t r24 asm("r24");
+
+register uint64_t is_emmc asm("r16");
 
 register uint64_t is_lv1 asm("r17"); // 0x9669, 0x9666 (stage5)
 register uint64_t lv1_rtoc asm("r18");
@@ -142,11 +143,15 @@ struct Stagex_Context_s
 {
     uint64_t magic; // 0xca8fe91729035026
 
-    uint64_t cached_myappldrElfAddress;
-    uint64_t cached_mylv2ldrElfAddress;
-    uint64_t cached_mymetldrElfAddress;
-    
+    void* cached_Stagex;
+
+    void* cached_StagexSpuElf;
+    void* cached_mymetldrElf;
+    void* cached_myappldrElf;
+
     uint16_t cached_fwVersion;
+
+    uint8_t cached_is_emmc;
 
     uint8_t cached_os_bank_indicator;
     uint8_t cached_qcfw_lite_flag;
@@ -155,6 +160,7 @@ struct Stagex_Context_s
 
     uint8_t stage6_isAppldr;
     uint8_t stage6_isLv2ldr;
+    uint8_t stage6_isLv2ldr_rvk;
 
     uint8_t stage6_spu_id; // 0xff = unknown
 };
@@ -1390,6 +1396,13 @@ FUNC_DEF uint8_t sc_read_stagex_debug_flag()
     return sc_read_eeprom8(0x20, 0x6);
 }
 
+FUNC_DEF uint8_t sc_read_flash_type()
+{
+    // block id (0x3000)
+    // offset (0x3007)
+    return sc_read_eeprom8(0x20, 0x7);
+}
+
 // in[32]
 FUNC_DEF void sc_write_ata_data_key(const uint8_t* in)
 {
@@ -1645,6 +1658,43 @@ FUNC_DEF struct Stagex_Context_s* GetStagexContext()
 
 //
 
+// todo should move to critical.c
+
+FUNC_DEF uint8_t FetchIsEmmc()
+{
+    if (IsLv1())
+        return GetStagexContext()->cached_is_emmc;
+
+    return (sc_read_flash_type() == 0x67) ? 1 : 0;
+}
+
+FUNC_DEF void NorRead(uint32_t offset, void* outBuf, uint32_t readSize)
+{
+    if (is_emmc)
+        dead_beep();
+
+    if (readSize == 0)
+        return;
+
+    if ((offset + readSize) >= (16 * 1024 * 1024))
+        dead_beep();
+
+    memcpy(outBuf, (const void*)(0x2401F000000 + offset), readSize);
+}
+
+FUNC_DEF void FlashRead(uint32_t offset, void* outBuf, uint32_t readSize)
+{
+    if (readSize == 0)
+        return;
+
+    if (is_emmc)
+        dead_beep();
+    else
+        NorRead(offset, outBuf, readSize);
+}
+
+//
+
 #define XDR_SCMD_SBW 0x1 /* Serial Broadcast Write */
 #define XDR_SCMD_SDW 0x0 /* Serial Device Write */
 
@@ -1806,90 +1856,7 @@ FUNC_DEF uint64_t calc_myspu_id_exclude(uint64_t exclude_spu_id)
     return myspu_id;
 }
 
-struct coreos_header_s
-{
-    uint64_t unknown0;
-    uint64_t length_region;
-    uint32_t unknown1;
-    uint32_t entry_count;
-    uint64_t length_region2;
-};
-
-struct coreos_entry_s
-{
-    uint64_t offset;
-    uint64_t length;
-    char file_name[32];
-};
-
-// startAddress = CoreOS start
-FUNC_DEF uint8_t CoreOS_FindFileEntry(uint64_t startAddress, const char *fileName, uint64_t *outFileAddress, uint64_t *outFileSize)
-{
-    uint64_t curAddress = startAddress;
-
-    const struct coreos_header_s *header = (const struct coreos_header_s *)curAddress;
-    curAddress += sizeof(struct coreos_header_s);
-
-    uint32_t entry_count = header->entry_count;
-
-    for (uint32_t i = 0; i < entry_count; ++i)
-    {
-        const struct coreos_entry_s *entry = (const struct coreos_entry_s *)curAddress;
-        curAddress += sizeof(struct coreos_entry_s);
-
-        // puts(entry->file_name);
-        // puts("\n");
-
-        if (!strcmp(entry->file_name, fileName))
-        {
-            if (outFileAddress != NULL)
-                *outFileAddress = (startAddress + (entry->offset + 16));
-
-            if (outFileSize != NULL)
-                *outFileSize = entry->length;
-
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
-FUNC_DEF uint8_t CoreOS_FindFileEntry_Bank(uint8_t os_bank_indicator, const char *fileName, uint64_t *outFileAddress, uint64_t *outFileSize)
-{
-    uint64_t coreOSStartAddress = (os_bank_indicator == 0xff) ? 0x2401F0C0000 : 0x2401F7C0000;
-
-    return CoreOS_FindFileEntry(coreOSStartAddress, fileName, outFileAddress, outFileSize);
-}
-
-FUNC_DEF uint16_t CoreOS_Bank_GetFWVersion(uint8_t os_bank_indicator)
-{
-    uint64_t addr;
-    
-    if (!CoreOS_FindFileEntry_Bank(os_bank_indicator, "sdk_version", &addr, NULL))
-        return 0;
-
-    const char* str = (const char*)addr;
-
-    uint16_t ver = 0;
-
-    // 492.000
-    ver += ((str[0] - '0') * 100);
-    ver += ((str[1] - '0') * 10);
-    ver += (str[2] - '0');
-
-    return ver;
-}
-
-FUNC_DEF uint8_t CoreOS_Bank_IsqCFW(uint8_t os_bank_indicator)
-{
-    return CoreOS_FindFileEntry_Bank(os_bank_indicator, "qcfw", NULL, NULL);
-}
-
-FUNC_DEF uint8_t CoreOS_Bank_IsqCFW_jig(uint8_t os_bank_indicator)
-{
-    return CoreOS_FindFileEntry_Bank(os_bank_indicator, "qcfw_jig", NULL, NULL);
-}
+//
 
 FUNC_DEF uint8_t calc_os_bank_indicator()
 {
@@ -1913,32 +1880,136 @@ FUNC_DEF uint8_t get_os_bank_indicator()
     return GetStagexContext()->cached_os_bank_indicator;
 }
 
-FUNC_DEF uint8_t CoreOS_FindFileEntry_CurrentBank(const char *fileName, uint64_t *outFileAddress, uint64_t *outFileSize)
+//
+
+struct coreos_header_s
+{
+    uint64_t unknown0;
+    uint64_t length_region;
+    uint32_t unknown1;
+    uint32_t entry_count;
+    uint64_t length_region2;
+};
+
+struct coreos_entry_s
+{
+    uint64_t offset;
+    uint64_t length;
+    char file_name[32];
+};
+
+FUNC_DEF uint8_t CoreOS2_FindFileEntry(uint32_t startFlashOffset, const char *fileName, uint32_t *outFileFlashOffset, uint32_t *outFileSize)
+{
+    uint32_t curFlashOffset = startFlashOffset;
+
+    struct coreos_header_s header;
+    FlashRead(curFlashOffset, &header, sizeof(header));
+    curFlashOffset += sizeof(header);
+
+    uint32_t entry_count = header.entry_count;
+
+    for (uint32_t i = 0; i < entry_count; ++i)
+    {
+        struct coreos_entry_s entry;
+        FlashRead(curFlashOffset, &entry, sizeof(entry));
+        curFlashOffset += sizeof(entry);
+
+        // puts(entry.file_name);
+        // puts("\n");
+
+        if (!strcmp(entry.file_name, fileName))
+        {
+            if (outFileFlashOffset != NULL)
+                *outFileFlashOffset = (startFlashOffset + (entry.offset + 16));
+
+            if (outFileSize != NULL)
+                *outFileSize = (uint32_t)entry.length;
+
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+FUNC_DEF uint8_t CoreOS2_FindFileEntry_Bank(uint8_t os_bank_indicator, const char *fileName, uint32_t *outFileFlashOffset, uint32_t *outFileSize)
+{
+    uint32_t startFlashOffset = 0;
+
+    if (is_emmc)
+        startFlashOffset = (os_bank_indicator == 0xff) ? 0xC0020 : 0x7C0010;
+    else
+        startFlashOffset = (os_bank_indicator == 0xff) ? 0xC0000 : 0x7C0000;
+
+    return CoreOS2_FindFileEntry(startFlashOffset, fileName, outFileFlashOffset, outFileSize);
+}
+
+FUNC_DEF uint16_t CoreOS2_Bank_GetFWVersion(uint8_t os_bank_indicator)
+{
+    uint32_t fileFlashOffset;
+    
+    if (!CoreOS2_FindFileEntry_Bank(os_bank_indicator, "sdk_version", &fileFlashOffset, NULL))
+        return 0;
+
+    char str[3];
+    FlashRead(fileFlashOffset, str, sizeof(str));
+
+    uint16_t ver = 0;
+
+    // 492.000
+    ver += ((str[0] - '0') * 100);
+    ver += ((str[1] - '0') * 10);
+    ver += (str[2] - '0');
+
+    return ver;
+}
+
+FUNC_DEF uint8_t CoreOS2_Bank_IsqCFW(uint8_t os_bank_indicator)
+{
+    return CoreOS2_FindFileEntry_Bank(os_bank_indicator, "qcfw", NULL, NULL);
+}
+
+FUNC_DEF uint8_t CoreOS2_Bank_IsqCFW_jig(uint8_t os_bank_indicator)
+{
+    return CoreOS2_FindFileEntry_Bank(os_bank_indicator, "qcfw_jig", NULL, NULL);
+}
+
+FUNC_DEF uint8_t CoreOS2_FindFileEntry_CurrentBank(const char *fileName, uint32_t *outFileFlashOffset, uint32_t *outFileSize)
 {
     uint8_t os_bank_indicator = get_os_bank_indicator();
 
-    return CoreOS_FindFileEntry_Bank(os_bank_indicator, fileName, outFileAddress, outFileSize);
+    return CoreOS2_FindFileEntry_Bank(os_bank_indicator, fileName, outFileFlashOffset, outFileSize);
 }
 
-FUNC_DEF uint8_t CoreOS_FindFileEntry_Aux(const char *fileName, uint64_t *outFileAddress, uint64_t *outFileSize)
+FUNC_DEF uint8_t CoreOS2_FindFileEntry_Aux(const char *fileName, uint32_t *outFileFlashOffset, uint32_t *outFileSize)
 {
-    return CoreOS_FindFileEntry(0x2401FF21000, fileName, outFileAddress, outFileSize);
+    if (is_emmc)
+        dead_beep();
+
+    return CoreOS2_FindFileEntry(is_emmc ? 0 : 0xF21000, fileName, outFileFlashOffset, outFileSize);
 }
 
-FUNC_DEF uint16_t CoreOS_CurrentBank_GetFWVersion()
+FUNC_DEF uint16_t CoreOS2_CurrentBank_GetFWVersion()
 {
-    return CoreOS_Bank_GetFWVersion(get_os_bank_indicator());
+    return CoreOS2_Bank_GetFWVersion(get_os_bank_indicator());
 }
 
-FUNC_DEF uint8_t CoreOS_CurrentBank_IsqCFW()
+FUNC_DEF uint8_t CoreOS2_CurrentBank_IsqCFW()
 {
-    return CoreOS_Bank_IsqCFW(get_os_bank_indicator());
+    return CoreOS2_Bank_IsqCFW(get_os_bank_indicator());
 }
+
+//
 
 FUNC_DEF uint8_t read_targetid()
 {
-    const uint8_t* tid = (const uint8_t*)0x2401F02F075;
-    return *tid;
+    if (is_emmc)
+        dead_beep();
+
+    uint8_t tid;
+    FlashRead(is_emmc ? 0 : 0x2f075, &tid, sizeof(tid));
+
+    return tid;
 }
 
 struct ElfHeader_s
@@ -2326,7 +2397,14 @@ FUNC_DEF void DecryptLv0Self(void *inDest, const void *inSrc, uint8_t use_spu)
     uint64_t spu_old_mfc_sr1;
 
     if (use_spu)
-        spu_old_mfc_sr1 = SpuAux_Init(spu_id);
+    {
+        static const uint64_t stagexSpuElf_MaxSize = (64 * 1024);
+        __attribute__((aligned(8))) uint8_t stagexSpuElf[stagexSpuElf_MaxSize];
+
+        SpuAux_CopyElfToMem(stagexSpuElf, stagexSpuElf_MaxSize);
+
+        spu_old_mfc_sr1 = SpuAux_Init(spu_id, stagexSpuElf);
+    }
 
     for (uint16_t i = 0; i < (elfHeader->e_phnum); ++i)
     {
@@ -2432,7 +2510,7 @@ struct Zelf2Header_s
     uint64_t padding; // for spu
 };
 
-FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void *destAddress, uint64_t *destSize, uint8_t use_spu)
+FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void *destAddress, uint64_t *destSize, uint8_t use_spu, const void* stagexSpuElf)
 {
     puts("ZelfDecompress()\n");
 
@@ -2497,7 +2575,7 @@ FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void *destAddress, uint64
         //
 
         uint64_t spu_id = calc_myspu_id();
-        uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id);
+        uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id, stagexSpuElf);
 
         spu_zlib_decompress(spu_id, compressed_data, compressed_size, destAddress, &yyy);
 
@@ -2557,7 +2635,7 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
     uint64_t spu_old_mfc_sr1 = 0;
 
     if (use_spu)
-        spu_old_mfc_sr1 = SpuAux_Init(spu_id);
+        spu_old_mfc_sr1 = SpuAux_Init(spu_id, GetStagexContext()->cached_StagexSpuElf);
 
     uint8_t *dest = (uint8_t *)inDest;
     const uint8_t *src = (const uint8_t *)inSrc;
@@ -2935,6 +3013,143 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
 
     puts("DecryptLv2Self() done.\n");
 }
+
+#endif
+
+FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)
+{
+    puts("Stagex_Relocate,  ");
+
+    print_hex(old_stagex_addr);
+    puts(" -> ");
+    print_hex(new_stagex_addr);
+
+    puts("\n");
+
+    static const uint64_t stagex_size = (48 * 1024);
+
+    memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
+
+    const volatile uint64_t* signature = (const volatile uint64_t*)(new_stagex_addr + 0x908);
+
+    if (*signature != 0x5446072c5516c2c6)
+    {
+        puts("bad signature!\n");
+        dead();
+    }
+
+    volatile uint64_t* toc1_addr = (volatile uint64_t*)(new_stagex_addr + 0x910);
+    const volatile uint64_t* toc1_size = (const volatile uint64_t*)(new_stagex_addr + 0x918);
+
+    if (*toc1_size > 0)
+    {
+        volatile uint64_t* toc = (volatile uint64_t*)(new_stagex_addr + 0x900);
+        *toc -= old_stagex_addr;
+        *toc += new_stagex_addr;
+
+        *toc1_addr -= old_stagex_addr;
+        *toc1_addr += new_stagex_addr;
+
+        volatile uint64_t* toc1 = (volatile uint64_t*)(*toc1_addr);
+
+        for (uint64_t i = 0; i < (*toc1_size / 8); ++i)
+        {
+            toc1[i] -= old_stagex_addr;
+            toc1[i] += new_stagex_addr;
+        }
+    }
+}
+
+struct SimpleHeap_s
+{
+    uint64_t heapPtr;
+    uint64_t heapSize;
+
+    uint64_t curPtr;
+};
+
+FUNC_DEF void SimpleHeap_Init(struct SimpleHeap_s* ctx, void* heapPtr, uint64_t heapSize)
+{
+    ctx->heapPtr = (uint64_t)heapPtr;
+    ctx->heapSize = heapSize;
+
+    ctx->curPtr = ctx->heapPtr;
+}
+
+FUNC_DEF void* SimpleHeap_Alloc(struct SimpleHeap_s* ctx, uint64_t size, uint64_t align)
+{
+    if (align == 0)
+        align = 8;
+
+    uint64_t addr = ctx->curPtr;
+
+    if ((addr % align) != 0)
+        addr += (align - (addr % align));
+
+    ctx->curPtr = addr;
+    ctx->curPtr += size;
+
+    uint64_t endPlusOne = (ctx->heapPtr + ctx->heapSize);
+
+    if (ctx->curPtr > endPlusOne)
+    {
+        puts("Heap full!, needs ");
+        print_decimal(ctx->curPtr - endPlusOne);
+        puts("bytes more\n");
+
+        dead();
+    }
+
+    return (void*)addr;
+}
+
+struct comp_entry_s
+{
+    uint8_t* ptr;
+    uint64_t size;
+};
+
+#if 0
+
+lv0_mem:00000000000100F8                                         # ***********************************************************************
+lv0_mem:00000000000100F8                                         # component 01: (lv1ldr)
+lv0_mem:0000000000010100 iso_tbl:        .quad 0xC150000         # DATA XREF: lv0_mem:0000000000009020↑o
+lv0_mem:0000000000010100                                         # lv0_mem:0000000000009230↑o ...
+lv0_mem:0000000000010100                                         # 0x00: lv1ldr addr
+lv0_mem:0000000000010108                 .quad 0x26C50           # 0x08: lv1ldr size
+lv0_mem:0000000000010108                                         # ----------------------------------------
+lv0_mem:0000000000010108                                         # component 00: (metldr)
+lv0_mem:0000000000010110                 .quad metldr_bin        # 0x10:
+lv0_mem:0000000000010118                 .quad 0xE920            # 0x18:
+lv0_mem:0000000000010118                                         # ----------------------------------------
+lv0_mem:0000000000010118                                         # component 02: (lv2ldr)
+lv0_mem:0000000000010120                 .quad lv2ldr_bin        # 0x20: lv2ldr addr
+lv0_mem:0000000000010128                 .quad 0x18AEC           # 0x28: lv2ldr size
+lv0_mem:0000000000010128                                         # ----------------------------------------
+lv0_mem:0000000000010128                                         # component 04: (isoldr)
+lv0_mem:0000000000010130                 .quad isoldr_bin        # 0x30: isoldr addr
+lv0_mem:0000000000010138                 .quad 0x146F0           # 0x38: isoldr size
+lv0_mem:0000000000010138                                         # ----------------------------------------
+lv0_mem:0000000000010138                                         # component 03: (appldr)
+lv0_mem:0000000000010140                 .quad appldr_bin        # 0x40: appldr addr
+lv0_mem:0000000000010148                 .quad 0x27A38           # 0x48: appldr size
+lv0_mem:0000000000010148                                         # ----------------------------------------
+lv0_mem:0000000000010148                                         # component 12: (eid0)
+lv0_mem:0000000000010150                 .quad eid0_bin          # 0x50: eid0 addr
+lv0_mem:0000000000010158                 .quad 0x860             # 0x58: eid0 size
+lv0_mem:0000000000010158                                         # ----------------------------------------
+lv0_mem:0000000000010158                                         # component 15:
+lv0_mem:0000000000010160                 .quad is_qa_flag        # 0x60: qa_flag addr
+lv0_mem:0000000000010168                 .quad 8                 # 0x68: qa_flag size
+lv0_mem:0000000000010168                                         # ----------------------------------------
+lv0_mem:0000000000010168                                         # component 16:
+lv0_mem:0000000000010170                 .quad qa_token_bin      # 0x70: qa_token addr
+lv0_mem:0000000000010178                 .quad 0x80              # 0x78: qa_token size
+lv0_mem:0000000000010178                                         # ----------------------------------------
+lv0_mem:0000000000010178                                         # component 17:
+lv0_mem:0000000000010180                 .quad trace_level       # 0x80:
+lv0_mem:0000000000010188                 .quad 8                 # 0x88:
+lv0_mem:0000000000010188                                         # ****************************************
 
 #endif
 

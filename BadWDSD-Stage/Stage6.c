@@ -21,28 +21,43 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
 
     //
 
-    uint64_t myappldrElfAddress = ctx->cached_myappldrElfAddress;
-    uint64_t mylv2ldrElfAddress = ctx->cached_mylv2ldrElfAddress;
+    const void* myappldrElf = ctx->cached_myappldrElf;
 
     uint8_t ok = 0;
-    uint64_t myldrElfAddress = 0;
+    const void* myldrElf = NULL;
 
     if (spu_id == ctx->stage6_spu_id)
     {
-        if (ctx->stage6_isAppldr && (myappldrElfAddress != 0))
+        if (ctx->stage6_isAppldr && (myappldrElf != NULL))
         {
-            myldrElfAddress = myappldrElfAddress;
+            myldrElf = myappldrElf;
             ok = 1;
         }
 
-        if (ctx->stage6_isLv2ldr && (mylv2ldrElfAddress != 0))
+        if (ctx->stage6_isLv2ldr || ctx->stage6_isLv2ldr_rvk)
         {
-            myldrElfAddress = mylv2ldrElfAddress;
+            void* mylv2ldrElf = (void*)0xC000000;
+
+            {
+                uint32_t fileFlashOffset = 0;
+                uint32_t fileSize = 0;
+
+                if (!CoreOS2_FindFileEntry_CurrentBank("mylv2ldr.elf", &fileFlashOffset, &fileSize))
+                {
+                    lv1_puts("mylv2ldr.elf not found!\n");
+                    dead();
+                }
+
+                FlashRead(fileFlashOffset, mylv2ldrElf, fileSize);
+            }
+
+            myldrElf = mylv2ldrElf;
             ok = 1;
         }
 
         ctx->stage6_isAppldr = 0;
         ctx->stage6_isLv2ldr = 0;
+        ctx->stage6_isLv2ldr_rvk = 0;
     }
 
     if (!ok)
@@ -53,9 +68,9 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
 
     //
 
-    uint64_t mymetldrElfAddress = ctx->cached_mymetldrElfAddress;
+    const void* mymetldrElf = ctx->cached_mymetldrElf;
 
-    if (mymetldrElfAddress == 0)
+    if (mymetldrElf == NULL)
     {
         lv1_puts("mymetldr.elf not found!\n");
         dead_beep();
@@ -65,11 +80,11 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
     SPU_IsoExitRequest(spu_id);
 
     //lv1_puts("Loading mymetldr.elf...\n");
-    LoadElfSpu(mymetldrElfAddress, spu_id, 1);
-    
+    LoadElfSpu((uint64_t)mymetldrElf, spu_id, 1);
+
     {
         struct mymetldr_context_s mctx;
-        mctx.myldrElfAddress = myldrElfAddress;
+        mctx.myldrElfAddress = (uint64_t)myldrElf;
         mctx.fwVersion = ctx->cached_fwVersion;
 
         memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &mctx, sizeof(mctx));
@@ -219,6 +234,7 @@ __attribute__((section("main6"))) uint64_t stage6_main(
     uint64_t in_r3, uint64_t in_r4, uint64_t in_r5, uint64_t in_r6, uint64_t in_r7, uint64_t in_r8, uint64_t in_r9, uint64_t in_r10
 )
 {
+    is_emmc = FetchIsEmmc();
     sc_puts_init();
 
     if (in_r10 == 1)

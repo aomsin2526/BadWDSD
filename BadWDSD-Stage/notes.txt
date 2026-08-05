@@ -24,14 +24,14 @@
 // 0xD000000 = sc_puts_buffer
 
 // Stage1:
-// 0x1000000 = stagex on ram
+// 0x3000000 = stagex on ram
 // 0xDFFFF00 = stage_sp
 // 0xB000000 = temp lv0SelfFileAddress
 // 0xC000000 = temp lv0FileAddress
 
 // Stage2:
-// 0x1000000 = stagex on ram
 // 0x2000000 = tmpMem
+// 0x3000000 = stagex on ram
 // 0xA000000 = tmpEa (HDDKeyDumper)
 // 0xDFFFF00 = stage_sp
 // 0xC000000 = temp lv1FileAddress

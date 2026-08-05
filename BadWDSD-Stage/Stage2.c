@@ -425,7 +425,7 @@ FUNC_DEF void Stage2()
 
             {
                 static const uint64_t stagex_size = (48 * 1024);
-                uint64_t old_stagex_addr = 0x1000000;
+                uint64_t old_stagex_addr = 0x3000000;
 
                 ctx->cached_Stagex = SimpleHeap_Alloc(&heap, stagex_size, 32);
                 uint64_t new_stagex_addr = (uint64_t)ctx->cached_Stagex;

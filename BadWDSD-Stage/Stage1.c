@@ -106,7 +106,7 @@ FUNC_DEF void WDSDTest_3()
     {
         uint64_t addr = (0x100 + i);
 
-        real_print_hex(i);
+        real_print_hex(addr);
         real_puts(" = ");
         real_hexdump((const void*)addr, 8);
         real_puts("\n");
@@ -120,87 +120,6 @@ FUNC_DEF void WDSDTest()
     WDSDTest_3();
 
     dead();
-}
-
-FUNC_DEF void Stage0_emmc_test()
-{
-    // r10 = sb_uart_stat
-
-    asm volatile("lis %r10, 0x240");
-    asm volatile("ori %r10, %r10, 0xff");
-    asm volatile("sldi %r10, %r10, 16");
-    asm volatile("ori %r10, %r10, 0xf308"); // sb_uart_stat
-
-    asm volatile("li %r3, 0x7a"); // 'z'
-    asm volatile("stw %r3, 20(%r10)"); // sb_uart_putchar('z')
-
-    // r9 = cur addr
-    asm volatile("li %r9, 0x1000");
-
-    asm volatile("loop1:");
-    // read stat
-    asm volatile("lwz %r3, 0(%r10)");
-    asm volatile("andi. %r3, %r3, 0x1f");
-    asm volatile("beq loop1");
-
-    // getc
-    asm volatile("lwz %r3, 24(%r10)");
-
-    // write lowest 8 bit of r3 to address at r9
-    asm volatile("stb %r3, 0(%r9)");
-    asm volatile("addi %r9, %r9, 1"); // r9 += 1
-
-    // loop if r9 < 0x2000
-    asm volatile("cmpi 0, 0, %r9, 0x2000");
-    asm volatile("bne loop1");
-
-    // jump to 0x1000
-    asm volatile("li %r3, 0x1000");
-    asm volatile("mtctr %r3");
-    asm volatile("bctr");
-
-    while (1) {}
-}
-
-FUNC_DEF void Stagex_RelocateTest(const void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)
-{
-    static const uint64_t stagex_size = (48 * 1024);
-
-    memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
-
-    const volatile uint64_t* signature = (const volatile uint64_t*)(new_stagex_addr + 0x908);
-
-    if (*signature != 0x5446072c5516c2c6)
-    {
-        real_puts("bad signature!\n");
-        dead();
-    }
-
-    volatile uint64_t* toc1_addr = (volatile uint64_t*)(new_stagex_addr + 0x910);
-    const volatile uint64_t* toc1_size = (const volatile uint64_t*)(new_stagex_addr + 0x918);
-
-    if (*toc1_size > 0)
-    {
-        volatile uint64_t* toc = (volatile uint64_t*)(new_stagex_addr + 0x900);
-        *toc -= old_stagex_addr;
-        *toc += new_stagex_addr;
-
-        *toc1_addr -= old_stagex_addr;
-        *toc1_addr += new_stagex_addr;
-
-        volatile uint64_t* toc1 = (volatile uint64_t*)(*toc1_addr);
-
-        for (uint64_t i = 0; i < (*toc1_size / 8); ++i)
-        {
-            toc1[i] -= old_stagex_addr;
-            toc1[i] += new_stagex_addr;
-        }
-    }
-
-    // jump to stage1_entry
-
-    asm volatile("mtctr %0" ::"r"(new_stagex_addr):);
-    asm volatile("bctr");
 }
 
 #endif
@@ -368,10 +287,6 @@ FUNC_DEF void Stage1()
 #if STAGEX_DEBUG_ENABLED
     if (stagex_debug_flag == 0x1)
         WDSDTest();
-    else if (stagex_debug_flag == 0x2)
-        Stage0_emmc_test();
-    else if (stagex_debug_flag == 0x3)
-        Stagex_RelocateTest((const void*)0x2401F031000, 0x2401F031000, 0x10000);
 #endif
 
     //
@@ -380,12 +295,6 @@ FUNC_DEF void Stage1()
 
     // clear lv2
     memset((void*)0x1000000, 0, 0x10000);
-    memset((void*)0x2000000, 0, 0x10000);
-    memset((void*)0x3000000, 0, 0x10000);
-    memset((void*)0x4000000, 0, 0x10000);
-    memset((void*)0x5000000, 0, 0x10000);
-    memset((void*)0x6000000, 0, 0x10000);
-    memset((void*)0x7000000, 0, 0x10000);
     memset((void*)0x8000000, 0, 0x10000);
 
     //
@@ -496,13 +405,12 @@ FUNC_DEF void Stage1()
                     DecryptLv0Self((void*)lv0FileAddress, (const void*)lv0SelfFileAddress, 1);
 #endif
 
-                    uint64_t new_stagex_addr = 0x1000000;
+                    uint64_t new_stagex_addr = 0x3000000;
 
                     if (!is_emmc)
                         Stagex_Relocate((const void*)0x2401F031000, 0x2401F031000, new_stagex_addr);
 
 #if HDDKEYDUMPER_ENABLED
-                    // todo adjust patch for emmc
                     if ((hdd_key_dumper_flag == 0x1) && ((fwVersion >= 470) || isqCFW)) // dump request
                     {
                         sc_write_hdd_key_dumper_flag(0x2); // will dump soon
@@ -524,7 +432,6 @@ FUNC_DEF void Stage1()
 
                     // ANTI BRICK!!!
                     // isqCFW!!!
-                    // todo adjust patch for emmc
                     if ((fwVersion >= 470) || isqCFW || isqCFW_jig)
                     {
                         uint8_t searchData[] = {0x38, 0x60, 0x01, 0x00, 0x7C, 0x69, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x60, 0x00, 0x00, 0x00};

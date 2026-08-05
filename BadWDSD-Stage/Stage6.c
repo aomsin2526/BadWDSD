@@ -21,38 +21,89 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
 
     //
 
-    const void* myappldrElf = ctx->cached_myappldrElf;
-
     uint8_t ok = 0;
     const void* myldrElf = NULL;
 
     if (spu_id == ctx->stage6_spu_id)
     {
-        if (ctx->stage6_isAppldr && (myappldrElf != NULL))
-        {
-            myldrElf = myappldrElf;
-            ok = 1;
-        }
-
         if (ctx->stage6_isLv2ldr || ctx->stage6_isLv2ldr_rvk)
         {
-            void* mylv2ldrElf = (void*)0xC000000;
-
+            if (ctx->has_mylv2ldr)
             {
-                uint32_t fileFlashOffset = 0;
-                uint32_t fileSize = 0;
-
-                if (!CoreOS2_FindFileEntry_CurrentBank("mylv2ldr.elf", &fileFlashOffset, &fileSize))
+                // load mylv2ldr to sharedLdr
+                if (ctx->cached_sharedLdr_CurKind != 3)
                 {
-                    lv1_puts("mylv2ldr.elf not found!\n");
-                    dead();
+                    //lv1_puts("load mylv2ldr\n");
+
+                    FlashRead(ctx->cached_mylv2ldrElf_FileFlashOffset, ctx->cached_sharedLdr, ctx->cached_mylv2ldrElf_FileSize);
+                    ctx->cached_sharedLdr_CurKind = 3;
                 }
 
-                FlashRead(fileFlashOffset, mylv2ldrElf, fileSize);
+                myldrElf = ctx->cached_sharedLdr;
+                ok = 1;
             }
+            else if (ctx->cached_sharedLdr_CurKind != 1)
+            {
+                //lv1_puts("load lv2ldr\n");
 
-            myldrElf = mylv2ldrElf;
-            ok = 1;
+                // load lv2ldr to sharedLdr
+
+                uint8_t* lv0Self = (uint8_t*)0xB000000;
+                uint8_t* lv0Elf = (uint8_t*)0xB800000;
+
+                FlashRead(ctx->cached_lv0_FileFlashOffset, lv0Self, ctx->cached_lv0_FileSize);
+
+                uint64_t myspu_id = calc_myspu_id_exclude(spu_id);
+
+                uint32_t old_mfc_sr1 = SpuAux_Init(myspu_id, ctx->cached_StagexSpuElf);
+                SPU_DecryptLv0Self(myspu_id, lv0Elf, lv0Self);
+                SpuAux_Uninit(myspu_id, old_mfc_sr1);
+
+                memcpy(ctx->cached_sharedLdr, (lv0Elf + 0x8b844), 0x18AEC);
+                memcpy((ctx->cached_sharedLdr + 0x210), ctx->cached_lv2ldr_meta, 0x370);
+
+                ctx->cached_sharedLdr_CurKind = 1;
+            }
+        }
+
+        if (ctx->stage6_isAppldr)
+        {
+            if (ctx->has_myappldr)
+            {
+                // load myappldr to sharedLdr
+                if (ctx->cached_sharedLdr_CurKind != 4)
+                {
+                    //lv1_puts("load myappldr\n");
+
+                    FlashRead(ctx->cached_myappldrElf_FileFlashOffset, ctx->cached_sharedLdr, ctx->cached_myappldrElf_FileSize);
+                    ctx->cached_sharedLdr_CurKind = 4;
+                }
+
+                myldrElf = ctx->cached_sharedLdr;
+                ok = 1;
+            }
+            else if (ctx->cached_sharedLdr_CurKind != 2)
+            {
+                //lv1_puts("load appldr\n");
+
+                // load appldr to sharedLdr
+
+                uint8_t* lv0Self = (uint8_t*)0xB000000;
+                uint8_t* lv0Elf = (uint8_t*)0xB800000;
+
+                FlashRead(ctx->cached_lv0_FileFlashOffset, lv0Self, ctx->cached_lv0_FileSize);
+
+                uint64_t myspu_id = calc_myspu_id_exclude(spu_id);
+
+                uint32_t old_mfc_sr1 = SpuAux_Init(myspu_id, ctx->cached_StagexSpuElf);
+                SPU_DecryptLv0Self(myspu_id, lv0Elf, lv0Self);
+                SpuAux_Uninit(myspu_id, old_mfc_sr1);
+
+                memcpy(ctx->cached_sharedLdr, (lv0Elf + 0xb8a20), 0x27A38);
+                memcpy((ctx->cached_sharedLdr + 0x210), ctx->cached_appldr_meta, 0x370);
+
+                ctx->cached_sharedLdr_CurKind = 2;
+            }
         }
 
         ctx->stage6_isAppldr = 0;

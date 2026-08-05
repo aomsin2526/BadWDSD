@@ -18,7 +18,7 @@
 #define ZLIB_SPU_ONLY_ENABLED 1
 #define STAGE0_DECRYPTLV0SELF_SPU_ENABLED 1
 
-#define DECRYPTLV2SELF_ENABLED 1
+//#define DECRYPTLV2SELF_ENABLED 1
 #define HDDKEYDUMPER_ENABLED 1
 
 //#if DECRYPTLV2SELF_ENABLED || HDDKEYDUMPER_ENABLED
@@ -143,11 +143,25 @@ struct Stagex_Context_s
 {
     uint64_t magic; // 0xca8fe91729035026
 
-    void* cached_Stagex;
+    uint8_t* cached_Stagex;
 
-    void* cached_StagexSpuElf;
-    void* cached_mymetldrElf;
-    void* cached_myappldrElf;
+    uint8_t* cached_StagexSpuElf;
+    uint8_t* cached_mymetldrElf;
+
+    uint8_t* cached_lv2ldr_meta; // [0x370]
+    uint8_t* cached_appldr_meta; // [0x370]
+
+    uint8_t* cached_sharedLdr;
+    uint64_t cached_sharedLdr_Size;
+
+    uint32_t cached_mylv2ldrElf_FileFlashOffset;
+    uint32_t cached_mylv2ldrElf_FileSize;
+
+    uint32_t cached_myappldrElf_FileFlashOffset;
+    uint32_t cached_myappldrElf_FileSize;
+
+    uint32_t cached_lv0_FileFlashOffset;
+    uint32_t cached_lv0_FileSize;
 
     uint16_t cached_fwVersion;
 
@@ -156,6 +170,9 @@ struct Stagex_Context_s
     uint8_t cached_os_bank_indicator;
     uint8_t cached_qcfw_lite_flag;
 
+    uint8_t has_mylv2ldr;
+    uint8_t has_myappldr;
+
     uint8_t stage3_alreadyDone;
 
     uint8_t stage6_isAppldr;
@@ -163,6 +180,9 @@ struct Stagex_Context_s
     uint8_t stage6_isLv2ldr_rvk;
 
     uint8_t stage6_spu_id; // 0xff = unknown
+
+    // 1 = lv2ldr, 2 = appldr, 3 = mylv2ldr, 4 = myappldr
+    uint8_t cached_sharedLdr_CurKind;
 };
 
 FUNC_DECL struct Stagex_Context_s* GetStagexContext_Unchecked();
@@ -3076,7 +3096,7 @@ FUNC_DEF void SimpleHeap_Init(struct SimpleHeap_s* ctx, void* heapPtr, uint64_t 
     ctx->curPtr = ctx->heapPtr;
 }
 
-FUNC_DEF void* SimpleHeap_Alloc(struct SimpleHeap_s* ctx, uint64_t size, uint64_t align)
+FUNC_DEF uint8_t* SimpleHeap_Alloc(struct SimpleHeap_s* ctx, uint64_t size, uint64_t align)
 {
     if (align == 0)
         align = 8;
@@ -3100,7 +3120,20 @@ FUNC_DEF void* SimpleHeap_Alloc(struct SimpleHeap_s* ctx, uint64_t size, uint64_
         dead();
     }
 
-    return (void*)addr;
+    return (uint8_t*)addr;
+}
+
+FUNC_DEF uint32_t crc32c(uint32_t crc, const uint8_t* buf, uint64_t len)
+{
+    int32_t k;
+
+    crc = ~crc;
+    while (len--) {
+        crc ^= *buf++;
+        for (k = 0; k < 8; k++)
+            crc = crc & 1 ? (crc >> 1) ^ 0xedb88320 : crc >> 1;
+    }
+    return ~crc;
 }
 
 struct comp_entry_s

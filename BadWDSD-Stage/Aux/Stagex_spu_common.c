@@ -173,7 +173,7 @@ uint8_t memcmp32(const void *p1, const void *p2, uint32_t count)
     return 0;
 }
 
-uint64_t strlen(const char *str)
+uint32_t strlen(const char *str)
 {
     uint64_t len = 0;
 
@@ -190,8 +190,8 @@ uint64_t strlen(const char *str)
 
 uint8_t strcmp(const char *str1, const char *str2)
 {
-    uint64_t str1_len = strlen(str1);
-    uint64_t str2_len = strlen(str2);
+    uint32_t str1_len = strlen(str1);
+    uint32_t str2_len = strlen(str2);
 
     if (str1_len != str2_len)
         return 1;

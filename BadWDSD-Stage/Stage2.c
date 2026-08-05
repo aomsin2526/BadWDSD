@@ -423,34 +423,6 @@ FUNC_DEF void Stage2()
             struct SimpleHeap_s heap;
             SimpleHeap_Init(&heap, (void*)heapAddr, heapSize);
 
-            for (uint64_t i = 0; i < comp_count; ++i)
-            {
-                if (i == lv1ldr_idx)
-                    continue;
-                if (i == lv2ldr_idx)
-                    continue;
-                if (i == appldr_idx)
-                    continue;
-
-                uint8_t isldr = (i <= 4) ? 1 : 0;
-
-                struct comp_entry_s* dest = &comps[i];
-                const struct comp_entry_s* src = &tmp_comps[i];
-
-                dest->size = src->size;
-                dest->ptr = SimpleHeap_Alloc(&heap, dest->size, isldr ? 0x80 : 0x10);
-
-                puts("comp ");
-                print_decimal(i);
-                puts(", ptr = ");
-                print_hex((uint64_t)dest->ptr);
-                puts(", size = ");
-                print_decimal(dest->size);
-                puts("\n");
-
-                memcpy(dest->ptr, src->ptr, dest->size);
-            }
-
             {
                 static const uint64_t stagex_size = (48 * 1024);
                 uint64_t old_stagex_addr = 0x1000000;
@@ -509,23 +481,147 @@ FUNC_DEF void Stage2()
                 puts("\n");
             }
 
+            ctx->has_mylv2ldr = 0;
+            ctx->has_myappldr = 0;
+
+            if (CoreOS2_FindFileEntry_Bank(os_bank_indicator, "mylv2ldr.elf", &ctx->cached_mylv2ldrElf_FileFlashOffset, &ctx->cached_mylv2ldrElf_FileSize))
             {
-                ctx->cached_myappldrElf = NULL;
+                ctx->has_mylv2ldr = 1;
 
+                puts("cached_mylv2ldrElf_FileFlashOffset = ");
+                print_hex(ctx->cached_mylv2ldrElf_FileFlashOffset);
+                puts("\n");
+
+                puts("cached_mylv2ldrElf_FileSize = ");
+                print_decimal(ctx->cached_mylv2ldrElf_FileSize);
+                puts("\n");
+            }
+
+            if (CoreOS2_FindFileEntry_Bank(os_bank_indicator, "myappldr.elf", &ctx->cached_myappldrElf_FileFlashOffset, &ctx->cached_myappldrElf_FileSize))
+            {
+                ctx->has_myappldr = 1;
+
+                puts("cached_myappldrElf_FileFlashOffset = ");
+                print_hex(ctx->cached_myappldrElf_FileFlashOffset);
+                puts("\n");
+
+                puts("cached_myappldrElf_FileSize = ");
+                print_decimal(ctx->cached_myappldrElf_FileSize);
+                puts("\n");
+            }
+
+            if (CoreOS2_FindFileEntry_Bank(os_bank_indicator, "lv0", &ctx->cached_lv0_FileFlashOffset, &ctx->cached_lv0_FileSize))
+            {
+                puts("cached_lv0_FileFlashOffset = ");
+                print_hex(ctx->cached_lv0_FileFlashOffset);
+                puts("\n");
+
+                puts("cached_lv0_FileSize = ");
+                print_decimal(ctx->cached_lv0_FileSize);
+                puts("\n");
+            }
+            else
+            {
+                puts("lv0 not found!\n");
+                dead_beep();
+            }
+
+            {
+                // cache metadata from (lv2ldrSelf + 0x210), size = 0x370
+                ctx->cached_lv2ldr_meta = SimpleHeap_Alloc(&heap, 0x370, 8);
+
+                memcpy(ctx->cached_lv2ldr_meta, (const void*)(tmp_comps[lv2ldr_idx].ptr + 0x210), 0x370);
+
+                puts("cached_lv2ldr_meta = ");
+                print_hex((uint64_t)ctx->cached_lv2ldr_meta);
+                puts("\n");
+            }
+
+            {
+                // cache metadata from (appldrSelf + 0x210), size = 0x370
+                ctx->cached_appldr_meta = SimpleHeap_Alloc(&heap, 0x370, 8);
+
+                memcpy(ctx->cached_appldr_meta, (const void*)(tmp_comps[appldr_idx].ptr + 0x210), 0x370);
+
+                puts("cached_appldr_meta = ");
+                print_hex((uint64_t)ctx->cached_appldr_meta);
+                puts("\n");
+            }
+
+            for (uint64_t i = 0; i < comp_count; ++i)
+            {
+                if (i == lv1ldr_idx)
+                    continue;
+                if (i == appldr_idx)
+                    continue;
+
+                uint8_t isldr = (i <= 4) ? 1 : 0;
+
+                struct comp_entry_s* dest = &comps[i];
+                const struct comp_entry_s* src = &tmp_comps[i];
+
+                dest->size = src->size;
+
+                uint64_t allocSize = dest->size;
+
+                if (i == lv2ldr_idx)
                 {
-                    uint32_t fileFlashOffset = 0;
-                    uint32_t fileSize = 0;
-
-                    if (CoreOS2_FindFileEntry_Bank(os_bank_indicator, "myappldr.elf", &fileFlashOffset, &fileSize))
                     {
-                        ctx->cached_myappldrElf = SimpleHeap_Alloc(&heap, fileSize, 32);
-                        FlashRead(fileFlashOffset, ctx->cached_myappldrElf, fileSize);
+                        const struct comp_entry_s* appldr_comp = &tmp_comps[appldr_idx];
+
+                        if (allocSize < appldr_comp->size)
+                            allocSize = appldr_comp->size;
                     }
+
+                    if (ctx->has_mylv2ldr)
+                    {
+                        if (allocSize < ctx->cached_mylv2ldrElf_FileSize)
+                            allocSize = ctx->cached_mylv2ldrElf_FileSize;
+                    }
+
+                    if (ctx->has_myappldr)
+                    {
+                        if (allocSize < ctx->cached_myappldrElf_FileSize)
+                            allocSize = ctx->cached_myappldrElf_FileSize;
+                    }
+
+                    ctx->cached_sharedLdr_Size = allocSize;
+
+                    puts("cached_sharedLdr_Size = ");
+                    print_decimal(ctx->cached_sharedLdr_Size);
+                    puts("\n");
                 }
 
-                puts("cached_myappldrElf = ");
-                print_hex((uint64_t)ctx->cached_myappldrElf);
+                dest->ptr = SimpleHeap_Alloc(&heap, allocSize, isldr ? 0x80 : 0x10);
+
+                if (i == lv2ldr_idx)
+                {
+                    ctx->cached_sharedLdr = dest->ptr;
+                    ctx->cached_sharedLdr_CurKind = 1; // lv2ldr
+
+                    puts("cached_sharedLdr = ");
+                    print_hex((uint64_t)ctx->cached_sharedLdr);
+                    puts("\n");
+                }
+
+                puts("comp ");
+                print_decimal(i);
+                puts(", ptr = ");
+                print_hex((uint64_t)dest->ptr);
+                puts(", size = ");
+                print_decimal(dest->size);
+                puts(", allocSize = ");
+                print_decimal(allocSize);
                 puts("\n");
+
+                memcpy(dest->ptr, src->ptr, dest->size);
+            }
+
+            // point it to some valid headers
+
+            {
+                struct comp_entry_s* dest = &comps[appldr_idx];
+                dest->ptr = (uint8_t*)ctx->cached_sharedLdr;
             }
 
             //

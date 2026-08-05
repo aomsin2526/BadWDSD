@@ -38,8 +38,6 @@ FUNC_DEF void Stage5(uint64_t type)
             lv1_lv2AreaHashPtr[0] = 0xfa60f9a679d561e2;
             lv1_lv2AreaHashPtr[1] = 0x4766aa39b90084b0;
             lv1_lv2AreaHashPtr[2] = 0x0b27d2ff00000000;
-
-            eieio();
         }
     }
     else if (type == 0x2)

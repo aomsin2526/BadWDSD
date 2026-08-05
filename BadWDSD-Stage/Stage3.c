@@ -176,7 +176,12 @@ FUNC_DEF uint8_t FindLv2(uint64_t *outFoundAddr)
     for (uint64_t addr = 0x1000000; addr < (250 * 1024 * 1024); addr += 0x1000000)
     {
         if (IsLv2(addr))
+        {
+            if (outFoundAddr != NULL)
+                *outFoundAddr = addr;
+
             return 1;
+        }
     }
 
     return 0;
@@ -367,6 +372,8 @@ FUNC_DEF void LoadLv2(uint64_t srcAddr, uint64_t loadme_addr)
     lv1_puts("loadme_addr = ");
     lv1_print_hex(loadme_addr);
     lv1_puts("\n");
+
+    //hexdump((const void*)srcAddr, 0x1000);
 
     {
         const struct SceHeader_s *sceHeader = (const struct SceHeader_s *)srcAddr;

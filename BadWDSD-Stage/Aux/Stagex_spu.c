@@ -235,7 +235,7 @@ void Stagex_spu_job_zlib_decompress(volatile struct Stagex_spu_job_zlib_decompre
 
 void Stagex_spu_job_stage3()
 {
-    static const uint32_t tmpBufSize = (128 * 1024);
+    static const uint32_t tmpBufSize = (128 * 1024); // 0x20000
     uint8_t *tmpBuf = (uint8_t *)0x10000;
 
     uint64_t invalid_handler_addr = 0;
@@ -245,13 +245,15 @@ void Stagex_spu_job_stage3()
 
     uint8_t done = 0;
 
-    const char *lv2FilePathSearchData = "/flh/os/lv2_kernel.self";
-    uint64_t lv2FilePathSearchDataSize = (strlen(lv2FilePathSearchData) + 1);
+    // /flh/os/lv2_kernel.self
+    // need to truncate it or it will conflict with "Boot OtherOS (qCFW)" option
+    const char *lv2FilePathSearchData = "/flh/os/lv2_ker";
+    uint32_t lv2FilePathSearchDataSize = strlen(lv2FilePathSearchData);
 
     static const uint64_t initialLparSizeSearchEndAddr = 0x200000;
     static const uint32_t foundInitialLPARSizeMaxCount = 2;
 
-    for (uint64_t tmpBuf_CurEaAddr = 0; tmpBuf_CurEaAddr < (16 * 1024 * 1024); tmpBuf_CurEaAddr += tmpBufSize)
+    for (uint64_t tmpBuf_CurEaAddr = 0x80000; tmpBuf_CurEaAddr < (16 * 1024 * 1024); tmpBuf_CurEaAddr += tmpBufSize)
     {
         DMARead(tmpBuf, tmpBuf_CurEaAddr, tmpBufSize);
 
@@ -312,9 +314,12 @@ void Stagex_spu_job_stage3()
     if (invalid_handler_addr == 0)
         stop(6);
 
+    if (foundInitialLPARSizeCount == 0)
+        stop(6);
+
     done = 0;
 
-    for (uint64_t tmpBuf_CurEaAddr = 0; tmpBuf_CurEaAddr < (16 * 1024 * 1024); tmpBuf_CurEaAddr += tmpBufSize)
+    for (uint64_t tmpBuf_CurEaAddr = 0x80000; tmpBuf_CurEaAddr < (16 * 1024 * 1024); tmpBuf_CurEaAddr += tmpBufSize)
     {
         DMARead(tmpBuf, tmpBuf_CurEaAddr, tmpBufSize);
 

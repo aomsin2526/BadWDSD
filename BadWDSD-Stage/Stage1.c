@@ -313,11 +313,13 @@ FUNC_DEF void Stage1()
     print_decimal(fwVersion);
     puts("\n");
 
+#if LOGGING_ENABLED
     uint8_t tid = read_targetid();
 
     puts("tid = ");
     print_hex(tid);
     puts("\n");
+#endif
 
     uint8_t isqCFW = CoreOS2_Bank_IsqCFW(os_bank_indicator);
 

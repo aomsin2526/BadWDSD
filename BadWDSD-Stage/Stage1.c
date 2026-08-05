@@ -295,6 +295,12 @@ FUNC_DEF void Stage1()
 
     // clear lv2
     memset((void*)0x1000000, 0, 0x10000);
+    memset((void*)0x2000000, 0, 0x10000);
+    memset((void*)0x3000000, 0, 0x10000);
+    memset((void*)0x4000000, 0, 0x10000);
+    memset((void*)0x5000000, 0, 0x10000);
+    memset((void*)0x6000000, 0, 0x10000);
+    memset((void*)0x7000000, 0, 0x10000);
     memset((void*)0x8000000, 0, 0x10000);
 
     //
@@ -405,7 +411,7 @@ FUNC_DEF void Stage1()
                     DecryptLv0Self((void*)lv0FileAddress, (const void*)lv0SelfFileAddress, 1);
 #endif
 
-                    uint64_t new_stagex_addr = 0x3000000;
+                    uint64_t new_stagex_addr = 0x1010000;
 
                     if (!is_emmc)
                         Stagex_Relocate((const void*)0x2401F031000, 0x2401F031000, new_stagex_addr);

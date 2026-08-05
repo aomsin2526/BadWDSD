@@ -289,8 +289,7 @@ FUNC_DEF void Stage1()
         WDSDTest();
 #endif
 
-    //
-
+    // do not remove!
     memset((void*)0, 0, (16 * 1024 * 1024));
 
     // clear lv2
@@ -302,6 +301,13 @@ FUNC_DEF void Stage1()
     memset((void*)0x6000000, 0, 0x10000);
     memset((void*)0x7000000, 0, 0x10000);
     memset((void*)0x8000000, 0, 0x10000);
+
+    //
+
+    uint64_t new_stagex_addr = 0x1010000;
+
+    if (!is_emmc)
+        Stagex_Relocate((const void*)0x2401F031000, 0x2401F031000, new_stagex_addr);
 
     //
 
@@ -320,48 +326,6 @@ FUNC_DEF void Stage1()
 
         {
             uint8_t found = 0;
-
-#if 0
-
-            if (found == 0)
-            {
-                puts("Searching for lv0.elf...\n");
-
-                if (CoreOS_FindFileEntry_Bank(os_bank_indicator, "lv0.elf", &lv0FileAddress, &lv0FileSize))
-                    found = 1;
-                else
-                    puts("File not found!\n");
-            }
-
-            if (found == 0)
-            {
-                puts("Searching for lv0.zelf...\n");
-
-                uint64_t zelfFileAddress;
-                uint64_t zelfFileSize;
-
-                if (CoreOS_FindFileEntry_Bank(os_bank_indicator, "lv0.zelf", &zelfFileAddress, &zelfFileSize))
-                {
-                    found = 1;
-
-                    puts("zelfFileAddress = ");
-                    print_hex(zelfFileAddress);
-
-                    puts(", zelfFileSize = ");
-                    print_decimal(zelfFileSize);
-
-                    puts("\n");
-
-                    lv0FileAddress = 0xC000000;
-                    lv0FileSize = (4 * 1024 * 1024);
-
-                    ZelfDecompress(zelfFileAddress, (void*)lv0FileAddress, &lv0FileSize, 1);
-                }
-                else
-                    puts("File not found!\n");
-            }
-
-#endif
 
             if (found == 0)
             {
@@ -410,79 +374,13 @@ FUNC_DEF void Stage1()
 #else
                     DecryptLv0Self((void*)lv0FileAddress, (const void*)lv0SelfFileAddress, 1);
 #endif
-
-                    uint64_t new_stagex_addr = 0x1010000;
-
-                    if (!is_emmc)
-                        Stagex_Relocate((const void*)0x2401F031000, 0x2401F031000, new_stagex_addr);
-
-#if HDDKEYDUMPER_ENABLED
-                    if ((hdd_key_dumper_flag == 0x1) && ((fwVersion >= 470) || isqCFW)) // dump request
-                    {
-                        sc_write_hdd_key_dumper_flag(0x2); // will dump soon
-
-                        uint8_t searchData[] = {0xE9, 0x22, 0x8C, 0x88, 0x78, 0x63, 0x9B, 0x24, 0x38, 0x00, 0x00, 0x03, 0xE9, 0x29, 0x00, 0x00, 0x3D, 0x29, 0x00, 0x04, 0x39, 0x29, 0x40, 0x1C, 0x7C, 0x03, 0x49, 0x2E, 0x4E, 0x80, 0x00, 0x20};
-                        uint8_t stage2jData[] = {0x48, 0x00, 0x00, 0x05, 0x7C, 0xA8, 0x02, 0xA6, 0x38, 0xA5, 0xFF, 0xFC, 0xE8, 0xA5, 0x00, 0x18, 0x7C, 0xA9, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x00, 0x00, 0x02, 0x40, 0x1F, 0x03, 0x11, 0x00};
-
-                        *((uint64_t*)(&stage2jData[sizeof(stage2jData) - 8])) = (new_stagex_addr + 0x100);
-
-                        puts("Installing stage2j... (HDDKeyDumper)\n");
-
-                        if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, sizeof(searchData), stage2jData, sizeof(stage2jData)))
-                        {
-                            puts("failed!\n");
-                            dead_beep();
-                        }
-                    }
-#endif
-
-                    // ANTI BRICK!!!
-                    // isqCFW!!!
-                    if ((fwVersion >= 470) || isqCFW || isqCFW_jig)
-                    {
-                        uint8_t searchData[] = {0x38, 0x60, 0x01, 0x00, 0x7C, 0x69, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x60, 0x00, 0x00, 0x00};
-                        uint8_t stage2jData[] = {0x48, 0x00, 0x00, 0x05, 0x7C, 0xA8, 0x02, 0xA6, 0x38, 0xA5, 0xFF, 0xFC, 0xE8, 0xA5, 0x00, 0x18, 0x7C, 0xA9, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x00, 0x00, 0x02, 0x40, 0x1F, 0x03, 0x11, 0x00};
-
-                        *((uint64_t*)(&stage2jData[sizeof(stage2jData) - 8])) = (new_stagex_addr + 0x100);
-
-                        puts("Installing stage2j...\n");
-
-                        if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, sizeof(searchData), stage2jData, sizeof(stage2jData)))
-                        {
-                            puts("Install failed!\n");
-
-                            if (isqCFW)
-                                dead_beep();
-                        }
-                    }
-                    else
-                        puts("fw too low!\n");
-
-                    // ANTI BRICK!!!
-                    if (isqCFW || isqCFW_jig)
-                    {
-                        // lv1.self -> lv1.qelf
-
-                        uint8_t searchData[] = {0x6C, 0x76, 0x31, 0x2E, 0x73, 0x65, 0x6C, 0x66};
-                        uint8_t replaceData[] = {0x6C, 0x76, 0x31, 0x2E, 0x71, 0x65, 0x6C, 0x66};
-
-                        puts("lv1.self -> lv1.qelf\n");
-
-                        if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, sizeof(searchData), replaceData, sizeof(replaceData)))
-                        {
-                            puts("failed!\n");
-                            dead_beep();
-                        }
-                    }
                 }
                 else
                     puts("File not found!\n");
             }
 
             if (found == 0)
-            {
                 dead_beep();
-            }
         }
 
         puts("lv0FileAddress = ");
@@ -493,21 +391,82 @@ FUNC_DEF void Stage1()
         print_decimal(lv0FileSize);
         puts("\n");
 
+        {
+#if HDDKEYDUMPER_ENABLED
+            if ((hdd_key_dumper_flag == 0x1) && ((fwVersion >= 470) || isqCFW)) // dump request
+            {
+                sc_write_hdd_key_dumper_flag(0x2); // will dump soon
+
+                uint8_t searchData[] = {0xE9, 0x22, 0x8C, 0x88, 0x78, 0x63, 0x9B, 0x24, 0x38, 0x00, 0x00, 0x03, 0xE9, 0x29, 0x00, 0x00, 0x3D, 0x29, 0x00, 0x04, 0x39, 0x29, 0x40, 0x1C, 0x7C, 0x03, 0x49, 0x2E, 0x4E, 0x80, 0x00, 0x20};
+                uint8_t stage2jData[] = {0x48, 0x00, 0x00, 0x05, 0x7C, 0xA8, 0x02, 0xA6, 0x38, 0xA5, 0xFF, 0xFC, 0xE8, 0xA5, 0x00, 0x18, 0x7C, 0xA9, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x00, 0x00, 0x02, 0x40, 0x1F, 0x03, 0x11, 0x00};
+
+                *((uint64_t*)(&stage2jData[sizeof(stage2jData) - 8])) = (new_stagex_addr + 0x100);
+
+                puts("Installing stage2j... (HDDKeyDumper)\n");
+
+                if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, sizeof(searchData), stage2jData, sizeof(stage2jData)))
+                {
+                    puts("failed!\n");
+                    dead_beep();
+                }
+            }
+#endif
+
+            // ANTI BRICK!!!
+            // isqCFW!!!
+            if ((fwVersion >= 470) || isqCFW || isqCFW_jig)
+            {
+                uint8_t searchData[] = {0x38, 0x60, 0x01, 0x00, 0x7C, 0x69, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x60, 0x00, 0x00, 0x00};
+                uint8_t stage2jData[] = {0x48, 0x00, 0x00, 0x05, 0x7C, 0xA8, 0x02, 0xA6, 0x38, 0xA5, 0xFF, 0xFC, 0xE8, 0xA5, 0x00, 0x18, 0x7C, 0xA9, 0x03, 0xA6, 0x4E, 0x80, 0x04, 0x20, 0x00, 0x00, 0x02, 0x40, 0x1F, 0x03, 0x11, 0x00};
+
+                *((uint64_t*)(&stage2jData[sizeof(stage2jData) - 8])) = (new_stagex_addr + 0x100);
+
+                puts("Installing stage2j...\n");
+
+                if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, sizeof(searchData), stage2jData, sizeof(stage2jData)))
+                {
+                    puts("Install failed!\n");
+
+                    if (isqCFW)
+                        dead_beep();
+                }
+            }
+            else
+                puts("fw too low!\n");
+
+            // ANTI BRICK!!!
+            if (isqCFW || isqCFW_jig)
+            {
+                // lv1.self -> lv1.qelf
+
+                uint8_t searchData[] = {0x6C, 0x76, 0x31, 0x2E, 0x73, 0x65, 0x6C, 0x66};
+                uint8_t replaceData[] = {0x6C, 0x76, 0x31, 0x2E, 0x71, 0x65, 0x6C, 0x66};
+
+                puts("lv1.self -> lv1.qelf\n");
+
+                if (!SearchAndReplace((void*)lv0FileAddress, lv0FileSize, searchData, sizeof(searchData), replaceData, sizeof(replaceData)))
+                {
+                    puts("failed!\n");
+                    dead_beep();
+                }
+            }
+        }
+
         puts("Loading lv0...\n");
         LoadElf(lv0FileAddress, 0x0, 1);
-
-        // write lv0 .vector
-        volatile uint64_t *ea0 = (volatile uint64_t *)0x0;
-        *ea0 = 0x50001010000;
-
-        puts("Booting lv0...\n");
-
-        eieio();
-
-        asm volatile("li 3, 0x100");
-        asm volatile("mtctr 3");
-        asm volatile("bctr");
     }
+
+    // write lv0 .vector
+    volatile uint64_t *ea0 = (volatile uint64_t *)0x0;
+    *ea0 = 0x50001010000;
+
+    puts("Booting lv0...\n");
+
+    eieio();
+
+    asm volatile("li 3, 0x100");
+    asm volatile("mtctr 3");
+    asm volatile("bctr");
 }
 
 __attribute__((section("main1"))) void stage1_main()

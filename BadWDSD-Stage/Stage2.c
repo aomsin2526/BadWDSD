@@ -90,69 +90,6 @@ FUNC_DEF void Stage2()
     uint16_t fwVersion = CoreOS2_Bank_GetFWVersion(os_bank_indicator);
 
     {
-#if 0
-
-        uint64_t lv1FileAddress;
-        uint64_t lv1FileSize;
-
-        uint8_t foundlv1file = 0;
-
-        {
-            if (foundlv1file == 0)
-            {
-                puts("Searching for lv1.elf...\n");
-
-                if (CoreOS_FindFileEntry_Bank(os_bank_indicator, "lv1.elf", &lv1FileAddress, &lv1FileSize))
-                    foundlv1file = 1;
-                else
-                    puts("File not found!\n");
-            }
-
-            if (foundlv1file == 0)
-            {
-                puts("Searching for lv1.zelf...\n");
-
-                uint64_t zelfFileAddress;
-                uint64_t zelfFileSize;
-
-                if (CoreOS_FindFileEntry_Bank(os_bank_indicator, "lv1.zelf", &zelfFileAddress, &zelfFileSize))
-                {
-                    foundlv1file = 1;
-
-                    puts("zelfFileAddress = ");
-                    print_hex(zelfFileAddress);
-
-                    puts(", zelfFileSize = ");
-                    print_decimal(zelfFileSize);
-
-                    puts("\n");
-
-                    lv1FileAddress = 0xC000000;
-                    lv1FileSize = (8 * 1024 * 1024);
-
-                    ZelfDecompress(zelfFileAddress, (void *)lv1FileAddress, &lv1FileSize, 1);
-                }
-                else
-                    puts("File not found!\n");
-            }
-        }
-
-        if (foundlv1file != 0)
-        {
-            puts("lv1FileAddress = ");
-            print_hex(lv1FileAddress);
-            puts("\n");
-
-            puts("lv1FileSize = ");
-            print_decimal(lv1FileSize);
-            puts("\n");
-
-            puts("Loading lv1...\n");
-            LoadElf(lv1FileAddress, 0x0, 1);
-        }
-
-#endif
-
         {
             static const uint64_t lv1DiffFileBuf_MaxSize = (64 * 1024);
             __attribute__((aligned(8))) uint8_t lv1DiffFileBuf[lv1DiffFileBuf_MaxSize];
@@ -218,8 +155,6 @@ FUNC_DEF void Stage2()
                 puts("File not found!\n");
         }
 
-        //static const uint64_t patchSearchSize = (8 * 1024 * 1024);
-
         {
             struct Stagex_spu_job_stage2_context_s job_context;
             job_context.is_qcfw_jig = 0;
@@ -235,7 +170,7 @@ FUNC_DEF void Stage2()
 
                 if (isqCFW)
                 {
-                    if (CoreOS2_FindFileEntry_CurrentBank("lv2Rkernel.self", NULL, NULL))
+                    if (CoreOS2_FindFileEntry_Bank(os_bank_indicator, "lv2Rkernel.self", NULL, NULL))
                     {
                         uint8_t tid = read_targetid();
 
@@ -309,25 +244,6 @@ FUNC_DEF void Stage2()
                 SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
             }
         }
-
-#if 0
-
-        // not working on 28nm
-        {
-            static const uint32_t vramClock = 800;
-
-            puts("Patching RSX vram clock to ");
-            print_decimal(vramClock);
-            puts("Mhz\n");
-
-            uint8_t searchData[] = {0x0a, 0x02, 0x00, 0x00, 0x00, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1a, 0x04};
-            uint8_t replaceData[] = {0x0a, 0x02, 0x00, 0x00, 0x00, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (vramClock / 25), 0x04};
-
-            if (!SearchAndReplace((void *)0x0, patchSearchSize, searchData, sizeof(searchData), replaceData, sizeof(replaceData)))
-                puts("Patch failed!\n");
-        }
-
-#endif
 
         if (isqCFW || (qcfw_lite_flag == 0x1))
         {
@@ -638,20 +554,20 @@ FUNC_DEF void Stage2()
 
             //
         }
-
-        if (isqCFW || isqCFW_jig)
-            sc_led_static_yellow();
-        else
-            sc_led_static_green();
-
-        puts("Booting lv1...\n");
-
-        eieio();
-
-        asm volatile("li 3, 0x100");
-        asm volatile("mtctr 3");
-        asm volatile("bctr");
     }
+
+    if (isqCFW || isqCFW_jig)
+        sc_led_static_yellow();
+    else
+        sc_led_static_green();
+
+    puts("Booting lv1...\n");
+
+    eieio();
+
+    asm volatile("li 3, 0x100");
+    asm volatile("mtctr 3");
+    asm volatile("bctr");
 }
 
 #if HDDKEYDUMPER_ENABLED

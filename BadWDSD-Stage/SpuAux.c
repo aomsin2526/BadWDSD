@@ -40,7 +40,10 @@ FUNC_DEF uint64_t SpuAux_Init(uint64_t spu_id, const void* elfFileData)
     //puts("SpuAux_Init()\n");
 
     if (elfFileData == NULL)
+    {
+        puts("elfFileData is null!\n");
         dead_beep();
+    }
 
     //puts("spu_id = ");
     //print_decimal(spu_id);

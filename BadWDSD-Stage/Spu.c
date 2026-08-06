@@ -524,11 +524,21 @@ FUNC_DEF void SPU_StopRequest(uint64_t spu_id)
     if ((status & SPU_STATUS_RUN_MASK) != 0)
     {
         // stop request
-        SPU_PS_Write32(spu_id, 0x0401C, 0x0);
+        SPU_Write_SPU_RUNCNTL(spu_id, 0x0);
 
         while ((status & SPU_STATUS_RUN_MASK) != 0)
             status = SPU_Read_SPU_STATUS(spu_id);
     }
+}
+
+FUNC_DEF void SPU_StartRequest(uint64_t spu_id)
+{
+    SPU_Write_SPU_RUNCNTL(spu_id, 0x1);
+}
+
+FUNC_DEF void SPU_DoIsoExitRequest(uint64_t spu_id)
+{
+    SPU_Write_SPU_RUNCNTL(spu_id, 0x2);
 }
 
 FUNC_DEF void SPU_IsoExitRequest(uint64_t spu_id)
@@ -538,11 +548,16 @@ FUNC_DEF void SPU_IsoExitRequest(uint64_t spu_id)
     if ((status & SPU_STATUS_ISOLATED_MASK) != 0)
     {
         // iso exit request
-        SPU_PS_Write32(spu_id, 0x0401C, 0x2);
+        SPU_DoIsoExitRequest(spu_id);
 
         while ((status & SPU_STATUS_ISOLATED_MASK) != 0)
             status = SPU_Read_SPU_STATUS(spu_id);
     }
+}
+
+FUNC_DEF void SPU_IsoLoadRequest(uint64_t spu_id)
+{
+    SPU_Write_SPU_RUNCNTL(spu_id, 0x3);
 }
 
 FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet)
@@ -624,7 +639,7 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet
     }
 
     // SPU_NPC[0:29] = entry (LS)
-    SPU_PS_Write32(spu_id, 0x04034, elfHdr->e_entry | 0x0);
+    SPU_Write_SPU_NPC(spu_id, elfHdr->e_entry);
 
     //eieio();
 

@@ -113,7 +113,7 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
 
     if (!ok)
     {
-        SPU_PS_Write32(spu_id, 0x0401C, 0x3);
+        SPU_IsoLoadRequest(spu_id);
         return;
     }
 
@@ -159,7 +159,7 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
     }
 
     eieio();
-    SPU_PS_Write32(spu_id, 0x0401C, 0x1);
+    SPU_StartRequest(spu_id);
 }
 
 FUNC_DEF uint32_t Stage6_GetSpuStatus(uint64_t spu_id)
@@ -228,7 +228,7 @@ FUNC_DEF void Stage6_RequestExitIsolation(uint64_t spu_id)
         }
     }
 
-    SPU_PS_Write32(spu_id, 0x0401C, 0x2);
+    SPU_DoIsoExitRequest(spu_id);
 }
 
 FUNC_DEF void Stage6_UpdateSPUStatusAndTransitionNotifierInShadowRegArea(uint64_t r3_2, uint64_t r4_2)

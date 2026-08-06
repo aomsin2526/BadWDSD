@@ -1,3 +1,5 @@
+#if 0
+
 FUNC_DEF uint64_t FindHvcallTable()
 {
     // if ((v[0] == 0x386000006463ffff) && (v[1] == 0x6063ffec4e800020))
@@ -33,6 +35,8 @@ FUNC_DEF uint64_t FindHvcallTable()
 
     return 0;
 }
+
+#endif
 
 FUNC_DEF void Stage3()
 {

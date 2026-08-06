@@ -268,7 +268,7 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
     struct HDDKeyDumper_Context_s context;
     HDDKeyDumper_Init(&context, spu_id);
 
-    SPU_Write_SPU_RUNCNTL(spu_id, 0x3);
+    SPU_IsoLoadRequest(spu_id);
 
     // wait for mbox...
     while (1)

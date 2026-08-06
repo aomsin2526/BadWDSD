@@ -31,10 +31,9 @@
 
 // Stage2:
 // 0x1010000 = stagex on ram
-// 0x2000000 = tmpMem
+// 0x2000000 = tmpMem/heap
 // 0xA000000 = tmpEa (HDDKeyDumper)
 // 0xDFFFF00 = stage_sp
-// 0xC000000 = temp lv1FileAddress
 
 // Stage3:
 // 0xB000000 = temp lv2DiffFileAddress

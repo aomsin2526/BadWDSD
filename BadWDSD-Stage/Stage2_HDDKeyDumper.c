@@ -92,7 +92,7 @@ FUNC_DEF void HDDKeyDumper_Init(struct HDDKeyDumper_Context_s* ctx, uint64_t spu
     else
     {
         puts("Unknown SB!!\n");
-        dead();
+        dead_beep();
     }
 
     memset(ctx->iv, 0, 16);
@@ -158,7 +158,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
     if (ea == 0x24003006000)
     {
         if (isGet || (dataSize != 4))
-            dead();
+            dead_beep();
 
         ctx->hostRndDataSize = 0;
         memcpy(&ctx->hostRndData[ctx->hostRndDataSize], dataBuf, dataSize);
@@ -167,7 +167,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
     else if ((ctx->hostRndDataSize > 0) && (ctx->hostRndDataSize != 32))
     {
         if (isGet || (dataSize != 4))
-            dead();
+            dead_beep();
 
         memcpy(&ctx->hostRndData[ctx->hostRndDataSize], dataBuf, dataSize);
         ctx->hostRndDataSize += dataSize;
@@ -187,7 +187,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
     if (ea == 0x24003006060)
     {
         if (!isGet || (dataSize != 4))
-            dead();
+            dead_beep();
 
         ctx->encdecRndDataSize = 0;
         memcpy(&ctx->encdecRndData[ctx->encdecRndDataSize], dataBuf, dataSize);
@@ -196,7 +196,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
     else if ((ctx->encdecRndDataSize > 0) && (ctx->encdecRndDataSize != 32))
     {
         if (!isGet || (dataSize != 4))
-            dead();
+            dead_beep();
 
         memcpy(&ctx->encdecRndData[ctx->encdecRndDataSize], dataBuf, dataSize);
         ctx->encdecRndDataSize += dataSize;
@@ -219,7 +219,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
     if (ea == ctx->ataDataKeyEa)
     {
         if (isGet || (dataSize != 64))
-            dead();
+            dead_beep();
 
         memcpy(ctx->ataDataKey, dataBuf, 64);
         spu_aes_decrypt_cbc(ctx->myspu_id, ctx->ataDataKey, 64, ctx->ataDataKey, ctx->sessionKey, 192, ctx->iv);
@@ -229,7 +229,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
     if (ea == ctx->ataTweakKeyEa)
     {
         if (isGet || (dataSize != 64))
-            dead();
+            dead_beep();
 
         memcpy(ctx->ataTweakKey, dataBuf, 64);
         spu_aes_decrypt_cbc(ctx->myspu_id, ctx->ataTweakKey, 64, ctx->ataTweakKey, ctx->sessionKey, 192, ctx->iv);
@@ -239,7 +239,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
     if (ea == ctx->encdecDataKeyEa)
     {
         if (isGet || (dataSize != 64))
-            dead();
+            dead_beep();
 
         memcpy(ctx->encdecDataKey, dataBuf, 64);
         spu_aes_decrypt_cbc(ctx->myspu_id, ctx->encdecDataKey, 64, ctx->encdecDataKey, ctx->sessionKey, 192, ctx->iv);
@@ -249,7 +249,7 @@ FUNC_DEF void HDDKeyDumper_ProcessMFCCommand(struct HDDKeyDumper_Context_s* ctx,
     if (ea == ctx->encdecTweakKeyEa)
     {
         if (isGet || (dataSize != 64))
-            dead();
+            dead_beep();
 
         memcpy(ctx->encdecTweakKey, dataBuf, 64);
         spu_aes_decrypt_cbc(ctx->myspu_id, ctx->encdecTweakKey, 64, ctx->encdecTweakKey, ctx->sessionKey, 192, ctx->iv);
@@ -372,7 +372,7 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
             if ((dsisr & 0x400000) != 0) // EACmp
             {
                 puts("not handled!!!\n");
-                dead();
+                dead_beep();
             }
             else if ((dsisr & 0x40000000) != 0)
             {
@@ -399,7 +399,7 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
                     if (!isFoundEntry)
                     {
                         puts("entry not found!!!\n");
-                        dead();
+                        dead_beep();
                     }
 
                     tmpEa += (foundEntry.ea % 4096);
@@ -446,7 +446,7 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
                     else
                     {
                         puts("unknown mfc command!!!\n");
-                        dead();
+                        dead_beep();
                     }
                 }
 
@@ -456,7 +456,7 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
             else
             {
                 puts("unknown dsisr!!!\n");
-                dead();
+                dead_beep();
             }
 
             SPU_ClearMF_INT_STAT_CLASS1(spu_id);
@@ -474,5 +474,5 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
         }
     }
 
-    dead();
+    dead_beep();
 }

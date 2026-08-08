@@ -587,7 +587,7 @@ __attribute__((section("main2"))) void stage2_main(uint64_t in_r3)
 #endif
         Stage2();
 
-    dead();
+    dead_beep();
 }
 
 __attribute__((noreturn, section("entry2"))) void stage2_entry()

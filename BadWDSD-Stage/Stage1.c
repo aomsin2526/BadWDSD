@@ -119,7 +119,7 @@ FUNC_DEF void WDSDTest()
     WDSDTest_2();
     WDSDTest_3();
 
-    dead();
+    dead_beep();
 }
 
 #endif
@@ -271,7 +271,7 @@ FUNC_DEF void Stage1()
         {
             sc_led_blinking_green();
             sc_puts("Wake source is BT!, waiting for power cycle by modchip...\n");
-            dead();
+            dead_beep();
         }
     }
     else
@@ -475,7 +475,7 @@ __attribute__((section("main1"))) void stage1_main()
 
     Stage1();
 
-    dead();
+    dead_beep();
 }
 
 __attribute__((noreturn, section("entry1"))) void stage1_entry()

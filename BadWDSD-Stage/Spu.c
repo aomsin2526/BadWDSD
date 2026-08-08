@@ -413,13 +413,13 @@ FUNC_DEF void SPU_SetSLB(uint64_t spu_id, uint64_t ea, uint64_t va)
     if ((ea & ~SPU_SLB_EA_MASK) != 0)
     {
         puts("Bad slb ea!!\n");
-        dead();
+        dead_beep();
     }
 
     if ((va & ~SPU_SLB_VA_MASK) != 0)
     {
         puts("Bad slb va!!\n");
-        dead();
+        dead_beep();
     }
 
     uint64_t esid = ea;
@@ -466,13 +466,13 @@ FUNC_DEF uint64_t SPU_SetTLB(uint64_t spu_id, uint64_t va, uint64_t ra)
     if ((va & ~SPU_TLB_VA_MASK) != 0)
     {
         puts("Bad tlb va!!\n");
-        dead();
+        dead_beep();
     }
 
     if ((ra & ~SPU_TLB_RA_MASK) != 0)
     {
         puts("Bad tlb ra!!\n");
-        dead();
+        dead_beep();
     }
 
     uint64_t vpn = va;
@@ -570,7 +570,7 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet
     if (*((const uint32_t *)elfHdr->e_ident) != 0x7F454C46)
     {
         puts("LoadElfSpu e_ident check failed!\n");
-        dead();
+        dead_beep();
     }
 
     if (!quiet)
@@ -705,10 +705,10 @@ struct SPU_MFCContextEntry_s
 FUNC_DEF void SPU_ReadMFCContextEntry(uint64_t spu_id, uint32_t entryIdx, struct SPU_MFCContextEntry_s* outEntry)
 {
     if (outEntry == NULL)
-        dead();
+        dead_beep();
 
     if (entryIdx >= 16)
-        dead();
+        dead_beep();
 
     uint64_t value0, value1, value2;
     //uint64_t value3;
@@ -759,7 +759,7 @@ FUNC_DEF void SPU_ModifyMFCContextEntry_EA(uint64_t spu_id, uint32_t entryIdx, u
 FUNC_DEF void SPU_ModifyMFCContextEntry_LS(uint64_t spu_id, uint32_t entryIdx, uint32_t ls)
 {
     if (ls >= 0x40000)
-        dead();
+        dead_beep();
 
     uint64_t spuAddress = (0x2000 + (0x20 * entryIdx)); // P2
 
@@ -778,7 +778,7 @@ FUNC_DEF void SPU_ModifyMFCContextEntry_LS(uint64_t spu_id, uint32_t entryIdx, u
 FUNC_DEF uint8_t SPU_FindMFCContextEntryByEA(uint64_t spu_id, uint64_t ea, uint32_t* outEntryIdx)
 {
     if (outEntryIdx == NULL)
-        dead();
+        dead_beep();
 
     struct SPU_MFCContextEntry_s entry;
 
@@ -799,7 +799,7 @@ FUNC_DEF uint8_t SPU_FindMFCContextEntryByEA(uint64_t spu_id, uint64_t ea, uint3
 FUNC_DEF uint8_t SPU_FindMFCContextEntryByLS(uint64_t spu_id, uint64_t ls, uint32_t* outEntryIdx)
 {
     if (outEntryIdx == NULL)
-        dead();
+        dead_beep();
 
     struct SPU_MFCContextEntry_s entry;
 

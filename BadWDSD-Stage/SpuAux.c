@@ -6,13 +6,13 @@ FUNC_DEF void SpuAux_CopyElfToMem(void* elfFileData, uint64_t elfFileData_MaxSiz
     if (!CoreOS2_FindFileEntry_Aux("Stagex_spu.elf", &fileFlashOffset, &fileSize))
     {
         puts("Stagex_spu.elf not found!\n");
-        dead();
+        dead_beep();
     }
 
     if (fileSize > elfFileData_MaxSize)
     {
         puts("Stagex_spu.elf too big!\n");
-        dead();
+        dead_beep();
     }
 
     FlashRead(fileFlashOffset, elfFileData, fileSize);

@@ -1653,7 +1653,7 @@ FUNC_DEF void dead_beep()
     WaitInMs(2000);
 
     sc_continuous_beep();
-    dead();
+    dead(); // dead_beep
 }
 
 //
@@ -1670,7 +1670,7 @@ FUNC_DEF struct Stagex_Context_s* GetStagexContext()
     if (ctx->magic != 0xca8fe91729035026)
     {
         puts("Stagex context not inited!!!\n");
-        dead();
+        dead_beep();
     }
 
     return ctx;
@@ -1888,7 +1888,7 @@ FUNC_DEF uint8_t calc_os_bank_indicator()
         return 0x00; // ros1
 
     puts("bad shadow value!\n");
-    dead();
+    dead_beep();
     return 0;
 }
 
@@ -2099,7 +2099,7 @@ FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset, uint8
     if (*((const uint32_t *)elfHdr->e_ident) != 0x7F454C46)
     {
         puts("LoadElf e_ident check failed!\n");
-        dead();
+        dead_beep();
     }
 
     puts("destAddressOffset = ");
@@ -3021,7 +3021,7 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
 
                 puts("\n");
 
-                dead();
+                dead_beep();
             }
         }
         else
@@ -3055,7 +3055,7 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
     if (*signature != 0x5446072c5516c2c6)
     {
         puts("bad signature!\n");
-        dead();
+        dead_beep();
     }
 
     volatile uint64_t* toc1_addr = (volatile uint64_t*)(new_stagex_addr + 0x910);
@@ -3117,7 +3117,7 @@ FUNC_DEF uint8_t* SimpleHeap_Alloc(struct SimpleHeap_s* ctx, uint64_t size, uint
         print_decimal(ctx->curPtr - endPlusOne);
         puts("bytes more\n");
 
-        dead();
+        dead_beep();
     }
 
     return (uint8_t*)addr;

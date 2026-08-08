@@ -299,7 +299,7 @@ __attribute__((section("main6"))) uint64_t stage6_main(
     else
     {
         lv1_puts("stage6_main bad r10!\n");
-        dead();
+        dead_beep();
     }
 
     return 0;

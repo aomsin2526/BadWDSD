@@ -131,6 +131,8 @@ FUNC_DEF void Stage1()
     real_sc_puts_init();
     sc_puts("Bad_WDSD Stage1 by Kafuu(aomsin2526)" " (Build Date: " __DATE__ " " __TIME__ ")\n");
 
+    print_pc();
+
 #if 0
 
     {
@@ -154,12 +156,6 @@ FUNC_DEF void Stage1()
     //
 
 #if STAGEX_DEBUG_ENABLED
-    uint64_t pc = get_pc();
-
-    real_puts("pc = ");
-    real_print_hex(pc);
-    real_puts("\n");
-
     uint8_t stagex_debug_flag = sc_read_stagex_debug_flag();
 
     real_puts("stagex_debug_flag = ");

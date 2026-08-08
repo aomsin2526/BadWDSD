@@ -72,13 +72,7 @@ FUNC_DEF void Stage2()
     puts(__TIME__);
     puts(")\n");
 
-#if STAGEX_DEBUG_ENABLED
-    uint64_t pc = get_pc();
-
-    real_puts("pc = ");
-    real_print_hex(pc);
-    real_puts("\n");
-#endif
+    print_pc();
 
     uint8_t os_bank_indicator = get_os_bank_indicator();
 

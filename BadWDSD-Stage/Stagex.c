@@ -3036,6 +3036,17 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
 
 #endif
 
+FUNC_DEF void print_pc()
+{
+#if LOGGING_ENABLED
+    uint64_t pc = get_pc();
+
+    puts("pc = ");
+    print_hex(pc);
+    puts("\n");
+#endif
+}
+
 FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)
 {
     puts("Stagex_Relocate,  ");

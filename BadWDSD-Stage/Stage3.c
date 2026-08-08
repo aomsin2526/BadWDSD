@@ -48,6 +48,8 @@ FUNC_DEF void Stage3()
     lv1_puts(__TIME__);
     lv1_puts(")\n");
 
+    print_pc();
+
     {
         {
             lv1_puts("Patching lv1 182/183\n");

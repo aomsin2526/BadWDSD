@@ -1,7 +1,6 @@
-FUNC_DEF uint8_t is_emmc()
+FUNC_DEF uint8_t FetchIsEmmc()
 {
-    // todo use sc eeprom value instead, set by modchip
-    return 1;
+    return (sc_read_flash_type() == 0x67) ? 1 : 0;
 }
 
 // do not change!!!
@@ -30,6 +29,9 @@ FUNC_DEF uint8_t emmc_is_sector_idx_valid_for_write(uint32_t sector_idx)
 
 FUNC_DEF uint8_t emmc_is_interrupt_asserted()
 {
+    if (!is_emmc)
+        dead_beep();
+
     const volatile uint32_t* v = (const volatile uint32_t*)0x24000FFF504;
 
     if ((*v & 1) == 0)
@@ -41,6 +43,9 @@ FUNC_DEF uint8_t emmc_is_interrupt_asserted()
 // outBuf[sector_count * emmc_sector_size]
 FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void* outBuf)
 {
+    if (!is_emmc)
+        dead_beep();
+
     uint8_t* outBuf_u8 = (uint8_t*)outBuf;
 
     //
@@ -48,7 +53,7 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
     if (sector_count == 0)
     {
         puts("bad sector_count!\n");
-        dead();
+        dead_beep();
     }
 
     for (uint32_t idx = 0; idx < sector_count; ++idx)
@@ -56,7 +61,7 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         if (!emmc_is_sector_idx_valid_for_read(sector_idx + idx))
         {
             puts("bad sector_idx!\n");
-            dead();
+            dead_beep();
         }
     }
 
@@ -104,7 +109,7 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         if (!((*p_intreg & 9) == 1))
         {
             puts("read_sector failed\n");
-            dead();
+            dead_beep();
         }
 
         *p_intreg &= 9;
@@ -173,7 +178,7 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         if (!((*p_intreg & 0xc) == 4))
         {
             puts("read_sector idle failed\n");
-            dead();
+            dead_beep();
         }
 
         *p_intreg &= 0xc;

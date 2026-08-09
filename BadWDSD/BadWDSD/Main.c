@@ -409,9 +409,9 @@ void main()
 #endif
 
 #if IS_EMMC
-    PrintLog("Flash is emmc\n");
+    PrintLog("Flash is eMMC\n");
 #else
-    PrintLog("Flash is nor\n");
+    PrintLog("Flash is NOR\n");
 #endif
 
     //

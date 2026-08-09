@@ -441,7 +441,7 @@ void Sc_Init()
 
             // flash_type
             {
-#if IS_EMMC
+#if IS_EMMC && 1
                 sprintf(cmdCtx.cmd, "w f07 67"); // emmc
 #else
                 sprintf(cmdCtx.cmd, "w f07 ff"); // nor

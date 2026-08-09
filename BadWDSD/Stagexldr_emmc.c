@@ -41,6 +41,8 @@ typedef uint64_t uintptr_t;
         asm volatile("sync");  \
     }
 
+register uint64_t is_emmc asm("r16");
+
 FUNC_DEF_NONSTATIC void HW_Init()
 {
     register uint64_t lr asm("r9");
@@ -809,6 +811,36 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
     }
 }
 
+FUNC_DEF uint8_t sc_read_eeprom8(uint8_t block_id, uint8_t offset)
+{
+    struct sc_packet_s pkt;
+
+    pkt.service_id = 0x14;
+    pkt.communication_tag = 1;
+
+    pkt.payload_size = 4;
+    pkt.data[0] = 0x20;
+
+    pkt.data[1] = block_id;  // block id
+    pkt.data[2] = offset; // offset
+    pkt.data[3] = 0x1;  // size
+
+    struct sc_packet_s outpkt;
+    sc_send_packet(&pkt, &outpkt);
+
+    if (outpkt.payload_size != 5)
+        dead();
+
+    return outpkt.data[4];
+}
+
+FUNC_DEF uint8_t sc_read_flash_type()
+{
+    // block id (0x3000)
+    // offset (0x3007)
+    return sc_read_eeprom8(0x20, 0x7);
+}
+
 FUNC_DEF void sc_triple_beep()
 {
     struct sc_packet_s pkt;
@@ -855,6 +887,24 @@ FUNC_DEF void sc_continuous_beep()
     sc_send_packet(&pkt, NULL);
 }
 
+FUNC_DEF void sc_shutdown()
+{
+    struct sc_packet_s pkt;
+
+    pkt.service_id = 0x13;
+    pkt.communication_tag = 1;
+
+    pkt.payload_size = 4;
+
+    pkt.data[0] = 0x11;
+    pkt.data[1] = 0x00;
+    pkt.data[2] = 0x00;
+    pkt.data[3] = 0x00;
+
+    sc_send_packet(&pkt, NULL);
+    dead();
+}
+
 FUNC_DEF void sc_soft_restart()
 {
     struct sc_packet_s pkt;
@@ -873,7 +923,70 @@ FUNC_DEF void sc_soft_restart()
     dead();
 }
 
+FUNC_DEF void dead_beep()
+{
+    sc_continuous_beep();
+    dead();
+}
+
 #include "Stagexldr_emmc_critical.c"
+
+FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)
+{
+    puts("Stagex_Relocate,  ");
+
+    print_hex(old_stagex_addr);
+    puts(" -> ");
+    print_hex(new_stagex_addr);
+
+    puts("\n");
+
+    static const uint64_t stagex_size = (48 * 1024);
+
+    memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
+
+    const volatile uint64_t* signature = (const volatile uint64_t*)(new_stagex_addr + 0x908);
+
+    if (*signature != 0x5446072c5516c2c6)
+    {
+        puts("bad signature!\n");
+        dead_beep();
+    }
+
+    volatile uint64_t* toc1_addr = (volatile uint64_t*)(new_stagex_addr + 0x910);
+    const volatile uint64_t* toc1_size = (const volatile uint64_t*)(new_stagex_addr + 0x918);
+
+    if (*toc1_size > 0)
+    {
+        volatile uint64_t* toc = (volatile uint64_t*)(new_stagex_addr + 0x900);
+        *toc -= old_stagex_addr;
+        *toc += new_stagex_addr;
+
+        *toc1_addr -= old_stagex_addr;
+        *toc1_addr += new_stagex_addr;
+
+        volatile uint64_t* toc1 = (volatile uint64_t*)(*toc1_addr);
+
+        for (uint64_t i = 0; i < (*toc1_size / 8); ++i)
+        {
+            toc1[i] -= old_stagex_addr;
+            toc1[i] += new_stagex_addr;
+        }
+    }
+}
+
+FUNC_DEF void RelocateStagexAndJumpToStage1(const void* stagex_data)
+{
+    uint64_t new_stagex_addr = 0x1010000;
+    Stagex_Relocate(stagex_data, 0x2401F031000, new_stagex_addr);
+
+    puts("Jumping to Stage1...\n");
+
+    asm volatile("mtctr %0" ::"r"(new_stagex_addr):);
+    asm volatile("bctr");
+
+    dead_beep();
+}
 
 FUNC_DEF void Stagexldr()
 {
@@ -894,7 +1007,7 @@ FUNC_DEF void Stagexldr()
         if ((payload_size == 0) || (payload_size > (1 * 1024 * 1024)))
         {
             puts("bad!!!\n");
-            dead();
+            dead_beep();
         }
 
         uint32_t crc32 = crc32c(0, (const uint8_t*)0x1000, payload_size);
@@ -902,32 +1015,36 @@ FUNC_DEF void Stagexldr()
         if (crc32 != payload_crc32)
         {
             puts("bad crc!!!\n");
-            dead();
+            dead_beep();
         }
 
         puts("crc32 check ok!\n");
     }
 
-    if (!is_emmc())
+    //
+
+    is_emmc = FetchIsEmmc();
+
+    //
+
+    if (!is_emmc)
     {
-        puts("flash is not emmc!!!\n");
-        dead();
+        puts("Flash is NOR\n");
+
+        RelocateStagexAndJumpToStage1((const void*)0x2401F031000);
+        dead_beep();
     }
 
-    puts("flash is emmc\n");
+    //
 
-    sc_continuous_beep();
-    WaitInMs(5000);
-    sc_triple_beep();
-
-    dead();
+    puts("Flash is eMMC\n");
+    dead_beep();
 }
 
 __attribute__((section("main"))) void stagexldr_main()
 {
     Stagexldr();
-
-    dead();
+    dead_beep();
 }
 
 __attribute__((noreturn, section("entry"))) void stagexldr_entry()

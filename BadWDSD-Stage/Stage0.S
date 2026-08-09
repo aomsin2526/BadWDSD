@@ -8,4 +8,4 @@ stage_entry:
     mtctr %r4
     bctr
 
-    .quad 0x2401F031000
+    .quad 0x2401FF21000

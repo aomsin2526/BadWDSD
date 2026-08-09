@@ -303,7 +303,7 @@ FUNC_DEF void Stage1()
     uint64_t new_stagex_addr = 0x1010000;
 
     if (!is_emmc)
-        Stagex_Relocate((const void*)0x2401F031000, 0x2401F031000, new_stagex_addr);
+        Stagex_Relocate((const void*)0x2401FF21000, 0x2401FF21000, new_stagex_addr);
 
     //
 

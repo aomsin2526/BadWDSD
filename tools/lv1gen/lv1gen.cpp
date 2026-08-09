@@ -265,16 +265,6 @@ void lv1gen(bool is4j, const char *inFilePath, const char *outFilePath, const ch
 #if 1
 
     {
-        printf("Writing 0x2401F031200 to offset 0x10120\n");
-
-        *((uint64_t *)&outData[0x10120]) = endswap64(0x2401F031200);
-    }
-
-#endif
-
-#if 1
-
-    {
         uint8_t searchData[] = { 0x38, 0x00, 0xFF, 0xEC, 0xF8, 0x03, 0x00, 0x28, 0x38, 0x60, 0xFF, 0xEC, 0x4E, 0x80, 0x00, 0x20 };
         
         printf("Installing stage3j...\n");
@@ -344,16 +334,6 @@ void lv1gen(bool is4j, const char *inFilePath, const char *outFilePath, const ch
 #if 1
 
     {
-        printf("Writing 0x2401F031400 to offset 0x10210\n");
-
-        *((uint64_t *)&outData[0x10210]) = endswap64(0x2401F031400);
-    }
-
-#endif
-
-#if 1
-
-    {
         uint8_t searchData[] = { 0xE9, 0x22, 0xCF, 0x08, 0x7C, 0x80, 0x23, 0x78, 0x7C, 0xA6, 0x2B, 0x78 };
         
         printf("Installing stage5j (appldr)...\n");
@@ -404,16 +384,6 @@ void lv1gen(bool is4j, const char *inFilePath, const char *outFilePath, const ch
             abort();
             return;
         }
-    }
-
-#endif
-
-#if 1
-
-    {
-        printf("Writing 0x2401F031700 to offset 0x10220\n");
-
-        *((uint64_t *)&outData[0x10220]) = endswap64(0x2401F031700);
     }
 
 #endif

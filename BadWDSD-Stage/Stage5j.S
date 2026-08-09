@@ -79,7 +79,7 @@ seg002:00000000002B2FF0                 b         sub_2B4DE8
 
 #endif
 
-// 0x2401F031400
+// 0x2401FF21400
 
 stage_entry:
     li %r10, 0x0 // 1 = appldr, 2 = lv2ldr, 3 = lv2ldr_rvk

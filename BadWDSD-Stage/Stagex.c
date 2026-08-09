@@ -2006,7 +2006,7 @@ FUNC_DEF uint8_t CoreOS2_FindFileEntry_Aux(const char *fileName, uint32_t *outFi
     if (is_emmc)
         dead_beep();
 
-    return CoreOS2_FindFileEntry(is_emmc ? 0 : 0xF21000, fileName, outFileFlashOffset, outFileSize);
+    return CoreOS2_FindFileEntry(is_emmc ? 0 : 0xF30000, fileName, outFileFlashOffset, outFileSize);
 }
 
 FUNC_DEF uint16_t CoreOS2_CurrentBank_GetFWVersion()
@@ -3057,7 +3057,7 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
 
     puts("\n");
 
-    static const uint64_t stagex_size = (48 * 1024);
+    static const uint64_t stagex_size = (60 * 1024);
 
     memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
 

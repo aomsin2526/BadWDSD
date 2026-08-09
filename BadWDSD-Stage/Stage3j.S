@@ -1,6 +1,6 @@
 .global stage_entry
 
-// 0x2401F031200
+// 0x2401FF21200
 
 stage_entry:
     li %r11, 0x120

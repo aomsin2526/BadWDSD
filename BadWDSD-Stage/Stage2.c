@@ -334,7 +334,7 @@ FUNC_DEF void Stage2()
             SimpleHeap_Init(&heap, (void*)heapAddr, heapSize);
 
             {
-                static const uint64_t stagex_size = (48 * 1024);
+                static const uint64_t stagex_size = (60 * 1024);
                 uint64_t old_stagex_addr = 0x1010000;
 
                 ctx->cached_Stagex = SimpleHeap_Alloc(&heap, stagex_size, 32);

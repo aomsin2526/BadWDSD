@@ -211,7 +211,7 @@ void Sc_Thread_x32_Stage0_nor()
         d[0] = swap_uint64(0x480000057C6802A6);
         d[1] = swap_uint64(0x3863FFFCE8830018);
         d[2] = swap_uint64(0x7C8903A64E800420);
-        d[3] = swap_uint64(0x000002401F031000);
+        d[3] = swap_uint64(0x000002401FF21000);
     }
 
     Xdr_GenerateReadyWDSLData_x32(data, wdslData0);
@@ -294,7 +294,7 @@ void Sc_Thread_x16_Stage0_nor()
         d[0] = swap_uint64(0x480000057C6802A6);
         d[1] = swap_uint64(0x3863FFFCE8830018);
         d[2] = swap_uint64(0x7C8903A64E800420);
-        d[3] = swap_uint64(0x000002401F031000);
+        d[3] = swap_uint64(0x000002401FF21000);
     }
 
     Xdr_GenerateReadyWDSLData_x16(data, wdslData0, wdslData1);

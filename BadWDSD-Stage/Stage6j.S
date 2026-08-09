@@ -59,7 +59,7 @@ E9 43 00 00 E9 63 00 08 E9 2A 00 08 3D 29 00 04 80 09 40 24 90 0B 00 30 E9 2B 0F
 
 #endif
 
-// 0x2401F031700
+// 0x2401FF21700
 
 stage_entry:
     li %r10, 0x69 // 1 = SPU_iso_load_request, 2 = __get_spu_status, 3 = request_exit_isolation, 4 = SPE_update_SPU_status_and_transition_notifier_in_shadow_reg_area

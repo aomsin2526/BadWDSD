@@ -439,6 +439,14 @@ void Sc_Init()
             // Sc_Rx: # addr=00001211 num=01 val=03:B1
             // Sc_Rx: OK 00000000:3A
 
+            // modchip v2
+            {
+                sprintf(cmdCtx.cmd, "w f10 02");
+                sprintf(cmdCtx.expectedResponse, "OK 00000000");
+
+                Sc_SendCommand(&cmdCtx);
+            }
+
             // flash_type
             {
 #if IS_EMMC && 1
@@ -502,6 +510,22 @@ void Sc_Init()
             // Sc_Rx: [mullion]$ w 48c24 00
             // Sc_Rx: w complete!
 
+            // modchip v2
+            {
+                sprintf(cmdCtx.cmd, "w 3010 02");
+                sprintf(cmdCtx.expectedResponse, "w complete!");
+
+                Sc_SendCommand(&cmdCtx);
+            }
+
+            // flash_type
+            {
+                sprintf(cmdCtx.cmd, "w 3007 ff"); // nor
+                sprintf(cmdCtx.expectedResponse, "w complete!");
+
+                Sc_SendCommand(&cmdCtx);
+            }
+
             if (banksel)
             {
                 // clear request_os_bank_indicator
@@ -529,14 +553,6 @@ void Sc_Init()
 
             {
                 sprintf(cmdCtx.cmd, "w 3000 %s", lite ? "01" : "00");
-                sprintf(cmdCtx.expectedResponse, "w complete!");
-
-                Sc_SendCommand(&cmdCtx);
-            }
-
-            // flash_type
-            {
-                sprintf(cmdCtx.cmd, "w 3007 ff"); // nor
                 sprintf(cmdCtx.expectedResponse, "w complete!");
 
                 Sc_SendCommand(&cmdCtx);

@@ -941,7 +941,7 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
 
     puts("\n");
 
-    static const uint64_t stagex_size = (48 * 1024);
+    static const uint64_t stagex_size = (60 * 1024);
 
     memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
 
@@ -978,7 +978,7 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
 FUNC_DEF void RelocateStagexAndJumpToStage1(const void* stagex_data)
 {
     uint64_t new_stagex_addr = 0x1010000;
-    Stagex_Relocate(stagex_data, 0x2401F031000, new_stagex_addr);
+    Stagex_Relocate(stagex_data, 0x2401FF21000, new_stagex_addr);
 
     puts("Jumping to Stage1...\n");
 
@@ -1031,7 +1031,7 @@ FUNC_DEF void Stagexldr()
     {
         puts("Flash is NOR\n");
 
-        RelocateStagexAndJumpToStage1((const void*)0x2401F031000);
+        RelocateStagexAndJumpToStage1((const void*)0x2401FF21000);
         dead_beep();
     }
 

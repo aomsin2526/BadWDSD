@@ -474,7 +474,7 @@ void create_coreos(const char *inDir, const char *rosPath)
         {
             if (inFileSize > 0x10000)
             {
-                printf("Stagex_aux.bin is bigger than 0x10000. This is not allowed until 0xF31000 bug is fixed\n");
+                printf("Stagex_aux.bin is bigger than 0x10000!!!\n");
 
                 abort();
                 return;

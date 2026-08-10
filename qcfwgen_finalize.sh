@@ -30,4 +30,18 @@ printf "w fa0 ${Stagex_size_hex:0:2} ${Stagex_size_hex:2:2} ${Stagex_size_hex:4:
 printf "w fa4 ${Stagex_crc32:0:2} ${Stagex_crc32:2:2} ${Stagex_crc32:4:2} ${Stagex_crc32:6:2}\n" >> qcfw_sc_eeprom.txt
 
 printf "w fa8 ${Stagex_aux_size_hex:0:2} ${Stagex_aux_size_hex:2:2} ${Stagex_aux_size_hex:4:2} ${Stagex_aux_size_hex:6:2}\n" >> qcfw_sc_eeprom.txt
-printf "w fac ${Stagex_aux_crc32:0:2} ${Stagex_aux_crc32:2:2} ${Stagex_aux_crc32:4:2} ${Stagex_aux_crc32:6:2}" >> qcfw_sc_eeprom.txt
+printf "w fac ${Stagex_aux_crc32:0:2} ${Stagex_aux_crc32:2:2} ${Stagex_aux_crc32:4:2} ${Stagex_aux_crc32:6:2}\n\n" >> qcfw_sc_eeprom.txt
+
+printf "w f08 ${Coreos_crc32:0:2} ${Coreos_crc32:2:2} ${Coreos_crc32:4:2} ${Coreos_crc32:6:2}\n" >> qcfw_sc_eeprom.txt
+
+Coreos2_crc32=$Coreos_crc32
+if [ -f "CoreOS_2.bin" ]; then
+    echo "CoreOS_2.bin found!"
+    Coreos2_crc32=$(crc32 CoreOS_2.bin)
+else
+    echo "CoreOS_2.bin not found, will use CoreOS.bin instead"
+fi
+
+printf "w f0c ${Coreos2_crc32:0:2} ${Coreos2_crc32:2:2} ${Coreos2_crc32:4:2} ${Coreos2_crc32:6:2}" >> qcfw_sc_eeprom.txt
+
+echo "qcfwgen_finalize done"

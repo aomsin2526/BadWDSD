@@ -7,6 +7,8 @@
 
 # inros.bin (OFW)
 
+# CoreOS_2.bin (normal qcfw)
+
 if [[ $# -eq 0 ]] ; then
     echo 'missing args'
     exit 1

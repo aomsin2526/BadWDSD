@@ -64,6 +64,9 @@ typedef uint64_t uintptr_t;
         asm volatile("sync");  \
     }
 
+static const uint64_t stagex_max_size = (60 * 1024);
+static const uint64_t stagex_aux_max_size = (64 * 1024);
+
 FUNC_DECL void dead();
 
 FUNC_DECL uint64_t GetTimeInNs();
@@ -1469,6 +1472,58 @@ FUNC_DEF void sc_write_encdec_tweak_key(const uint8_t* in)
     // offset (0x3080 - 0x309f)
     for (uint32_t i = 0; i < 32; ++i)
         sc_write_eeprom8(0x20, (0x80 + i), in[i]);
+}
+
+FUNC_DEF uint32_t sc_read_stagex_size()
+{
+    uint32_t v;
+    uint8_t* v2 = (uint8_t*)&v;
+
+    // block id (0x3000)
+    // offset (0x30a0 - 0x30a3)
+    for (uint32_t i = 0; i < 4; ++i)
+        v2[i] = sc_read_eeprom8(0x20, (0xa0 + i));
+
+    return v;
+}
+
+FUNC_DEF uint32_t sc_read_stagex_crc32()
+{
+    uint32_t v;
+    uint8_t* v2 = (uint8_t*)&v;
+
+    // block id (0x3000)
+    // offset (0x30a4 - 0x30a7)
+    for (uint32_t i = 0; i < 4; ++i)
+        v2[i] = sc_read_eeprom8(0x20, (0xa4 + i));
+
+    return v;
+}
+
+FUNC_DEF uint32_t sc_read_stagex_aux_size()
+{
+    uint32_t v;
+    uint8_t* v2 = (uint8_t*)&v;
+
+    // block id (0x3000)
+    // offset (0x30a8 - 0x30ab)
+    for (uint32_t i = 0; i < 4; ++i)
+        v2[i] = sc_read_eeprom8(0x20, (0xa8 + i));
+
+    return v;
+}
+
+FUNC_DEF uint32_t sc_read_stagex_aux_crc32()
+{
+    uint32_t v;
+    uint8_t* v2 = (uint8_t*)&v;
+
+    // block id (0x3000)
+    // offset (0x30ac - 0x30af)
+    for (uint32_t i = 0; i < 4; ++i)
+        v2[i] = sc_read_eeprom8(0x20, (0xac + i));
+
+    return v;
 }
 
 FUNC_DEF void sc_query_system_power_up_cause(uint64_t* outCause) // [2]
@@ -3057,7 +3112,7 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
 
     puts("\n");
 
-    static const uint64_t stagex_size = (60 * 1024);
+    static const uint64_t stagex_size = stagex_max_size;
 
     memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
 

@@ -429,7 +429,7 @@ FUNC_DEF void Stage1()
 
 #if STAGE0_DECRYPTLV0SELF_SPU_ENABLED
                     {
-                        static const uint64_t stagexSpuElf_MaxSize = (64 * 1024);
+                        static const uint64_t stagexSpuElf_MaxSize = stagex_aux_max_size;
                         __attribute__((aligned(8))) uint8_t stagexSpuElf[stagexSpuElf_MaxSize];
 
                         SpuAux_CopyElfToMem(stagexSpuElf, stagexSpuElf_MaxSize);

@@ -10,8 +10,8 @@
 
 #define SC_PUTS_BUFFER_ENABLED 1
 
-#define LOGGING_ENABLED 1
-#define SC_LV1_LOGGING_ENABLED 1
+//#define LOGGING_ENABLED 1
+//#define SC_LV1_LOGGING_ENABLED 1
 
 //#define STAGE5_LOG_ENABLED 1
 
@@ -221,6 +221,34 @@ FUNC_DEF uint8_t IsLogEnabled()
 
     return 1;
 }
+
+//
+
+FUNC_DEF uint64_t msr_load()
+{
+    uint64_t v;
+    asm volatile("mfmsr %0":"=r"(v)::);
+
+    return v;
+}
+
+FUNC_DEF void msr_store(uint64_t v)
+{
+    asm volatile("mtmsr %0"::"r"(v):);
+}
+
+FUNC_DEF uint64_t intr_disable()
+{
+    uint64_t old_val = msr_load();
+
+    uint64_t new_val = old_val;
+    new_val &= ~(1ULL << 15); // EE
+    msr_store(new_val);
+
+    return old_val;
+}
+
+//
 
 // PPU core init
 FUNC_DEF_NONSTATIC void HW_Init()
@@ -1813,6 +1841,13 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         }
     }
 
+    //
+
+    uint64_t msr = 0;
+
+    if (IsLv1())
+        msr = intr_disable();
+
     // start_read_sector
 
     {
@@ -1933,6 +1968,13 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
 
         //
     }
+
+    //
+
+    if (IsLv1())
+        msr_store(msr);
+
+    //
 }
 
 FUNC_DEF void emmc_read(uint64_t offset, void* data, uint64_t size)

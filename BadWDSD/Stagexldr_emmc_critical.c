@@ -1,3 +1,5 @@
+//
+
 FUNC_DEF uint8_t FetchIsEmmc()
 {
     //return (sc_read_flash_type() == 0x67) ? 1 : 0;
@@ -273,3 +275,44 @@ FUNC_DEF void emmc_read(uint64_t offset, void* data, uint64_t size)
         }
     }
 }
+
+//
+
+struct ros_s
+{
+    uint64_t offset1; // 0x20 or 0x700010
+    uint64_t offset2; // 0x20 or 0x700010
+
+    uint64_t region_size; // 0xE00000
+
+    uint64_t unknown; // 0
+};
+
+FUNC_DEF void CheckRos(const struct ros_s* ros)
+{
+    if (!((ros->offset1 == 0x20) || (ros->offset1 == 0x700010)))
+    {
+        puts("bad offset1!\n");
+        dead_beep();
+    }
+
+    if (!((ros->offset2 == 0x20) || (ros->offset2 == 0x700010)))
+    {
+        puts("bad offset2!\n");
+        dead_beep();
+    }
+
+    if (ros->region_size != 0xE00000)
+    {
+        puts("bad region_size!\n");
+        dead_beep();
+    }
+
+    if (ros->unknown != 0)
+    {
+        puts("bad unknown!\n");
+        dead_beep();
+    }
+}
+
+//

@@ -1015,7 +1015,7 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
 
 FUNC_DEF void RelocateStagexAndJumpToStage1(const void* stagex_data)
 {
-    uint64_t new_stagex_addr = 0x1010000;
+    static const uint64_t new_stagex_addr = 0x1010000;
     Stagex_Relocate(stagex_data, 0x2401FF21000, new_stagex_addr);
 
     puts("Jumping to Stage1...\n");
@@ -1025,47 +1025,6 @@ FUNC_DEF void RelocateStagexAndJumpToStage1(const void* stagex_data)
 
     dead_beep();
 }
-
-//
-
-struct ros_s
-{
-    uint64_t offset1; // 0x20 or 0x700010
-    uint64_t offset2; // 0x20 or 0x700010
-
-    uint64_t region_size; // 0xE00000
-
-    uint64_t unknown; // 0
-};
-
-FUNC_DEF void CheckRos(const struct ros_s* ros)
-{
-    if (!((ros->offset1 == 0x20) || (ros->offset1 == 0x700010)))
-    {
-        puts("bad offset1!\n");
-        dead_beep();
-    }
-
-    if (!((ros->offset2 == 0x20) || (ros->offset2 == 0x700010)))
-    {
-        puts("bad offset2!\n");
-        dead_beep();
-    }
-
-    if (ros->region_size != 0xE00000)
-    {
-        puts("bad region_size!\n");
-        dead_beep();
-    }
-
-    if (ros->unknown != 0)
-    {
-        puts("bad unknown!\n");
-        dead_beep();
-    }
-}
-
-//
 
 FUNC_DEF void Stagexldr()
 {
@@ -1172,7 +1131,7 @@ FUNC_DEF void Stagexldr()
     //
 
     {
-        uint64_t stagex_addr = 0x1010000;
+        static const uint64_t stagex_addr = 0x1010000;
 
         emmc_read(0xA1000, (void*)stagex_addr, stagex_max_size);
         RelocateStagexAndJumpToStage1((const void*)stagex_addr);

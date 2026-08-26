@@ -18,6 +18,7 @@
 // Stagexldr_emmc:
 // runs at 0x1000
 // 0x1FFFF00 = sp
+// 0x3000000 = tmpBuf
 
 // Stagex:
 // 0xA00 - 0xBFF = Stagex_Context_s

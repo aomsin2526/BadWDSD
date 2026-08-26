@@ -868,11 +868,51 @@ FUNC_DEF void sc_write_shadow_os_bank_indicator(uint8_t val)
     sc_write_eeprom8(0x20, 0x1, val);
 }
 
+FUNC_DEF uint8_t sc_read_request_os_bank_indicator()
+{
+    // block id (0x3000)
+    // offset (0x3002)
+    return sc_read_eeprom8(0x20, 0x2);
+}
+
+FUNC_DEF void sc_write_request_os_bank_indicator(uint8_t val)
+{
+    // block id (0x3000)
+    // offset (0x3002)
+    sc_write_eeprom8(0x20, 0x2, val);
+}
+
 FUNC_DEF uint8_t sc_read_flash_type()
 {
     // block id (0x3000)
     // offset (0x3007)
     return sc_read_eeprom8(0x20, 0x7);
+}
+
+FUNC_DEF uint32_t sc_read_ros0_crc32()
+{
+    uint32_t v;
+    uint8_t* v2 = (uint8_t*)&v;
+
+    // block id (0x3000)
+    // offset (0x3008 - 0x300b)
+    for (uint32_t i = 0; i < 4; ++i)
+        v2[i] = sc_read_eeprom8(0x20, (0x8 + i));
+
+    return v;
+}
+
+FUNC_DEF uint32_t sc_read_ros1_crc32()
+{
+    uint32_t v;
+    uint8_t* v2 = (uint8_t*)&v;
+
+    // block id (0x3000)
+    // offset (0x300c - 0x300f)
+    for (uint32_t i = 0; i < 4; ++i)
+        v2[i] = sc_read_eeprom8(0x20, (0xc + i));
+
+    return v;
 }
 
 FUNC_DEF void sc_triple_beep()
@@ -1115,16 +1155,61 @@ FUNC_DEF void Stagexldr()
     //
 
     {
-        struct ros_s ros;
-        emmc_read(0xC0000, &ros, sizeof(ros));
+        uint8_t request_os_bank_indicator = sc_read_request_os_bank_indicator();
 
-        CheckRos(&ros);
+        puts("request_os_bank_indicator = ");
+        print_hex(request_os_bank_indicator);
+        puts("\n");
 
-        uint8_t shadow_os_bank_indicator = ((ros.offset1 == 0x20) ? 0x1 : 0x2); // ros0 or ros1
+        sc_write_request_os_bank_indicator(0xff);
+
+        if (request_os_bank_indicator == 0x1)
+            switch_ros(0xff);
+        else if (request_os_bank_indicator == 0x2)
+            switch_ros(0x00);
+    }
+
+    //
+
+    {
+        uint8_t real_os_bank_indicator = get_os_bank_indicator_from_ros();
+
+        puts("real_os_bank_indicator = ");
+        print_hex(real_os_bank_indicator);
+        puts("\n");
+
+        uint8_t shadow_os_bank_indicator = ((real_os_bank_indicator == 0xFF) ? 0x1 : 0x2); // ros0 or ros1
         sc_write_shadow_os_bank_indicator(shadow_os_bank_indicator);
 
         puts("shadow_os_bank_indicator = ");
         print_hex(shadow_os_bank_indicator);
+        puts("\n");
+    }
+
+    //
+
+    {
+        static uint64_t offset = 0xEF9A000;
+
+        uint8_t buf[emmc_sector_size];
+
+        emmc_read(offset, buf, emmc_sector_size);
+        puts("before:\n");
+        hexdump(buf, emmc_sector_size);
+        puts("\n");
+
+        uint8_t v = 0x23;
+        emmc_write(offset + 45, &v, 1);
+
+        v = 0x69;
+        emmc_write(offset + 49, &v, 1);
+
+        v = 0xff;
+        emmc_write(offset + 50, &v, 1);
+
+        emmc_read(offset, buf, emmc_sector_size);
+        puts("after:\n");
+        hexdump(buf, emmc_sector_size);
         puts("\n");
     }
 

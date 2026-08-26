@@ -29,6 +29,8 @@ FUNC_DEF uint8_t FetchIsEmmc()
 static const uint32_t emmc_sector_size = 512;
 static const uint32_t emmc_sector_count = 0x1893000;
 
+static const uint64_t emmc_max_size = (((uint64_t)emmc_sector_count) * emmc_sector_size);
+
 FUNC_DEF uint8_t emmc_is_sector_idx_valid_for_read(uint32_t sector_idx)
 {
     if (sector_idx >= emmc_sector_count)
@@ -209,6 +211,157 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
     }
 }
 
+FUNC_DEF void emmc_erase_sector(uint32_t sector_idx)
+{
+    if (!is_emmc)
+        dead_beep();
+
+    //
+
+    if (!emmc_is_sector_idx_valid_for_write(sector_idx))
+    {
+        puts("bad sector_idx!\n");
+        dead_beep();
+    }
+
+    // start_erase_sector
+
+    {
+        {
+            volatile uint16_t* p_intenreg = (volatile uint16_t*)0x2401FC44012;
+            volatile uint16_t* p_count = (volatile uint16_t*)0x2401FC44006;
+
+            volatile uint16_t* p_high = (volatile uint16_t*)0x2401FC44008;
+            volatile uint16_t* p_low = (volatile uint16_t*)0x2401FC4400A;
+
+            *p_intenreg = 0xc;
+            *p_count = 1;
+
+            *p_high = (uint16_t)(sector_idx / 0x10000);
+            *p_low = (uint16_t)sector_idx;
+
+            eieio();
+        }
+
+        {
+            volatile uint16_t* p_cmd = (volatile uint16_t*)0x2401FC4400C;
+            *p_cmd = 0x40; // !!!!!! ERASE !!!!!!
+
+            eieio();
+        }
+    }
+
+    // erase_sector
+
+    {
+        //
+
+        while (!emmc_is_interrupt_asserted()) {}
+
+        //
+
+        volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401FC44010;
+
+        if (!((*p_intreg & 0xc) == 4))
+        {
+            puts("erase_sector erase failed\n");
+            dead_beep();
+        }
+
+        *p_intreg &= 0xc;
+
+        //
+    }
+}
+
+// inBuf[emmc_sector_size]
+FUNC_DEF void emmc_write_sector(uint32_t sector_idx, const void* inBuf)
+{
+    if (!is_emmc)
+        dead_beep();
+
+    const uint8_t* inBuf_u8 = (const uint8_t*)inBuf;
+
+    //
+
+    emmc_erase_sector(sector_idx);
+
+    // start_write_sector
+
+    {
+        {
+            volatile uint16_t* p_intenreg = (volatile uint16_t*)0x2401FC44012;
+            volatile uint16_t* p_count = (volatile uint16_t*)0x2401FC44006;
+
+            volatile uint16_t* p_high = (volatile uint16_t*)0x2401FC44008;
+            volatile uint16_t* p_low = (volatile uint16_t*)0x2401FC4400A;
+
+            *p_intenreg = 0xe;
+            *p_count = 1;
+
+            *p_high = (uint16_t)(sector_idx / 0x10000);
+            *p_low = (uint16_t)sector_idx;
+
+            eieio();
+        }
+
+        {
+            volatile uint16_t* p_cmd = (volatile uint16_t*)0x2401FC4400C;
+            *p_cmd = 0x38; // !!!!!! WRITE !!!!!!
+
+            eieio();
+        }
+    }
+
+    // write_sector
+
+    uint64_t curInBufOffset = 0; // in bytes
+
+    {
+        //
+
+        while (!emmc_is_interrupt_asserted()) {}
+
+        //
+
+        volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401FC44010;
+
+        if (!((*p_intreg & 2) != 0))
+        {
+            puts("write_sector failed 1\n");
+            dead_beep();
+        }
+
+        *p_intreg = 2;
+
+        //
+
+        for (uint32_t i2 = 0; i2 < (emmc_sector_size / 2); ++i2)
+        {
+            volatile uint16_t* p_data = (volatile uint16_t*)0x2401FC44000;
+
+            *p_data = *((const uint16_t*)(&inBuf_u8[curInBufOffset]));
+            curInBufOffset += 2;
+        }
+
+        //
+
+        while (!emmc_is_interrupt_asserted()) {}
+
+        //
+
+        if (!((*p_intreg & 4) != 0))
+        {
+            puts("write_sector failed 2\n");
+            dead_beep();
+        }
+
+        *p_intreg = 4;
+
+        //
+    }
+}
+
 FUNC_DEF void emmc_read(uint64_t offset, void* data, uint64_t size)
 {
     uint8_t* dataa = (uint8_t*)data;
@@ -216,7 +369,7 @@ FUNC_DEF void emmc_read(uint64_t offset, void* data, uint64_t size)
     if (size == 0)
         return;
 
-    if ((offset + size) > 13193183232) // 0x1893000 * 512
+    if ((offset + size) > emmc_max_size)
     {
         puts("emmc_read overflow!!!\n");
         dead_beep();
@@ -276,6 +429,62 @@ FUNC_DEF void emmc_read(uint64_t offset, void* data, uint64_t size)
     }
 }
 
+FUNC_DEF void emmc_write(uint64_t offset, const void* data, uint64_t size)
+{
+    const uint8_t* dataa = (const uint8_t*)data;
+
+    if (size == 0)
+        return;
+
+    if ((offset + size) > emmc_max_size)
+    {
+        puts("emmc_read overflow!!!\n");
+        dead_beep();
+    }
+
+    static const uint32_t sector_size = emmc_sector_size;
+
+    uint8_t buf[sector_size];
+
+    uint64_t curOffset = offset;
+    uint64_t curDataOffset = 0;
+
+    uint64_t left = size;
+
+    while (left > 0)
+    {
+        uint32_t processSize = (left > sector_size) ? sector_size : left;
+        uint32_t zzz = (curOffset % sector_size);
+        uint32_t yyy = (sector_size - zzz);
+        uint32_t xxx = (yyy > processSize) ? processSize : yyy;
+
+        uint32_t sector_idx = (curOffset / sector_size);
+
+        if ((zzz != 0) || (processSize != sector_size))
+        {
+            emmc_read_sectors(sector_idx, 1, buf);
+
+            memcpy(&buf[zzz], &dataa[curDataOffset], xxx);
+
+            emmc_write_sector(sector_idx, buf);
+
+            curOffset += xxx;
+            curDataOffset += xxx;
+
+            left -= xxx;
+        }
+        else
+        {
+            emmc_write_sector(sector_idx, &dataa[curDataOffset]);
+
+            curOffset += processSize;
+            curDataOffset += processSize;
+
+            left -= processSize;
+        }
+    }
+}
+
 //
 
 struct ros_s
@@ -288,8 +497,14 @@ struct ros_s
     uint64_t unknown; // 0
 };
 
-FUNC_DEF void CheckRos(const struct ros_s* ros)
+FUNC_DEF void check_ros(const struct ros_s* ros)
 {
+    if (sizeof(struct ros_s) != 32)
+    {
+        puts("bad sizeof!\n");
+        dead_beep();
+    }
+
     if (!((ros->offset1 == 0x20) || (ros->offset1 == 0x700010)))
     {
         puts("bad offset1!\n");
@@ -299,6 +514,12 @@ FUNC_DEF void CheckRos(const struct ros_s* ros)
     if (!((ros->offset2 == 0x20) || (ros->offset2 == 0x700010)))
     {
         puts("bad offset2!\n");
+        dead_beep();
+    }
+
+    if (ros->offset1 != ros->offset2)
+    {
+        puts("bad offsets!\n");
         dead_beep();
     }
 
@@ -313,6 +534,118 @@ FUNC_DEF void CheckRos(const struct ros_s* ros)
         puts("bad unknown!\n");
         dead_beep();
     }
+}
+
+FUNC_DEF uint8_t get_os_bank_indicator_from_ros()
+{
+    struct ros_s ros;
+    emmc_read(0xC0000, &ros, sizeof(ros));
+    check_ros(&ros);
+
+    uint64_t offset = ros.offset1;
+
+    if (offset == 0x20) // ros0
+        return 0xff;
+    else if (offset == 0x700010) // ros1
+        return 0x00;
+
+    puts("bad!!!\n");
+    dead_beep();
+    return 0;
+}
+
+FUNC_DEF void switch_ros(uint8_t os_bank_indicator)
+{
+    puts("switch_ros()\n");
+
+    puts("os_bank_indicator = ");
+    print_hex(os_bank_indicator);
+    puts("\n");
+
+    uint8_t ros_os_bank_indicator = get_os_bank_indicator_from_ros();
+
+    puts("ros_os_bank_indicator = ");
+    print_hex(ros_os_bank_indicator);
+    puts("\n");
+
+    if (os_bank_indicator == ros_os_bank_indicator)
+    {
+        puts("skip\n");
+        return;
+    }
+
+    uint32_t expected_ros_crc32 = 0;
+    uint32_t ros_flash_offset = 0;
+
+    uint64_t ros_offset = 0; // 0x20 or 0x700010
+
+    if (os_bank_indicator == 0xff) // ros0
+    {
+        puts("switch to ros0...\n");
+
+        expected_ros_crc32 = sc_read_ros0_crc32();
+        ros_flash_offset = 0xC0020;
+
+        ros_offset = 0x20;
+    }
+    else if (os_bank_indicator == 0x00) // ros1
+    {
+        puts("switch to ros1...\n");
+
+        expected_ros_crc32 = sc_read_ros1_crc32();
+        ros_flash_offset = 0x7C0010;
+
+        ros_offset = 0x700010;
+    }
+    else
+    {
+        puts("bad!!!\n");
+        dead_beep();
+    }
+
+    puts("expected_ros_crc32 = ");
+    print_hex(expected_ros_crc32);
+    puts("\n");
+
+    puts("ros_flash_offset = ");
+    print_hex(ros_flash_offset);
+    puts("\n");
+
+    puts("ros_offset = ");
+    print_hex(ros_offset);
+    puts("\n");
+
+    uint32_t ros_crc32 = 0;
+
+    {
+        uint8_t* tmpBuf = (uint8_t*)0x3000000;
+        emmc_read(ros_flash_offset, tmpBuf, 0x6FFFF0);
+
+        ros_crc32 = crc32c(0, tmpBuf, 0x6FFFF0);
+
+        if (ros_crc32 != expected_ros_crc32)
+        {
+            puts("crc32 check failed!!!\n");
+            dead_beep();
+        }
+
+        puts("crc32 check ok!\n");
+    }
+
+    {
+        struct ros_s ros;
+
+        ros.offset1 = ros_offset;
+        ros.offset2 = ros_offset;
+
+        ros.region_size = 0xE00000;
+        ros.unknown = 0;
+
+        check_ros(&ros);
+        emmc_write(0xC0000, &ros, sizeof(ros));
+    }
+
+    puts("switch_ros done\n");
 }
 
 //

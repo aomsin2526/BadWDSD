@@ -57,7 +57,7 @@ void XdrCmd_SetJunk2(volatile struct XdrCmd_s *cmd, uint8_t value)
     cmd->value |= ((uint32_t)value << XdrCmd_Junk2_ShiftCount) & XdrCmd_Junk2_Mask;
 }
 
-void Xdr_SendCmd(volatile struct XdrCmd_s cmd)
+uint32_t XdrCmd_GetValueForSendRaw(volatile struct XdrCmd_s cmd)
 {
     XdrCmd_SetStart(&cmd, 0xc);
 
@@ -69,10 +69,11 @@ void Xdr_SendCmd(volatile struct XdrCmd_s cmd)
     if (scmd == 0x2 || scmd == 0x3) // read
         XdrCmd_SetSwd(&cmd, 0);
 
-    uint32_t value = XdrCmd_GetValue(&cmd);
+    return XdrCmd_GetValue(&cmd);
+}
 
-    //
-
+void Xdr_SendRawCmd(uint32_t value)
+{
     uint32_t i = 31;
 
     while (1)
@@ -115,6 +116,11 @@ void Xdr_SendCmd(volatile struct XdrCmd_s cmd)
     //
 
     GPIO_FLOAT2(XDR_GPO_CMD_PIN_ID, XDR_GPO_CMD_PIN_ID2);
+}
+
+void Xdr_SendCmd(volatile struct XdrCmd_s cmd)
+{
+    Xdr_SendRawCmd(XdrCmd_GetValueForSendRaw(cmd));
 }
 
 void Xdr_SendReadROM0()
@@ -239,7 +245,7 @@ void Xdr_SendDisableSLE_x32()
     Xdr_SendCmd(cmd);
 }
 
-void Xdr_SendEnableSLE_x32_PerDevice(uint8_t sid)
+uint32_t Xdr_PrepareSendEnableSLE_x32_PerDeviceRaw(uint8_t sid)
 {
     struct XdrCmd_s cmd;
 
@@ -249,7 +255,12 @@ void Xdr_SendEnableSLE_x32_PerDevice(uint8_t sid)
     XdrCmd_SetSadr(&cmd, 0x2); // CFG
     XdrCmd_SetSwd(&cmd, 0x15); // SLE Enabled, x32
 
-    Xdr_SendCmd(cmd);
+    return XdrCmd_GetValueForSendRaw(cmd);
+}
+
+void Xdr_SendEnableSLE_x32_PerDevice(uint8_t sid)
+{
+    Xdr_SendRawCmd(Xdr_PrepareSendEnableSLE_x32_PerDeviceRaw(sid));
 }
 
 void Xdr_SendDisableSLE_x32_PerDevice(uint8_t sid)
@@ -281,7 +292,8 @@ void Xdr_SendWDSD_x32(const uint8_t *wdslData)
     }
 }
 
-void Xdr_SendWDSD_x32_PerDevice(uint8_t sid, const uint8_t *wdslData)
+// [64]
+void Xdr_PrepareSendWDSD_x32_PerDeviceRaw(uint8_t sid, const uint8_t *wdslData, uint32_t* outRawValues)
 {
     volatile struct XdrCmd_s cmd;
 
@@ -293,8 +305,17 @@ void Xdr_SendWDSD_x32_PerDevice(uint8_t sid, const uint8_t *wdslData)
     for (uint32_t i = 0; i < 64; ++i)
     {
         XdrCmd_SetSwd(&cmd, wdslData[i]);
-        Xdr_SendCmd(cmd);
+        outRawValues[i] = XdrCmd_GetValueForSendRaw(cmd);
     }
+}
+
+void Xdr_SendWDSD_x32_PerDevice(uint8_t sid, const uint8_t *wdslData)
+{
+    uint32_t values[64];
+    Xdr_PrepareSendWDSD_x32_PerDeviceRaw(sid, wdslData, values);
+
+    for (uint32_t i = 0; i < 64; ++i)
+        Xdr_SendRawCmd(values[i]);
 }
 
 uint16_t Xdr_ConvertToWDSLWord(uint16_t inData)

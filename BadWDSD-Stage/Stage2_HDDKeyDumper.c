@@ -83,11 +83,22 @@ FUNC_DEF void HDDKeyDumper_Init(struct HDDKeyDumper_Context_s* ctx, uint64_t spu
         memcpy(ctx->sbFix1, fix1_sb, 24);
         memcpy(ctx->sbFix2, fix2_sb, 24);
 
-        ctx->ataDataKeyEa = 0xc2b00c0;
-        ctx->ataTweakKeyEa = 0xc2b0060;
+        if (is_emmc)
+        {
+            ctx->ataDataKeyEa = 0xc2900c0;
+            ctx->ataTweakKeyEa = 0xc290060;
 
-        ctx->encdecDataKeyEa = 0xc2b0180;
-        ctx->encdecTweakKeyEa = 0xc2b01e0;
+            ctx->encdecDataKeyEa = 0xc290180;
+            ctx->encdecTweakKeyEa = 0xc2901e0;
+        }
+        else
+        {
+            ctx->ataDataKeyEa = 0xc2b00c0;
+            ctx->ataTweakKeyEa = 0xc2b0060;
+
+            ctx->encdecDataKeyEa = 0xc2b0180;
+            ctx->encdecTweakKeyEa = 0xc2b01e0;
+        }
     }
     else
     {

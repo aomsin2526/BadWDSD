@@ -834,6 +834,40 @@ FUNC_DEF uint8_t sc_read_eeprom8(uint8_t block_id, uint8_t offset)
     return outpkt.data[4];
 }
 
+FUNC_DEF void sc_write_eeprom8(uint8_t block_id, uint8_t offset, uint8_t value)
+{
+    struct sc_packet_s pkt;
+
+    pkt.service_id = 0x14;
+    pkt.communication_tag = 1;
+
+    pkt.payload_size = 5;
+    pkt.data[0] = 0x10;
+
+    pkt.data[1] = block_id;  // block id
+    pkt.data[2] = offset; // offset
+    pkt.data[3] = 0x1;  // size
+
+    pkt.data[4] = value; // value
+
+    struct sc_packet_s outpkt;
+    sc_send_packet(&pkt, &outpkt);
+}
+
+FUNC_DEF uint8_t sc_read_shadow_os_bank_indicator()
+{
+    // block id (0x3000)
+    // offset (0x3001)
+    return sc_read_eeprom8(0x20, 0x1);
+}
+
+FUNC_DEF void sc_write_shadow_os_bank_indicator(uint8_t val)
+{
+    // block id (0x3000)
+    // offset (0x3001)
+    sc_write_eeprom8(0x20, 0x1, val);
+}
+
 FUNC_DEF uint8_t sc_read_flash_type()
 {
     // block id (0x3000)
@@ -931,6 +965,10 @@ FUNC_DEF void dead_beep()
 
 #include "Stagexldr_emmc_critical.c"
 
+//
+
+static const uint64_t stagex_max_size = (60 * 1024);
+
 FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)
 {
     puts("Stagex_Relocate,  ");
@@ -941,7 +979,7 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
 
     puts("\n");
 
-    static const uint64_t stagex_size = (60 * 1024);
+    static const uint64_t stagex_size = stagex_max_size;
 
     memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
 
@@ -987,6 +1025,47 @@ FUNC_DEF void RelocateStagexAndJumpToStage1(const void* stagex_data)
 
     dead_beep();
 }
+
+//
+
+struct ros_s
+{
+    uint64_t offset1; // 0x20 or 0x700010
+    uint64_t offset2; // 0x20 or 0x700010
+
+    uint64_t region_size; // 0xE00000
+
+    uint64_t unknown; // 0
+};
+
+FUNC_DEF void CheckRos(const struct ros_s* ros)
+{
+    if (!((ros->offset1 == 0x20) || (ros->offset1 == 0x700010)))
+    {
+        puts("bad offset1!\n");
+        dead_beep();
+    }
+
+    if (!((ros->offset2 == 0x20) || (ros->offset2 == 0x700010)))
+    {
+        puts("bad offset2!\n");
+        dead_beep();
+    }
+
+    if (ros->region_size != 0xE00000)
+    {
+        puts("bad region_size!\n");
+        dead_beep();
+    }
+
+    if (ros->unknown != 0)
+    {
+        puts("bad unknown!\n");
+        dead_beep();
+    }
+}
+
+//
 
 FUNC_DEF void Stagexldr()
 {
@@ -1038,6 +1117,69 @@ FUNC_DEF void Stagexldr()
     //
 
     puts("Flash is eMMC\n");
+
+    //
+
+#if 0
+    // print lv0ldr region
+    {
+        static const uint64_t dumpSize = (256 * 1024);
+
+        uint8_t buf[dumpSize];
+        uint8_t buf2[dumpSize];
+
+        emmc_read(0, buf, dumpSize);
+        emmc_read(0, buf2, dumpSize);
+
+        uint32_t c1 = crc32c(0, buf, dumpSize);
+        uint32_t c2 = crc32c(0, buf2, dumpSize);
+
+        puts("c1 = ");
+        print_hex(c1);
+        puts("\n");
+
+        puts("c2 = ");
+        print_hex(c2);
+        puts("\n");
+
+        if (c1 != c2)
+        {
+            puts("crc fail!\n");
+            dead_beep();
+        }
+
+        hexdump(buf, dumpSize);
+        puts("\n");
+    }
+#endif
+
+    //
+
+    {
+        struct ros_s ros;
+        emmc_read(0xC0000, &ros, sizeof(ros));
+
+        CheckRos(&ros);
+
+        uint8_t shadow_os_bank_indicator = ((ros.offset1 == 0x20) ? 0x1 : 0x2); // ros0 or ros1
+        sc_write_shadow_os_bank_indicator(shadow_os_bank_indicator);
+
+        puts("shadow_os_bank_indicator = ");
+        print_hex(shadow_os_bank_indicator);
+        puts("\n");
+    }
+
+    //
+
+    {
+        uint64_t stagex_addr = 0x1010000;
+
+        emmc_read(0xA1000, (void*)stagex_addr, stagex_max_size);
+        RelocateStagexAndJumpToStage1((const void*)stagex_addr);
+    }
+
+    //
+
     dead_beep();
 }
 

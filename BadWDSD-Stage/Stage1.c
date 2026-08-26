@@ -318,10 +318,7 @@ FUNC_DEF void Stage1()
         {
             uint8_t stagex_buf[stagex_max_size];
 
-            if (is_emmc)
-                dead_beep();
-
-            FlashRead(is_emmc ? 0 : 0xF21000, stagex_buf, expected_stagex_size);
+            FlashRead(is_emmc ? 0xA1000 : 0xF21000, stagex_buf, expected_stagex_size);
 
             uint32_t stagex_crc32 = crc32c(0, stagex_buf, expected_stagex_size);
             if (stagex_crc32 != expected_stagex_crc32)
@@ -334,10 +331,7 @@ FUNC_DEF void Stage1()
         {
             uint8_t stagex_aux_buf[stagex_aux_max_size];
 
-            if (is_emmc)
-                dead_beep();
-
-            FlashRead(is_emmc ? 0 : 0xF30000, stagex_aux_buf, expected_stagex_aux_size);
+            FlashRead(is_emmc ? 0xB0000 : 0xF30000, stagex_aux_buf, expected_stagex_aux_size);
 
             uint32_t stagex_aux_crc32 = crc32c(0, stagex_aux_buf, expected_stagex_aux_size);
             if (stagex_aux_crc32 != expected_stagex_aux_crc32)

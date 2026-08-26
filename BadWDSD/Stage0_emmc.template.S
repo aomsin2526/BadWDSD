@@ -41,6 +41,28 @@ loop1:
 #endif
 
 #if 0
+
+stage0_emmc_entry:
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+    b 0
+
+#endif
+
+#if 0
 // second ch test
 stage0_emmc_entry:
     // r10 = sb_uart_stat

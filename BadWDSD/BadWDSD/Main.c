@@ -95,6 +95,9 @@ void XdrInitFail_Watchdog()
 
 #include "../Stagexldr_emmc.bin.c"
 
+uint32_t cached_EnableSLE;
+uint32_t cached_WDSDs[64];
+
 void Sc_Thread_x32_Stage0_emmc()
 {
     PrintLog("Sc_Thread_x32_Stage0_emmc()\n");
@@ -123,6 +126,13 @@ void Sc_Thread_x32_Stage0_emmc()
     memcpy(data, bin2c_Stage0_emmc_bin, sizeof(bin2c_Stage0_emmc_bin));
     Xdr_GenerateReadyWDSLData_x32(data, wdslData0);
 
+    //
+
+    cached_EnableSLE = Xdr_PrepareSendEnableSLE_x32_PerDeviceRaw(0);
+    Xdr_PrepareSendWDSD_x32_PerDeviceRaw(0, wdslData0, cached_WDSDs);
+
+    //
+
     Led_SetStatus(LED_STATUS_ON);
 
     while (1)
@@ -136,8 +146,27 @@ void Sc_Thread_x32_Stage0_emmc()
 
             //
 
-            Xdr_SendEnableSLE_x32_PerDevice(0);
-            Xdr_SendWDSD_x32_PerDevice(0, wdslData0);
+            // 70-74 = lv0 not found
+            // 75 = good? (works!!!)
+            // 80 = lv0 auth fail
+            // 85 = pass but crash
+
+            //busy_wait_ms(75);
+            busy_wait_us(75000);
+            //PrintLog("trigger2!!!\n");
+
+            //
+
+            uint64_t t1 = get_time_in_us();
+
+            Xdr_SendRawCmd(cached_EnableSLE);
+
+            for (uint32_t i = 0; i < 64; ++i)
+                Xdr_SendRawCmd(cached_WDSDs[i]);
+
+            uint64_t t2 = get_time_in_us();
+
+            PrintLog("trigger3!!!, takes %lluus\n", (t2 - t1));
 
             //
 
@@ -146,7 +175,7 @@ void Sc_Thread_x32_Stage0_emmc()
 
             //
 
-            busy_wait_ms(600);
+            busy_wait_ms(500);
 
             //
 
@@ -376,7 +405,7 @@ void Core1_Thread()
 
 void main()
 {
-#if 0
+#if IS_EMMC
     vreg_set_voltage(VREG_VOLTAGE_1_30);
     set_sys_clock_khz(250000, true);
 #endif

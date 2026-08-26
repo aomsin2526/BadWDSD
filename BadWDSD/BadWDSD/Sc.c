@@ -15,92 +15,116 @@ void Sc_RxFn()
         if (ch == 0)
             continue;
 
+        bool isNewline = (ch == '\n');
+
         scContext.rxBuf[scContext.rxBufCurLen] = ch;
         ++scContext.rxBufCurLen;
         scContext.rxBuf[scContext.rxBufCurLen] = 0;
 
         bool trigger = false;
 
-        if (strstr(scContext.rxBuf, "XDR Link successfully"))
-            trigger = true;
-
-        if (trigger)
+        if (isNewline)
         {
-            scContext.trigger = true;
-            sync();
-        }
+            if (strstr(scContext.rxBuf, "XDR Link successfully"))
+                trigger = true;
 
-        bool xdrInitFail = false;
+#if IS_EMMC
+            if (trigger)
+            {
+                scContext.emmcTriggerCounter = 0;
+                trigger = false;
+            }
 
-        if (strstr(scContext.rxBuf, "XDR Link not"))
-            xdrInitFail = true;
+            if (strstr(scContext.rxBuf, "[INFO]: flash format 1"))
+            {
+                ++scContext.emmcTriggerCounter;
 
-        if (xdrInitFail)
-        {
-            scContext.xdrInitFail = true;
-            sync();
-        }
+                if (scContext.emmcTriggerCounter == 3)
+                    trigger = true;
+            }
+#endif
 
-        bool success = false;
+            if (trigger)
+            {
+                scContext.trigger = true;
+                sync();
+            }
 
-        if (strstr(scContext.rxBuf, "BadWDSD"))
-            success = true;
+            bool xdrInitFail = false;
 
-        if (success)
-        {
-            scContext.success = true;
-            sync();
-        }
+            if (strstr(scContext.rxBuf, "XDR Link not"))
+                xdrInitFail = true;
 
-        bool shutdownSuccess = false;
+            if (xdrInitFail)
+            {
+                scContext.xdrInitFail = true;
+                sync();
+            }
 
-        if (strstr(scContext.rxBuf, "(PowerOff State)"))
-            shutdownSuccess = true;
+            bool success = false;
 
-        if (shutdownSuccess)
-        {
-            scContext.shutdownSuccess = true;
-            sync();
-        }
+            if (strstr(scContext.rxBuf, "BadWDSD"))
+                success = true;
 
-        bool bringupSuccess = false;
+            if (success)
+            {
+                scContext.success = true;
+                sync();
+            }
 
-        if (strstr(scContext.rxBuf, "Bringup"))
-            bringupSuccess = true;
+            bool shutdownSuccess = false;
 
-        if (bringupSuccess)
-        {
-            scContext.bringupSuccess = true;
-            sync();
-        }
+            if (strstr(scContext.rxBuf, "(PowerOff State)"))
+                shutdownSuccess = true;
 
-        bool needReboot = false;
+            if (shutdownSuccess)
+            {
+                scContext.shutdownSuccess = true;
+                sync();
+            }
 
-        if (strstr(scContext.rxBuf, "Wake source is BT!"))
-            needReboot = true;
+            bool bringupSuccess = false;
 
-        if (needReboot)
-        {
-            scContext.needReboot = true;
-            sync();
-        }
+            if (strstr(scContext.rxBuf, "Bringup"))
+                bringupSuccess = true;
 
-        bool reset = false;
+            if (bringupSuccess)
+            {
+                scContext.bringupSuccess = true;
+                sync();
+            }
 
-        if ((get_time_in_ms() - scContext.lastScTxTimeInMs) > 5000)
-        {
+            bool needReboot = false;
+
+            if (strstr(scContext.rxBuf, "Wake source is BT!"))
+                needReboot = true;
+
+            if (strstr(scContext.rxBuf, "[SSM] Fataldown Start"))
+                needReboot = true;
+
+            if (needReboot)
+            {
+                scContext.needReboot = true;
+                sync();
+            }
+
+            bool reset = false;
+
+            if ((get_time_in_ms() - scContext.lastScTxTimeInMs) > 5000)
+            {
 
 #if SC_IS_SW
-            if (strstr(scContext.rxBuf, "OK 00000000:3A"))
+                if (strstr(scContext.rxBuf, "OK 00000000:3A"))
 #else
-            if (strstr(scContext.rxBuf, "[mullion]$"))
+                if (strstr(scContext.rxBuf, "[mullion]$"))
 #endif
-                reset = true;
+                    reset = true;
 
+            }
+
+            if (reset)
+                watchdog_reboot(0, 0, 0);
         }
-
-        if (reset)
-            watchdog_reboot(0, 0, 0);
 
         if (strstr(scContext.rxBuf, "[mullion]$ "))
         {
@@ -108,7 +132,7 @@ void Sc_RxFn()
             scContext.rxBuf[scContext.rxBufCurLen] = 0;
         }
 
-        if ((ch == '\n') || (scContext.rxBufCurLen >= (SC_RXBUF_SIZE - 1)))
+        if (isNewline || (scContext.rxBufCurLen >= (SC_RXBUF_SIZE - 1)))
         {
             volatile struct Sc_SendCommandContext_s *ctx = scContext.sendCommandCtx;
             bool ctx_done = false;
@@ -201,6 +225,10 @@ void Sc_Init()
 
     scContext.rxBufCurLen = 0;
     scContext.rxBuf[0] = 0;
+
+#if IS_EMMC
+    scContext.emmcTriggerCounter = 0;
+#endif
 
     scContext.trigger = false;
     scContext.xdrInitFail = false;

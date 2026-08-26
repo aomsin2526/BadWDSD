@@ -92,12 +92,19 @@ extern bool Led_IsInited();
 // XDRs
 
 static const uint32_t XDR_GPO_CLK_PIN_ID = 6;
-static const uint32_t XDR_GPO_CLK_PIN_ID2 = 7;
-
 static const uint32_t XDR_GPO_CMD_PIN_ID = 10;
-static const uint32_t XDR_GPO_CMD_PIN_ID2 = 11;
 
+#if IS_EMMC
+static const uint32_t XDR_GPO_CLK_PIN_ID2 = XDR_GPO_CLK_PIN_ID;
+static const uint32_t XDR_GPO_CMD_PIN_ID2 = XDR_GPO_CMD_PIN_ID;
+#else
+static const uint32_t XDR_GPO_CLK_PIN_ID2 = 7;
+static const uint32_t XDR_GPO_CMD_PIN_ID2 = 11;
+#endif
+
+#if !IS_EMMC
 #define XDR_GPO_DELAY_ENABLED 1
+#endif
 #define XDR_GPO_DELAY_VALUE_IN_US 1 // 4000ns/250khz per cycle
 //#define XDR_GPO_DELAY_VALUE_IN_US 2 // 8000ns/125khz per cycle
 //#define XDR_GPO_DELAY_VALUE_IN_US 4 // 16000ns/62.5khz per cycle
@@ -189,6 +196,10 @@ extern void XdrCmd_SetSwd(volatile struct XdrCmd_s* cmd, uint8_t value);
 
 extern void XdrCmd_SetJunk2(volatile struct XdrCmd_s* cmd, uint8_t value);
 
+extern uint32_t XdrCmd_GetValueForSendRaw(volatile struct XdrCmd_s cmd);
+
+extern void Xdr_SendRawCmd(uint32_t value);
+
 extern void Xdr_SendCmd(volatile struct XdrCmd_s cmd);
 
 extern void Xdr_SendReadROM0();
@@ -210,11 +221,15 @@ extern void Xdr_SendWDSD_x16_PerDevice(uint8_t sid, const uint8_t* wdslData);
 extern void Xdr_SendEnableSLE_x32();
 extern void Xdr_SendDisableSLE_x32();
 
+extern uint32_t Xdr_PrepareSendEnableSLE_x32_PerDeviceRaw(uint8_t sid);
 extern void Xdr_SendEnableSLE_x32_PerDevice(uint8_t sid);
+
 extern void Xdr_SendDisableSLE_x32_PerDevice(uint8_t sid);
 
 // data[64]
 extern void Xdr_SendWDSD_x32(const uint8_t* wdslData);
+
+extern void Xdr_PrepareSendWDSD_x32_PerDeviceRaw(uint8_t sid, const uint8_t *wdslData, uint32_t* outRawValues);
 extern void Xdr_SendWDSD_x32_PerDevice(uint8_t sid, const uint8_t* wdslData);
 
 //
@@ -282,6 +297,10 @@ struct ScContext_s
 
     volatile char rxBuf[SC_RXBUF_SIZE];
     volatile uint32_t rxBufCurLen;
+
+#if IS_EMMC
+    volatile uint32_t emmcTriggerCounter;
+#endif
 
     volatile bool trigger;
     volatile bool xdrInitFail;

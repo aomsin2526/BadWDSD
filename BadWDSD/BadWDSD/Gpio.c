@@ -5,7 +5,9 @@ void GPIO_FLOATTOLOW(uint32_t pinId)
     gpio_set_dir(pinId, GPIO_OUT);
     gpio_put(pinId, false);
 
+#if !IS_EMMC
     gpio_set_drive_strength(pinId, GPIO_DRIVE_STRENGTH_12MA);
+#endif
 
     gpio_set_function(pinId, GPIO_FUNC_SIO);
 }
@@ -15,7 +17,9 @@ void GPIO_FLOATTOHIGH(uint32_t pinId)
     gpio_set_dir(pinId, GPIO_OUT);
     gpio_put(pinId, true);
 
+#if !IS_EMMC
     gpio_set_drive_strength(pinId, GPIO_DRIVE_STRENGTH_12MA);
+#endif
 
     gpio_set_function(pinId, GPIO_FUNC_SIO);
 }
@@ -29,16 +33,20 @@ void GPIO_FLOATTOLOW2(uint32_t pinId1, uint32_t pinId2)
 {
     GPIO_FLOATTOLOW(pinId1);
 
+#if !IS_EMMC
     if (pinId2 != pinId1)
         GPIO_FLOATTOLOW(pinId2);
+#endif
 }
 
 void GPIO_FLOAT2(uint32_t pinId1, uint32_t pinId2)
 {
+    GPIO_FLOAT(pinId1);
+
+#if !IS_EMMC
     if (pinId2 != pinId1)
         GPIO_FLOAT(pinId2);
-
-    GPIO_FLOAT(pinId1);
+#endif
 }
 
 bool Gpio_GetOnce(uint32_t pinId)

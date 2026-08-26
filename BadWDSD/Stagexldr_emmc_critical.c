@@ -1,11 +1,31 @@
 FUNC_DEF uint8_t FetchIsEmmc()
 {
-    return (sc_read_flash_type() == 0x67) ? 1 : 0;
+    //return (sc_read_flash_type() == 0x67) ? 1 : 0;
+
+    const volatile uint32_t* sbVersion = (const volatile uint32_t*)0x24000087000;
+
+    if ((*sbVersion & 0xFF000000) != 0x04000000)
+        return 0;
+
+    const volatile uint32_t* a = (const volatile uint32_t*)0x24000FFF020;
+    const volatile uint32_t* b = (const volatile uint32_t*)0x24000FFF028;
+    const volatile uint32_t* c = (const volatile uint32_t*)0x24000FFF02C;
+
+    if (*a != 0x1fc0000c)
+        return 0;
+
+    if (*b != 0x203)
+        return 0;
+
+    if (*c != 0x1fc00000)
+        return 0;
+
+    return 1;
 }
 
 // do not change!!!
 static const uint32_t emmc_sector_size = 512;
-static const uint32_t emmc_sector_count = ((256 * 1024 * 1024) / emmc_sector_size);
+static const uint32_t emmc_sector_count = 0x1893000;
 
 FUNC_DEF uint8_t emmc_is_sector_idx_valid_for_read(uint32_t sector_idx)
 {
@@ -69,11 +89,11 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
 
     {
         {
-            volatile uint16_t* p_intenreg = (volatile uint16_t*)0x2401F044012;
-            volatile uint16_t* p_count = (volatile uint16_t*)0x2401F044006;
+            volatile uint16_t* p_intenreg = (volatile uint16_t*)0x2401FC44012;
+            volatile uint16_t* p_count = (volatile uint16_t*)0x2401FC44006;
 
-            volatile uint16_t* p_high = (volatile uint16_t*)0x2401F044008;
-            volatile uint16_t* p_low = (volatile uint16_t*)0x2401F04400A;
+            volatile uint16_t* p_high = (volatile uint16_t*)0x2401FC44008;
+            volatile uint16_t* p_low = (volatile uint16_t*)0x2401FC4400A;
 
             *p_intenreg = 9;
             *p_count = 0;
@@ -85,7 +105,7 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         }
 
         {
-            volatile uint16_t* p_cmd = (volatile uint16_t*)0x2401F04400C;
+            volatile uint16_t* p_cmd = (volatile uint16_t*)0x2401FC4400C;
             *p_cmd = 0x18; // !!!!!! READ !!!!!!
 
             eieio();
@@ -104,7 +124,7 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
 
         //
 
-        volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401F044010;
+        volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401FC44010;
 
         if (!((*p_intreg & 9) == 1))
         {
@@ -118,7 +138,7 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
 
         for (uint32_t i2 = 0; i2 < (emmc_sector_size / 2); ++i2)
         {
-            const volatile uint16_t* p_data = (const volatile uint16_t*)0x2401F044000;
+            const volatile uint16_t* p_data = (const volatile uint16_t*)0x2401FC44000;
 
             *((uint16_t*)(&outBuf_u8[curOutBufOffset])) = *p_data;
             curOutBufOffset += 2;
@@ -137,12 +157,12 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         //
 
         {
-            volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401F044010;
-            volatile uint16_t* p_intenreg = (volatile uint16_t*)0x2401F044012;
-            volatile uint16_t* p_count = (volatile uint16_t*)0x2401F044006;
+            volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401FC44010;
+            volatile uint16_t* p_intenreg = (volatile uint16_t*)0x2401FC44012;
+            volatile uint16_t* p_count = (volatile uint16_t*)0x2401FC44006;
 
-            volatile uint16_t* p_high = (volatile uint16_t*)0x2401F044008;
-            volatile uint16_t* p_low = (volatile uint16_t*)0x2401F04400A;
+            volatile uint16_t* p_high = (volatile uint16_t*)0x2401FC44008;
+            volatile uint16_t* p_low = (volatile uint16_t*)0x2401FC4400A;
 
             *p_intreg = 0xf;
             *p_intenreg = 4;
@@ -155,7 +175,7 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         }
 
         {
-            volatile uint16_t* p_cmd = (volatile uint16_t*)0x2401F04400C;
+            volatile uint16_t* p_cmd = (volatile uint16_t*)0x2401FC4400C;
             *p_cmd = 0xc; // !!!!!! IDLE !!!!!!
 
             eieio();
@@ -173,7 +193,7 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
 
         //
 
-        volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401F044010;
+        volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401FC44010;
 
         if (!((*p_intreg & 0xc) == 4))
         {
@@ -184,5 +204,72 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         *p_intreg &= 0xc;
 
         //
+    }
+}
+
+FUNC_DEF void emmc_read(uint64_t offset, void* data, uint64_t size)
+{
+    uint8_t* dataa = (uint8_t*)data;
+
+    if (size == 0)
+        return;
+
+    if ((offset + size) > 13193183232) // 0x1893000 * 512
+    {
+        puts("emmc_read overflow!!!\n");
+        dead_beep();
+    }
+
+    static const uint32_t sector_size = emmc_sector_size;
+    uint32_t burst_size = (1 * 1024 * 1024);
+
+    uint8_t buf[sector_size];
+
+    uint64_t curOffset = offset;
+    uint64_t curDataOffset = 0;
+
+    uint64_t left = size;
+
+    while (left > 0)
+    {
+        uint32_t processSize = (left > sector_size) ? sector_size : left;
+        uint32_t zzz = (curOffset % sector_size);
+        uint32_t yyy = (sector_size - zzz);
+        uint32_t xxx = (yyy > processSize) ? processSize : yyy;
+
+        uint32_t sector_idx = (curOffset / sector_size);
+
+        while (burst_size > left)
+            burst_size -= sector_size;
+
+        if ((zzz != 0) || (processSize != sector_size))
+        {
+            emmc_read_sectors(sector_idx, 1, buf);
+
+            memcpy(&dataa[curDataOffset], &buf[zzz], xxx);
+
+            curOffset += xxx;
+            curDataOffset += xxx;
+
+            left -= xxx;
+        }
+        else if ((burst_size > 0) && (left >= burst_size) && ((burst_size % sector_size) == 0))
+        {
+            emmc_read_sectors(sector_idx, (burst_size / sector_size), &dataa[curDataOffset]);
+
+            curOffset += burst_size;
+            curDataOffset += burst_size;
+
+            left -= burst_size;
+        }
+        else
+        {
+            emmc_read_sectors(sector_idx, 1, &dataa[curDataOffset]);
+
+            curOffset += processSize;
+            curDataOffset += processSize;
+
+            left -= processSize;
+        }
     }
 }

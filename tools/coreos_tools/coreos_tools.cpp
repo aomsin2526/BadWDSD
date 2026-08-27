@@ -270,6 +270,7 @@ void create_coreos(const char *inDir, const char *rosPath)
         header.length_region2 = 0x6FFFE0;
 
         coreos_entry_s *entrys = new coreos_entry_s[256];
+        memset(entrys, 0, (sizeof(coreos_entry_s) * 256));
 
         while (1)
         {
@@ -331,9 +332,11 @@ void create_coreos(const char *inDir, const char *rosPath)
 
             curOffset = round_up(curOffset, 0x20);
 
-            entry->offset = (curOffset - 16);
+            entry->offset = curOffset;
             curOffset += entry->length;
         }
+
+        curOffset += 16;
 
         if (curOffset > 0x6FFFF0)
         {

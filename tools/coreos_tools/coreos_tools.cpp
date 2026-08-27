@@ -323,14 +323,15 @@ void create_coreos(const char *inDir, const char *rosPath)
         printf("entry_count = %u\n", header.entry_count);
 
         uint64_t curOffset = 0;
-        curOffset += sizeof(coreos_header_s);
+        curOffset += 16;
         curOffset += header.entry_count * sizeof(coreos_entry_s);
 
         for (uint32_t i = 0; i < header.entry_count; ++i)
         {
             coreos_entry_s *entry = &entrys[i];
 
-            curOffset = round_up(curOffset, 0x20);
+            if ((curOffset % 0x20) != 0)
+                curOffset = round_up(curOffset, 0x20);
 
             entry->offset = curOffset;
             curOffset += entry->length;

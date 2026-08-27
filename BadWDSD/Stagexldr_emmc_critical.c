@@ -438,7 +438,7 @@ FUNC_DEF void emmc_write(uint64_t offset, const void* data, uint64_t size)
 
     if ((offset + size) > emmc_max_size)
     {
-        puts("emmc_read overflow!!!\n");
+        puts("emmc_write overflow!!!\n");
         dead_beep();
     }
 

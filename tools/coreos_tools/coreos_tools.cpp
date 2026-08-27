@@ -149,7 +149,7 @@ void extract_coreos(const char *rosPath, const char *outDir)
 
     size_t rosFileSize = get_file_size(rosFile);
 
-    if (rosFileSize > 0x700000)
+    if (rosFileSize > 0x6FFFF0)
     {
         printf("bad file size!\n");
 
@@ -226,6 +226,8 @@ void extract_coreos(const char *rosPath, const char *outDir)
 
         delete[] entrys;
     }
+
+    free(rosData);
 
     printf("extract_coreos() done\n");
 }
@@ -330,8 +332,8 @@ void create_coreos(const char *inDir, const char *rosPath)
         {
             coreos_entry_s *entry = &entrys[i];
 
-            if ((curOffset % 0x20) != 0)
-                curOffset = round_up(curOffset, 0x20);
+            if ((curOffset % 0x100) != 0)
+                curOffset = round_up(curOffset, 0x100);
 
             entry->offset = curOffset;
             curOffset += entry->length;

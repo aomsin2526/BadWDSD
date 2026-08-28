@@ -4,14 +4,14 @@ FUNC_DEF uint8_t FetchIsEmmc()
 {
     //return (sc_read_flash_type() == 0x67) ? 1 : 0;
 
-    const volatile uint32_t* sbVersion = (const volatile uint32_t*)0x24000087000;
+    const uint32_t* sbVersion = (const uint32_t*)0x24000087000;
 
     if ((*sbVersion & 0xFF000000) != 0x04000000)
         return 0;
 
-    const volatile uint32_t* a = (const volatile uint32_t*)0x24000FFF020;
-    const volatile uint32_t* b = (const volatile uint32_t*)0x24000FFF028;
-    const volatile uint32_t* c = (const volatile uint32_t*)0x24000FFF02C;
+    const uint32_t* a = (const uint32_t*)0x24000FFF020;
+    const uint32_t* b = (const uint32_t*)0x24000FFF028;
+    const uint32_t* c = (const uint32_t*)0x24000FFF02C;
 
     if (*a != 0x1fc0000c)
         return 0;

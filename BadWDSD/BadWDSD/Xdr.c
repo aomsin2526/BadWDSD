@@ -1,63 +1,63 @@
 #include "Include.h"
 
-uint32_t XdrCmd_GetValue(volatile struct XdrCmd_s *cmd)
+uint32_t XdrCmd_GetValue(struct XdrCmd_s *cmd)
 {
     return cmd->value;
 }
 
-void XdrCmd_SetValue(volatile struct XdrCmd_s *cmd, uint32_t value)
+void XdrCmd_SetValue(struct XdrCmd_s *cmd, uint32_t value)
 {
     cmd->value = value;
 }
 
-void XdrCmd_SetStart(volatile struct XdrCmd_s *cmd, uint8_t value)
+void XdrCmd_SetStart(struct XdrCmd_s *cmd, uint8_t value)
 {
     cmd->value &= ~XdrCmd_Start_Mask;
     cmd->value |= (value << XdrCmd_Start_ShiftCount) & XdrCmd_Start_Mask;
 }
 
-uint8_t XdrCmd_GetScmd(volatile struct XdrCmd_s *cmd)
+uint8_t XdrCmd_GetScmd(struct XdrCmd_s *cmd)
 {
     return (cmd->value & XdrCmd_Scmd_Mask) >> XdrCmd_Scmd_ShiftCount;
 }
 
-void XdrCmd_SetScmd(volatile struct XdrCmd_s *cmd, uint8_t value)
+void XdrCmd_SetScmd(struct XdrCmd_s *cmd, uint8_t value)
 {
     cmd->value &= ~XdrCmd_Scmd_Mask;
     cmd->value |= ((uint32_t)value << XdrCmd_Scmd_ShiftCount) & XdrCmd_Scmd_Mask;
 }
 
-void XdrCmd_SetSid(volatile struct XdrCmd_s *cmd, uint8_t value)
+void XdrCmd_SetSid(struct XdrCmd_s *cmd, uint8_t value)
 {
     cmd->value &= ~XdrCmd_Sid_Mask;
     cmd->value |= ((uint32_t)value << XdrCmd_Sid_ShiftCount) & XdrCmd_Sid_Mask;
 }
 
-void XdrCmd_SetSadr(volatile struct XdrCmd_s *cmd, uint8_t value)
+void XdrCmd_SetSadr(struct XdrCmd_s *cmd, uint8_t value)
 {
     cmd->value &= ~XdrCmd_Sadr_Mask;
     cmd->value |= ((uint32_t)value << XdrCmd_Sadr_ShiftCount) & XdrCmd_Sadr_Mask;
 }
 
-void XdrCmd_SetJunk1(volatile struct XdrCmd_s *cmd, uint8_t value)
+void XdrCmd_SetJunk1(struct XdrCmd_s *cmd, uint8_t value)
 {
     cmd->value &= ~XdrCmd_Junk1_Mask;
     cmd->value |= ((uint32_t)value << XdrCmd_Junk1_ShiftCount) & XdrCmd_Junk1_Mask;
 }
 
-void XdrCmd_SetSwd(volatile struct XdrCmd_s *cmd, uint8_t value)
+void XdrCmd_SetSwd(struct XdrCmd_s *cmd, uint8_t value)
 {
     cmd->value &= ~XdrCmd_Swd_Mask;
     cmd->value |= ((uint32_t)value << XdrCmd_Swd_ShiftCount) & XdrCmd_Swd_Mask;
 }
 
-void XdrCmd_SetJunk2(volatile struct XdrCmd_s *cmd, uint8_t value)
+void XdrCmd_SetJunk2(struct XdrCmd_s *cmd, uint8_t value)
 {
     cmd->value &= ~XdrCmd_Junk2_Mask;
     cmd->value |= ((uint32_t)value << XdrCmd_Junk2_ShiftCount) & XdrCmd_Junk2_Mask;
 }
 
-uint32_t XdrCmd_GetValueForSendRaw(volatile struct XdrCmd_s cmd)
+uint32_t XdrCmd_GetValueForSendRaw(struct XdrCmd_s cmd)
 {
     XdrCmd_SetStart(&cmd, 0xc);
 
@@ -118,7 +118,7 @@ void Xdr_SendRawCmd(uint32_t value)
     GPIO_FLOAT2(XDR_GPO_CMD_PIN_ID, XDR_GPO_CMD_PIN_ID2);
 }
 
-void Xdr_SendCmd(volatile struct XdrCmd_s cmd)
+void Xdr_SendCmd(struct XdrCmd_s cmd)
 {
     Xdr_SendRawCmd(XdrCmd_GetValueForSendRaw(cmd));
 }
@@ -189,7 +189,7 @@ void Xdr_SendDisableSLE_x16_PerDevice(uint8_t sid)
 
 void Xdr_SendWDSD_x16(const uint8_t *wdslData)
 {
-    volatile struct XdrCmd_s cmd;
+    struct XdrCmd_s cmd;
 
     XdrCmd_SetScmd(&cmd, 0x1); // broadcast write
     XdrCmd_SetSid(&cmd, 0x0);
@@ -205,7 +205,7 @@ void Xdr_SendWDSD_x16(const uint8_t *wdslData)
 
 void Xdr_SendWDSD_x16_PerDevice(uint8_t sid, const uint8_t *wdslData)
 {
-    volatile struct XdrCmd_s cmd;
+    struct XdrCmd_s cmd;
 
     XdrCmd_SetScmd(&cmd, 0x0); // device write
     XdrCmd_SetSid(&cmd, sid);
@@ -278,7 +278,7 @@ void Xdr_SendDisableSLE_x32_PerDevice(uint8_t sid)
 
 void Xdr_SendWDSD_x32(const uint8_t *wdslData)
 {
-    volatile struct XdrCmd_s cmd;
+    struct XdrCmd_s cmd;
 
     XdrCmd_SetScmd(&cmd, 0x1); // broadcast write
     XdrCmd_SetSid(&cmd, 0x0);
@@ -295,7 +295,7 @@ void Xdr_SendWDSD_x32(const uint8_t *wdslData)
 // [64]
 void Xdr_PrepareSendWDSD_x32_PerDeviceRaw(uint8_t sid, const uint8_t *wdslData, uint32_t* outRawValues)
 {
-    volatile struct XdrCmd_s cmd;
+    struct XdrCmd_s cmd;
 
     XdrCmd_SetScmd(&cmd, 0x0); // device write
     XdrCmd_SetSid(&cmd, sid);

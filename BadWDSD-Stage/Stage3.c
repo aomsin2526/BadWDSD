@@ -362,7 +362,7 @@ FUNC_DEF void EnableLoadCobraFromUSB(uint64_t lv2AreaAddr)
 {
     lv1_puts("Enabling Load Cobra from USB...\n");
 
-    volatile uint8_t *enableLoadCobraFromUSB = (volatile uint8_t *)(lv2AreaAddr + 0x30);
+    uint8_t *enableLoadCobraFromUSB = (uint8_t *)(lv2AreaAddr + 0x30);
     *enableLoadCobraFromUSB = 1;
     eieio();
 
@@ -488,72 +488,72 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
     register uint64_t r4 asm("r4");
 
     // start only if r4 = 0x6996
-    asm volatile("li %0, 0x6996" : "=r"(r0)::);
-    asm volatile("cmp 0, 0, %0, %1" ::"r"(r4), "r"(r0) :);
-    asm volatile("beq stage3_start");
-    asm volatile("li %0, -0x14" : "=r"(r3)::); // r3 = -0x14
+    ASM("li %0, 0x6996" : "=r"(r0)::);
+    ASM("cmp 0, 0, %0, %1" ::"r"(r4), "r"(r0) :);
+    ASM("beq stage3_start");
+    ASM("li %0, -0x14" : "=r"(r3)::); // r3 = -0x14
 
-    asm volatile("blr");
+    ASM("blr");
 
     // stage3_start:
-    asm volatile("stage3_start:");
+    ASM("stage3_start:");
 
     // push stack
-    asm volatile("addi 1, 1, -512");
+    ASM("addi 1, 1, -512");
 
     // store all registers to stack
-    asm volatile("std 0, %0(1)" ::"i"(8 * 0) :);
-    asm volatile("std 1, %0(1)" ::"i"(8 * 1) :);
-    asm volatile("std 2, %0(1)" ::"i"(8 * 2) :);
-    asm volatile("std 3, %0(1)" ::"i"(8 * 3) :);
-    asm volatile("std 4, %0(1)" ::"i"(8 * 4) :);
-    asm volatile("std 5, %0(1)" ::"i"(8 * 5) :);
-    asm volatile("std 6, %0(1)" ::"i"(8 * 6) :);
-    asm volatile("std 7, %0(1)" ::"i"(8 * 7) :);
-    asm volatile("std 8, %0(1)" ::"i"(8 * 8) :);
-    asm volatile("std 9, %0(1)" ::"i"(8 * 9) :);
-    asm volatile("std 10, %0(1)" ::"i"(8 * 10) :);
-    asm volatile("std 11, %0(1)" ::"i"(8 * 11) :);
-    asm volatile("std 12, %0(1)" ::"i"(8 * 12) :);
-    asm volatile("std 13, %0(1)" ::"i"(8 * 13) :);
-    asm volatile("std 14, %0(1)" ::"i"(8 * 14) :);
-    asm volatile("std 15, %0(1)" ::"i"(8 * 15) :);
-    asm volatile("std 16, %0(1)" ::"i"(8 * 16) :);
-    asm volatile("std 17, %0(1)" ::"i"(8 * 17) :);
-    asm volatile("std 18, %0(1)" ::"i"(8 * 18) :);
-    asm volatile("std 19, %0(1)" ::"i"(8 * 19) :);
-    asm volatile("std 20, %0(1)" ::"i"(8 * 20) :);
-    asm volatile("std 21, %0(1)" ::"i"(8 * 21) :);
-    asm volatile("std 22, %0(1)" ::"i"(8 * 22) :);
-    asm volatile("std 23, %0(1)" ::"i"(8 * 23) :);
-    asm volatile("std 24, %0(1)" ::"i"(8 * 24) :);
-    asm volatile("std 25, %0(1)" ::"i"(8 * 25) :);
-    asm volatile("std 26, %0(1)" ::"i"(8 * 26) :);
-    asm volatile("std 27, %0(1)" ::"i"(8 * 27) :);
-    asm volatile("std 28, %0(1)" ::"i"(8 * 28) :);
-    asm volatile("std 29, %0(1)" ::"i"(8 * 29) :);
-    asm volatile("std 30, %0(1)" ::"i"(8 * 30) :);
-    asm volatile("std 31, %0(1)" ::"i"(8 * 31) :);
+    ASM("std 0, %0(1)" ::"i"(8 * 0) :);
+    ASM("std 1, %0(1)" ::"i"(8 * 1) :);
+    ASM("std 2, %0(1)" ::"i"(8 * 2) :);
+    ASM("std 3, %0(1)" ::"i"(8 * 3) :);
+    ASM("std 4, %0(1)" ::"i"(8 * 4) :);
+    ASM("std 5, %0(1)" ::"i"(8 * 5) :);
+    ASM("std 6, %0(1)" ::"i"(8 * 6) :);
+    ASM("std 7, %0(1)" ::"i"(8 * 7) :);
+    ASM("std 8, %0(1)" ::"i"(8 * 8) :);
+    ASM("std 9, %0(1)" ::"i"(8 * 9) :);
+    ASM("std 10, %0(1)" ::"i"(8 * 10) :);
+    ASM("std 11, %0(1)" ::"i"(8 * 11) :);
+    ASM("std 12, %0(1)" ::"i"(8 * 12) :);
+    ASM("std 13, %0(1)" ::"i"(8 * 13) :);
+    ASM("std 14, %0(1)" ::"i"(8 * 14) :);
+    ASM("std 15, %0(1)" ::"i"(8 * 15) :);
+    ASM("std 16, %0(1)" ::"i"(8 * 16) :);
+    ASM("std 17, %0(1)" ::"i"(8 * 17) :);
+    ASM("std 18, %0(1)" ::"i"(8 * 18) :);
+    ASM("std 19, %0(1)" ::"i"(8 * 19) :);
+    ASM("std 20, %0(1)" ::"i"(8 * 20) :);
+    ASM("std 21, %0(1)" ::"i"(8 * 21) :);
+    ASM("std 22, %0(1)" ::"i"(8 * 22) :);
+    ASM("std 23, %0(1)" ::"i"(8 * 23) :);
+    ASM("std 24, %0(1)" ::"i"(8 * 24) :);
+    ASM("std 25, %0(1)" ::"i"(8 * 25) :);
+    ASM("std 26, %0(1)" ::"i"(8 * 26) :);
+    ASM("std 27, %0(1)" ::"i"(8 * 27) :);
+    ASM("std 28, %0(1)" ::"i"(8 * 28) :);
+    ASM("std 29, %0(1)" ::"i"(8 * 29) :);
+    ASM("std 30, %0(1)" ::"i"(8 * 30) :);
+    ASM("std 31, %0(1)" ::"i"(8 * 31) :);
 
 #if 1
 
     // push stack
-    asm volatile("addi 1, 1, -64");
+    ASM("addi 1, 1, -64");
 
     // store original rtoc to stack
-    asm volatile("std 2, 0(1)");
+    ASM("std 2, 0(1)");
 
     // store original lr to stack
-    asm volatile("mflr %0" : "=r"(r3)::);
-    asm volatile("std %0, 8(1)" ::"r"(r3) :);
+    ASM("mflr %0" : "=r"(r3)::);
+    ASM("std %0, 8(1)" ::"r"(r3) :);
 
     // set stage_entry_ra
-    asm volatile("bl 4");
-    asm volatile("mflr %0" : "=r"(stage_entry_ra)::);
+    ASM("bl 4");
+    ASM("mflr %0" : "=r"(stage_entry_ra)::);
     stage_entry_ra -= (4 * 43);
 
     // set lv1_rtoc
-    asm volatile("mr %0, 2" : "=r"(lv1_rtoc)::);
+    ASM("mr %0, 2" : "=r"(lv1_rtoc)::);
 
     // set is_lv1 to 0x9669
     is_lv1 = 0x9669;
@@ -567,90 +567,90 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc
-    asm volatile("mr 2, %0" ::"r"(stage_rtoc) :);
+    ASM("mr 2, %0" ::"r"(stage_rtoc) :);
 
     // set lv1_sp
-    asm volatile("mr %0, 1" : "=r"(lv1_sp)::);
+    ASM("mr %0, 1" : "=r"(lv1_sp)::);
 
     // set stage_sp to 0xE000000
     //stage_sp = 0xE000000;
 
     // set r1 to stage_sp
-    //asm volatile("mr 1, %0" ::"r"(stage_sp) :);
+    //ASM("mr 1, %0" ::"r"(stage_sp) :);
 
     // sync
-    asm volatile("sync");
+    ASM("sync");
 
     // push stack
-    asm volatile("addi 1, 1, -128");
+    ASM("addi 1, 1, -128");
 
     // jump to stage3_main
-    asm volatile("bl stage3_main");
+    ASM("bl stage3_main");
 
     // pop stack
-    asm volatile("addi 1, 1, 128");
+    ASM("addi 1, 1, 128");
 
     // set r1 to lv1_sp
-    asm volatile("mr 1, %0" ::"r"(lv1_sp) :);
+    ASM("mr 1, %0" ::"r"(lv1_sp) :);
 
     // restore original lr from stack
-    asm volatile("ld %0, 8(1)" : "=r"(r3)::);
-    asm volatile("mtlr %0" ::"r"(r3));
+    ASM("ld %0, 8(1)" : "=r"(r3)::);
+    ASM("mtlr %0" ::"r"(r3));
 
     // restore original rtoc from stack
-    asm volatile("ld %0, 0(1)" : "=r"(r3)::);
-    asm volatile("mr 2, %0" ::"r"(r3));
+    ASM("ld %0, 0(1)" : "=r"(r3)::);
+    ASM("mr 2, %0" ::"r"(r3));
 
     // pop stack
-    asm volatile("addi 1, 1, 64");
+    ASM("addi 1, 1, 64");
 
 #endif
 
     // restore all registers from stack
-    asm volatile("ld 0, %0(1)" ::"i"(8 * 0) :);
-    asm volatile("ld 1, %0(1)" ::"i"(8 * 1) :);
-    asm volatile("ld 2, %0(1)" ::"i"(8 * 2) :);
-    asm volatile("ld 3, %0(1)" ::"i"(8 * 3) :);
-    //asm volatile("ld 4, %0(1)" ::"i"(8 * 4) :);//
-    //asm volatile("ld 5, %0(1)" ::"i"(8 * 5) :);//
-    //asm volatile("ld 6, %0(1)" ::"i"(8 * 6) :);//
-    asm volatile("ld 7, %0(1)" ::"i"(8 * 7) :);
-    asm volatile("ld 8, %0(1)" ::"i"(8 * 8) :);
-    asm volatile("ld 9, %0(1)" ::"i"(8 * 9) :);
-    asm volatile("ld 10, %0(1)" ::"i"(8 * 10) :);
-    asm volatile("ld 11, %0(1)" ::"i"(8 * 11) :);
-    asm volatile("ld 12, %0(1)" ::"i"(8 * 12) :);
-    asm volatile("ld 13, %0(1)" ::"i"(8 * 13) :);
-    asm volatile("ld 14, %0(1)" ::"i"(8 * 14) :);
-    asm volatile("ld 15, %0(1)" ::"i"(8 * 15) :);
-    asm volatile("ld 16, %0(1)" ::"i"(8 * 16) :);
-    asm volatile("ld 17, %0(1)" ::"i"(8 * 17) :);
-    asm volatile("ld 18, %0(1)" ::"i"(8 * 18) :);
-    asm volatile("ld 19, %0(1)" ::"i"(8 * 19) :);
-    asm volatile("ld 20, %0(1)" ::"i"(8 * 20) :);
-    asm volatile("ld 21, %0(1)" ::"i"(8 * 21) :);
-    asm volatile("ld 22, %0(1)" ::"i"(8 * 22) :);
-    asm volatile("ld 23, %0(1)" ::"i"(8 * 23) :);
-    asm volatile("ld 24, %0(1)" ::"i"(8 * 24) :);
-    asm volatile("ld 25, %0(1)" ::"i"(8 * 25) :);
-    asm volatile("ld 26, %0(1)" ::"i"(8 * 26) :);
-    asm volatile("ld 27, %0(1)" ::"i"(8 * 27) :);
-    asm volatile("ld 28, %0(1)" ::"i"(8 * 28) :);
-    asm volatile("ld 29, %0(1)" ::"i"(8 * 29) :);
-    asm volatile("ld 30, %0(1)" ::"i"(8 * 30) :);
-    asm volatile("ld 31, %0(1)" ::"i"(8 * 31) :);
+    ASM("ld 0, %0(1)" ::"i"(8 * 0) :);
+    ASM("ld 1, %0(1)" ::"i"(8 * 1) :);
+    ASM("ld 2, %0(1)" ::"i"(8 * 2) :);
+    ASM("ld 3, %0(1)" ::"i"(8 * 3) :);
+    //ASM("ld 4, %0(1)" ::"i"(8 * 4) :);//
+    //ASM("ld 5, %0(1)" ::"i"(8 * 5) :);//
+    //ASM("ld 6, %0(1)" ::"i"(8 * 6) :);//
+    ASM("ld 7, %0(1)" ::"i"(8 * 7) :);
+    ASM("ld 8, %0(1)" ::"i"(8 * 8) :);
+    ASM("ld 9, %0(1)" ::"i"(8 * 9) :);
+    ASM("ld 10, %0(1)" ::"i"(8 * 10) :);
+    ASM("ld 11, %0(1)" ::"i"(8 * 11) :);
+    ASM("ld 12, %0(1)" ::"i"(8 * 12) :);
+    ASM("ld 13, %0(1)" ::"i"(8 * 13) :);
+    ASM("ld 14, %0(1)" ::"i"(8 * 14) :);
+    ASM("ld 15, %0(1)" ::"i"(8 * 15) :);
+    ASM("ld 16, %0(1)" ::"i"(8 * 16) :);
+    ASM("ld 17, %0(1)" ::"i"(8 * 17) :);
+    ASM("ld 18, %0(1)" ::"i"(8 * 18) :);
+    ASM("ld 19, %0(1)" ::"i"(8 * 19) :);
+    ASM("ld 20, %0(1)" ::"i"(8 * 20) :);
+    ASM("ld 21, %0(1)" ::"i"(8 * 21) :);
+    ASM("ld 22, %0(1)" ::"i"(8 * 22) :);
+    ASM("ld 23, %0(1)" ::"i"(8 * 23) :);
+    ASM("ld 24, %0(1)" ::"i"(8 * 24) :);
+    ASM("ld 25, %0(1)" ::"i"(8 * 25) :);
+    ASM("ld 26, %0(1)" ::"i"(8 * 26) :);
+    ASM("ld 27, %0(1)" ::"i"(8 * 27) :);
+    ASM("ld 28, %0(1)" ::"i"(8 * 28) :);
+    ASM("ld 29, %0(1)" ::"i"(8 * 29) :);
+    ASM("ld 30, %0(1)" ::"i"(8 * 30) :);
+    ASM("ld 31, %0(1)" ::"i"(8 * 31) :);
 
     // pop stack
-    asm volatile("addi 1, 1, 512");
+    ASM("addi 1, 1, 512");
 
     // sync
-    asm volatile("sync");
+    ASM("sync");
 
     // r3 = 0
-    asm volatile("li %0, 0" : "=r"(r3)::);
+    ASM("li %0, 0" : "=r"(r3)::);
 
     // blr
-    asm volatile("blr");
+    ASM("blr");
 
     __builtin_unreachable();
 }

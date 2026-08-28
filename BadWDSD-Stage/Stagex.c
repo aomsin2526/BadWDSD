@@ -45,23 +45,25 @@ typedef uint64_t uintptr_t;
 
 #define NULL 0
 
+#define ASM(...) asm volatile(__VA_ARGS__)
+
 #define eieio()                \
     {                          \
-        asm volatile("eieio"); \
-        asm volatile("sync");  \
+        ASM("eieio");          \
+        ASM("sync");           \
     }
 
 #define dcbf(___in_addr_register)                                                  \
     {                                                                              \
-        asm volatile("dcbf %0, %1" ::"r"(stage_zero), "r"(___in_addr_register) :); \
-        asm volatile("sync");                                                      \
+        ASM("dcbf %0, %1" ::"r"(stage_zero), "r"(___in_addr_register) :);          \
+        ASM("sync");                                                               \
     }
 
 #define sync()                 \
     {                          \
-        asm volatile("eieio"); \
-        asm volatile("isync"); \
-        asm volatile("sync");  \
+        ASM("eieio");          \
+        ASM("isync");          \
+        ASM("sync");           \
     }
 
 static const uint64_t stagex_max_size = (60 * 1024);
@@ -227,14 +229,14 @@ FUNC_DEF uint8_t IsLogEnabled()
 FUNC_DEF uint64_t msr_load()
 {
     uint64_t v;
-    asm volatile("mfmsr %0":"=r"(v)::);
+    ASM("mfmsr %0":"=r"(v)::);
 
     return v;
 }
 
 FUNC_DEF void msr_store(uint64_t v)
 {
-    asm volatile("mtmsr %0"::"r"(v):);
+    ASM("mtmsr %0"::"r"(v):);
 }
 
 FUNC_DEF uint64_t intr_disable()
@@ -254,12 +256,12 @@ FUNC_DEF uint64_t intr_disable()
 FUNC_DEF_NONSTATIC void HW_Init()
 {
     register uint64_t lr asm("r9");
-    asm volatile("mflr %0" : "=r"(lr)::);
+    ASM("mflr %0" : "=r"(lr)::);
 
     register uint64_t data_start asm("r10");
-    asm volatile("bl 4");
-    asm volatile("mflr %0" : "=r"(data_start)::);
-    asm volatile("b jump");
+    ASM("bl 4");
+    ASM("mflr %0" : "=r"(data_start)::);
+    ASM("b jump");
 
     // [0] = 0x4B00000000
     // [1] = 0x9C30104000000000
@@ -270,138 +272,138 @@ FUNC_DEF_NONSTATIC void HW_Init()
     // [6] = 0x1400000000
     // [7] = 0x0
 
-    asm volatile(".quad 0x4B00000000");
-    asm volatile(".quad 0x9C30104000000000");
-    asm volatile(".quad 0x9E30100000000000");
-    asm volatile(".quad 0x3F0000000000");
-    asm volatile(".quad 0x803F0000000000");
-    asm volatile(".quad 0x0");
-    asm volatile(".quad 0x1400000000");
-    asm volatile(".quad 0x0");
+    ASM(".quad 0x4B00000000");
+    ASM(".quad 0x9C30104000000000");
+    ASM(".quad 0x9E30100000000000");
+    ASM(".quad 0x3F0000000000");
+    ASM(".quad 0x803F0000000000");
+    ASM(".quad 0x0");
+    ASM(".quad 0x1400000000");
+    ASM(".quad 0x0");
 
     // [8] = 0x6
     // [9] = 0xF8040000
     // [10] = 0x0
     // [11] = 0x9000000000000000
 
-    asm volatile(".quad 0x6");
-    asm volatile(".quad 0xF8040000");
-    asm volatile(".quad 0x0");
-    asm volatile(".quad 0x9000000000000000");
+    ASM(".quad 0x6");
+    ASM(".quad 0xF8040000");
+    ASM(".quad 0x0");
+    ASM(".quad 0x9000000000000000");
 
     // [12] = 0x7FFFFFFF
     // [13] = 0x0
     // [14] = 0x1001400000000
 
-    asm volatile(".quad 0x7FFFFFFF");
-    asm volatile(".quad 0x0");
-    asm volatile(".quad 0x1001400000000");
+    ASM(".quad 0x7FFFFFFF");
+    ASM(".quad 0x0");
+    ASM(".quad 0x1001400000000");
 
-    asm volatile("jump:");
+    ASM("jump:");
     data_start += 8;
 
     // r3 = 6; [8]
-    asm volatile("ld 3, %0(%1)" ::"i"(8 * 8), "r"(data_start) :);
+    ASM("ld 3, %0(%1)" ::"i"(8 * 8), "r"(data_start) :);
     sync();
     // mtspr lpcr, r3
-    asm volatile(".long 0x7C7E4BA6");
+    ASM(".long 0x7C7E4BA6");
     sync();
 
 #if 1
 
     // slbia
-    asm volatile("slbia");
+    ASM("slbia");
     sync();
 
     // r4 = 0x9C30104000000000; // [1]
-    asm volatile("ld 4, %0(%1)" ::"i"(1 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(1 * 8), "r"(data_start) :);
     sync();
     // mtspr hid1, r4
-    asm volatile(".long 0x7C91FBA6");
+    ASM(".long 0x7C91FBA6");
     sync();
 
     // r4 = 0x3F0000000000; // [3]
-    asm volatile("ld 4, %0(%1)" ::"i"(3 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(3 * 8), "r"(data_start) :);
     sync();
     // mtspr hid4, r4
-    asm volatile(".long 0x7C94FBA6");
+    ASM(".long 0x7C94FBA6");
     sync();
 
     // r4 = 0x9E30100000000000; // [2]
-    asm volatile("ld 4, %0(%1)" ::"i"(2 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(2 * 8), "r"(data_start) :);
     sync();
     // mtspr hid1, r4
-    asm volatile(".long 0x7C91FBA6");
+    ASM(".long 0x7C91FBA6");
     sync();
 
     // r4 = 0x803F0000000000; // [4]
-    asm volatile("ld 4, %0(%1)" ::"i"(4 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(4 * 8), "r"(data_start) :);
     sync();
     // mtspr hid4, r4
-    asm volatile(".long 0x7C94FBA6");
+    ASM(".long 0x7C94FBA6");
     sync();
 
     // r4 = 0x9C30104000000000; // [1]
-    asm volatile("ld 4, %0(%1)" ::"i"(1 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(1 * 8), "r"(data_start) :);
     sync();
     // mtspr hid1, r4
-    asm volatile(".long 0x7C91FBA6");
+    ASM(".long 0x7C91FBA6");
     sync();
 
     // r4 = 0x3F0000000000; // [3]
-    asm volatile("ld 4, %0(%1)" ::"i"(3 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(3 * 8), "r"(data_start) :);
     sync();
     // mtspr hid4, r4
-    asm volatile(".long 0x7C94FBA6");
+    ASM(".long 0x7C94FBA6");
     sync();
 
     // r4 = 0x4B00000000; // [0]
-    asm volatile("ld 4, %0(%1)" ::"i"(0 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(0 * 8), "r"(data_start) :);
     sync();
     // mtspr hid0, r4
-    asm volatile(".long 0x7C90FBA6");
+    ASM(".long 0x7C90FBA6");
     sync();
 
     // r4 = 0x0; // [5]
-    asm volatile("ld 4, %0(%1)" ::"i"(5 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(5 * 8), "r"(data_start) :);
     sync();
     // mtspr hid5, r4
-    asm volatile(".long 0x7C96FBA6");
+    ASM(".long 0x7C96FBA6");
     sync();
 
     // r4 = 0x1400000000; // [6]
-    asm volatile("ld 4, %0(%1)" ::"i"(6 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(6 * 8), "r"(data_start) :);
     sync();
     // mtspr hid6, r4
-    asm volatile(".long 0x7C99FBA6");
+    ASM(".long 0x7C99FBA6");
     sync();
 
     // r4 = 0x0; // [7]
-    asm volatile("ld 4, %0(%1)" ::"i"(7 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(7 * 8), "r"(data_start) :);
     sync();
     // mtspr hid7, r4
-    asm volatile(".long 0x7C9AFBA6");
+    ASM(".long 0x7C9AFBA6");
     sync();
 
     // r4 = 0xF8040000; [9]
-    asm volatile("ld 4, %0(%1)" ::"i"(9 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(9 * 8), "r"(data_start) :);
     sync();
     // mtspr tscr, r4
-    asm volatile(".long 0x7C99E3A6");
+    ASM(".long 0x7C99E3A6");
     sync();
 
     // r4 = 0x0; [10]
-    asm volatile("ld 4, %0(%1)" ::"i"(10 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(10 * 8), "r"(data_start) :);
     sync();
     // mtspr lpidr, r4
-    asm volatile(".long 0x7C9F4BA6");
+    ASM(".long 0x7C9F4BA6");
     sync();
 
     // r3 = 0x9000000000000000; [11]
-    asm volatile("ld 3, %0(%1)" ::"i"(11 * 8), "r"(data_start) :);
+    ASM("ld 3, %0(%1)" ::"i"(11 * 8), "r"(data_start) :);
     sync();
     // mtmsrd r3
-    asm volatile(".long 0x7C600164");
+    ASM(".long 0x7C600164");
     sync();
 
 #endif
@@ -411,36 +413,36 @@ FUNC_DEF_NONSTATIC void HW_Init()
 #if 1
 
     // r4 = 0x7FFFFFFFLL
-    asm volatile("ld 4, %0(%1)" ::"i"(12 * 8), "r"(data_start) :);
+    ASM("ld 4, %0(%1)" ::"i"(12 * 8), "r"(data_start) :);
     sync();
-    asm volatile("mtdec 4");
+    ASM("mtdec 4");
     sync();
 
     // r0 = 0x0
-    asm volatile("ld 0, %0(%1)" ::"i"(13 * 8), "r"(data_start) :);
+    ASM("ld 0, %0(%1)" ::"i"(13 * 8), "r"(data_start) :);
     sync();
     // mtspr tblw, r0
-    asm volatile(".long 0x7C1C43A6");
+    ASM(".long 0x7C1C43A6");
     sync();
     // mtspr tbuw, r0
-    asm volatile(".long 0x7C1D43A6");
+    ASM(".long 0x7C1D43A6");
     sync();
     // mtspr tblw, r0
-    asm volatile(".long 0x7C1C43A6");
+    ASM(".long 0x7C1C43A6");
     sync();
 
     // r0 = 0x1001400000000
-    asm volatile("ld 0, %0(%1)" ::"i"(14 * 8), "r"(data_start) :);
+    ASM("ld 0, %0(%1)" ::"i"(14 * 8), "r"(data_start) :);
     sync();
     // mtspr hid6, r0
-    asm volatile(".long 0x7C19FBA6");
+    ASM(".long 0x7C19FBA6");
     sync();
 
 #endif
 
-    // asm volatile("b DBG_RET");
+    // ASM("b DBG_RET");
 
-    asm volatile("mtlr %0" : "=r"(lr)::);
+    ASM("mtlr %0" : "=r"(lr)::);
 }
 
 FUNC_DEF void dead()
@@ -455,10 +457,10 @@ FUNC_DEF uint64_t get_pc()
 {
     register uint64_t r3 asm("r3");
 
-    asm volatile("mflr %r4");
-    asm volatile("bl 4");
-    asm volatile("mflr %r3");
-    asm volatile("mtlr %r4");
+    ASM("mflr %r4");
+    ASM("bl 4");
+    ASM("mflr %r3");
+    ASM("mtlr %r4");
 
     return r3;
 }
@@ -472,7 +474,7 @@ FUNC_DEF uint64_t get_pc()
 #define SYS_TIMEBASE_GET(tb)                          \
     do                                                \
     {                                                 \
-        __asm__ volatile("1: mftb %[current_tb];"     \
+        ASM("1: mftb %[current_tb];"                  \
                          "cmpwi 7, %[current_tb], 0;" \
                          "beq-  7, 1b;"               \
                          : [current_tb] "=r"(tb) :    \
@@ -577,16 +579,16 @@ FUNC_DEF_NONSTATIC void WaitInMs2(uint64_t ms)
 {
     // save lr
     register uint64_t lr asm("r0");
-    asm volatile("mflr %0" : "=r"(lr)::);
+    ASM("mflr %0" : "=r"(lr)::);
 
     // ms2 = ms
     register uint64_t ms2 asm("r7");
-    asm volatile("mr %0, %1" : "=r"(ms2) : "r"(ms) :);
+    ASM("mr %0, %1" : "=r"(ms2) : "r"(ms) :);
 
     // start = GetTimeInMs2();
     register uint64_t start asm("r8");
-    asm volatile("bl GetTimeInMs2");
-    asm volatile("mr %0, 3" : "=r"(start)::);
+    ASM("bl GetTimeInMs2");
+    ASM("mr %0, 3" : "=r"(start)::);
 
     // end = start + ms2
     register uint64_t end asm("r9") = start + ms2;
@@ -597,8 +599,8 @@ FUNC_DEF_NONSTATIC void WaitInMs2(uint64_t ms)
     {
         // cur = GetTimeInMs2();
         register uint64_t cur asm("r10");
-        asm volatile("bl GetTimeInMs2");
-        asm volatile("mr %0, 3" : "=r"(cur)::);
+        ASM("bl GetTimeInMs2");
+        ASM("mr %0, 3" : "=r"(cur)::);
 
         if (cur >= end)
             break;
@@ -607,7 +609,7 @@ FUNC_DEF_NONSTATIC void WaitInMs2(uint64_t ms)
     //
 
     // restore lr
-    asm volatile("mtlr %0" ::"r"(lr) :);
+    ASM("mtlr %0" ::"r"(lr) :);
 }
 
 FUNC_DEF void memset(void *buf, uint8_t v, uint64_t count)
@@ -861,67 +863,28 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
         dead();
     }
 
-    // 0x24000000000
-    uint64_t sb_base_addr = 0x24;
-    sb_base_addr <<= 36;
-
     //
-    uint64_t send_packet_counter_addr[2];
 
-    // cell
-    // 0x2400008DFF0
-    send_packet_counter_addr[0] = sb_base_addr;
-    send_packet_counter_addr[0] |= 0x8DFF0;
+    uint64_t msr = 0;
 
-    // sc
-    // 0x2400008CFF4
-    send_packet_counter_addr[1] = sb_base_addr;
-    send_packet_counter_addr[1] |= 0x8CFF4;
-
-    // 0x2400008D000
-    uint64_t send_packet_data_addr = sb_base_addr;
-    send_packet_data_addr |= 0x8D000;
-
-    // 0x2400008E100
-    uint64_t send_packet_kick_addr = sb_base_addr;
-    send_packet_kick_addr |= 0x8E100;
-
-    //
-    uint64_t recieve_packet_counter_addr[2];
-
-    // sc
-    // 0x2400008CFF0
-    recieve_packet_counter_addr[0] = sb_base_addr;
-    recieve_packet_counter_addr[0] |= 0x8CFF0;
-
-    // cell
-    // 0x2400008DFF4
-    recieve_packet_counter_addr[1] = sb_base_addr;
-    recieve_packet_counter_addr[1] |= 0x8DFF4;
-
-    // 0x2400008E000
-    uint64_t recieve_packet_test_addr = sb_base_addr;
-    recieve_packet_test_addr |= 0x8E000;
-
-    // 0x2400008C000
-    uint64_t recieve_packet_data_addr = sb_base_addr;
-    recieve_packet_data_addr |= 0x8C000;
+    if (IsLv1())
+        msr = intr_disable();
 
     //
 
-    volatile uint32_t *send_packet_counter_cell = (volatile uint32_t *)send_packet_counter_addr[0];
+    volatile uint32_t* send_packet_counter_cell = (volatile uint32_t*)0x2400008DFF0;
 
-    volatile uint32_t *send_packet_data = (volatile uint32_t *)send_packet_data_addr;
-    volatile uint32_t *send_packet_kick = (volatile uint32_t *)send_packet_kick_addr;
+    volatile uint32_t* send_packet_data = (volatile uint32_t*)0x2400008D000;
+    volatile uint32_t* send_packet_kick = (volatile uint32_t*)0x2400008E100;
 
     //
 
-    volatile uint32_t *recieve_packet_counter_sc = (volatile uint32_t *)recieve_packet_counter_addr[0];
-    volatile uint32_t *recieve_packet_counter_cell = (volatile uint32_t *)recieve_packet_counter_addr[1];
+    volatile uint32_t* recieve_packet_counter_sc = (volatile uint32_t*)0x2400008CFF0;
+    volatile uint32_t* recieve_packet_counter_cell = (volatile uint32_t*)0x2400008DFF4;
 
-    volatile uint32_t *recieve_packet_test = (volatile uint32_t *)recieve_packet_test_addr;
+    volatile uint32_t* recieve_packet_test = (volatile uint32_t*)0x2400008E000;
 
-    volatile uint32_t *recieve_packet_data = (volatile uint32_t *)recieve_packet_data_addr;
+    volatile uint32_t* recieve_packet_data = (volatile uint32_t*)0x2400008C000;
 
     //
 
@@ -1054,6 +1017,13 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
             }
         }
     }
+
+    //
+
+    if (IsLv1())
+        msr_store(msr);
+
+    //
 }
 
 FUNC_DEF void sc_triple_beep()
@@ -1789,51 +1759,37 @@ FUNC_DEF struct Stagex_Context_s* GetStagexContext()
 //#define YREG_YDRAM_DTA_1 0x148
 //#define MIC_YREG_STAT_1 0x150
 
-#define XDR_CH0_SCMD ((volatile uint32_t*)0x2000050A108)
-#define XDR_CH0_SCMD_STAT ((volatile uint32_t*)0x2000050A110)
+#define XDR_CH0_SCMD ((uint32_t*)0x2000050A108)
+#define XDR_CH0_SCMD_STAT ((uint32_t*)0x2000050A110)
 
-#define XDR_CH1_SCMD ((volatile uint32_t*)0x2000050A148)
-#define XDR_CH1_SCMD_STAT ((volatile uint32_t*)0x2000050A150)
+#define XDR_CH1_SCMD ((uint32_t*)0x2000050A148)
+#define XDR_CH1_SCMD_STAT ((uint32_t*)0x2000050A150)
 
 FUNC_DEF void Xdr_Ch0_SendScmd(uint32_t data)
 {
-    //*XDR_CH0_SCMD = data;
-    //eieio();
+    ASM("lis %r4, 0x200");
+    ASM("ori %r4, %r4, 0x50");
+    ASM("sldi %r4, %r4, 16");
+    ASM("ori %r4, %r4, 0xA108");
 
-    //volatile uint32_t yyy = *XDR_CH0_SCMD_STAT;
-    //++yyy;
-    //eieio();
-
-    asm volatile("lis %r4, 0x200");
-    asm volatile("ori %r4, %r4, 0x50");
-    asm volatile("sldi %r4, %r4, 16");
-    asm volatile("ori %r4, %r4, 0xA108");
-
-    asm volatile("stw %r3, 0(%r4)");
+    ASM("stw %r3, 0(%r4)");
     eieio();
 
-    asm volatile("lwz %r5, 8(%r4)");
+    ASM("lwz %r5, 8(%r4)");
     eieio();
 }
 
 FUNC_DEF void Xdr_Ch1_SendScmd(uint32_t data)
 {
-    //*XDR_CH1_SCMD = data;
-    //eieio();
+    ASM("lis %r4, 0x200");
+    ASM("ori %r4, %r4, 0x50");
+    ASM("sldi %r4, %r4, 16");
+    ASM("ori %r4, %r4, 0xA148");
 
-    //volatile uint32_t yyy = *XDR_CH1_SCMD_STAT;
-    //++yyy;
-    //eieio();
-
-    asm volatile("lis %r4, 0x200");
-    asm volatile("ori %r4, %r4, 0x50");
-    asm volatile("sldi %r4, %r4, 16");
-    asm volatile("ori %r4, %r4, 0xA148");
-
-    asm volatile("stw %r3, 0(%r4)");
+    ASM("stw %r3, 0(%r4)");
     eieio();
 
-    asm volatile("lwz %r5, 8(%r4)");
+    ASM("lwz %r5, 8(%r4)");
     eieio();
 }
 
@@ -1870,7 +1826,7 @@ FUNC_DEF uint64_t calc_myspu_id()
     uint8_t found = 0;
     uint64_t myspu_id = 0;
 
-    uint32_t spu_avail = *((const volatile uint32_t*)0x20000509C38);
+    uint32_t spu_avail = *((const uint32_t*)0x20000509C38);
 
     for (uint32_t i = 0; i < 8; ++i)
     {
@@ -1898,7 +1854,7 @@ FUNC_DEF uint64_t calc_myspu_id_exclude(uint64_t exclude_spu_id)
     uint8_t found = 0;
     uint64_t myspu_id = 0;
 
-    uint32_t spu_avail = *((const volatile uint32_t*)0x20000509C38);
+    uint32_t spu_avail = *((const uint32_t*)0x20000509C38);
 
     for (uint32_t i = 0; i < 8; ++i)
     {
@@ -3105,7 +3061,7 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
 
     memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
 
-    const volatile uint64_t* signature = (const volatile uint64_t*)(new_stagex_addr + 0x908);
+    const uint64_t* signature = (const uint64_t*)(new_stagex_addr + 0x908);
 
     if (*signature != 0x5446072c5516c2c6)
     {
@@ -3113,19 +3069,19 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
         dead_beep();
     }
 
-    volatile uint64_t* toc1_addr = (volatile uint64_t*)(new_stagex_addr + 0x910);
-    const volatile uint64_t* toc1_size = (const volatile uint64_t*)(new_stagex_addr + 0x918);
+    uint64_t* toc1_addr = (uint64_t*)(new_stagex_addr + 0x910);
+    const uint64_t* toc1_size = (const uint64_t*)(new_stagex_addr + 0x918);
 
     if (*toc1_size > 0)
     {
-        volatile uint64_t* toc = (volatile uint64_t*)(new_stagex_addr + 0x900);
+        uint64_t* toc = (uint64_t*)(new_stagex_addr + 0x900);
         *toc -= old_stagex_addr;
         *toc += new_stagex_addr;
 
         *toc1_addr -= old_stagex_addr;
         *toc1_addr += new_stagex_addr;
 
-        volatile uint64_t* toc1 = (volatile uint64_t*)(*toc1_addr);
+        uint64_t* toc1 = (uint64_t*)(*toc1_addr);
 
         for (uint64_t i = 0; i < (*toc1_size / 8); ++i)
         {
@@ -3250,9 +3206,9 @@ lv0_mem:0000000000010188                                         # *************
 
 void stage_link_entry()
 {
-    asm volatile("bl stage1_entry");
-    asm volatile("bl stage2_entry");
-    asm volatile("bl stage3_entry");
-    asm volatile("bl stage5_entry");
-    asm volatile("bl stage6_entry");
+    ASM("bl stage1_entry");
+    ASM("bl stage2_entry");
+    ASM("bl stage3_entry");
+    ASM("bl stage5_entry");
+    ASM("bl stage6_entry");
 }

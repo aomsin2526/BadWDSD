@@ -75,9 +75,6 @@ struct LedContext_s
     uint64_t blink_t1;
 };
 
-extern volatile bool ledIsInited;
-extern volatile struct LedContext_s ledContext;
-
 extern void Led_SetStatus(uint32_t status);
 extern void Led_SetBlinkIntervalInMs(uint32_t value);
 
@@ -105,6 +102,7 @@ static const uint32_t XDR_GPO_CMD_PIN_ID2 = 11;
 #if !IS_EMMC
 #define XDR_GPO_DELAY_ENABLED 1
 #endif
+
 #define XDR_GPO_DELAY_VALUE_IN_US 1 // 4000ns/250khz per cycle
 //#define XDR_GPO_DELAY_VALUE_IN_US 2 // 8000ns/125khz per cycle
 //#define XDR_GPO_DELAY_VALUE_IN_US 4 // 16000ns/62.5khz per cycle
@@ -178,29 +176,31 @@ struct XdrCmd_s
     uint32_t value;
 };
 
-extern uint32_t XdrCmd_GetValue(volatile struct XdrCmd_s* cmd);
-extern void XdrCmd_SetValue(volatile struct XdrCmd_s* cmd, uint32_t value);
+extern uint32_t XdrCmd_GetValue(struct XdrCmd_s* cmd);
+extern void XdrCmd_SetValue(struct XdrCmd_s* cmd, uint32_t value);
 
-extern void XdrCmd_SetStart(volatile struct XdrCmd_s* cmd, uint8_t value);
+extern void XdrCmd_SetStart(struct XdrCmd_s* cmd, uint8_t value);
 
-extern uint8_t XdrCmd_GetScmd(volatile struct XdrCmd_s* cmd);
-extern void XdrCmd_SetScmd(volatile struct XdrCmd_s* cmd, uint8_t value);
+extern uint8_t XdrCmd_GetScmd(struct XdrCmd_s* cmd);
+extern void XdrCmd_SetScmd(struct XdrCmd_s* cmd, uint8_t value);
 
-extern void XdrCmd_SetSid(volatile struct XdrCmd_s* cmd, uint8_t value);
+extern void XdrCmd_SetSid(struct XdrCmd_s* cmd, uint8_t value);
 
-extern void XdrCmd_SetSadr(volatile struct XdrCmd_s* cmd, uint8_t value);
+extern void XdrCmd_SetSadr(struct XdrCmd_s* cmd, uint8_t value);
 
-extern void XdrCmd_SetJunk1(volatile struct XdrCmd_s* cmd, uint8_t value);
+extern void XdrCmd_SetJunk1(struct XdrCmd_s* cmd, uint8_t value);
 
-extern void XdrCmd_SetSwd(volatile struct XdrCmd_s* cmd, uint8_t value);
+extern void XdrCmd_SetSwd(struct XdrCmd_s* cmd, uint8_t value);
 
-extern void XdrCmd_SetJunk2(volatile struct XdrCmd_s* cmd, uint8_t value);
+extern void XdrCmd_SetJunk2(struct XdrCmd_s* cmd, uint8_t value);
 
-extern uint32_t XdrCmd_GetValueForSendRaw(volatile struct XdrCmd_s cmd);
+extern uint32_t XdrCmd_GetValueForSendRaw(struct XdrCmd_s cmd);
 
 extern void Xdr_SendRawCmd(uint32_t value);
 
-extern void Xdr_SendCmd(volatile struct XdrCmd_s cmd);
+extern void Xdr_SendCmd(struct XdrCmd_s cmd);
+
+//
 
 extern void Xdr_SendReadROM0();
 
@@ -293,27 +293,27 @@ struct Sc_SendCommandContext_s;
 
 struct ScContext_s
 {
-    volatile uart_inst_t* uartId;
+    uart_inst_t* uartId;
 
-    volatile char rxBuf[SC_RXBUF_SIZE];
-    volatile uint32_t rxBufCurLen;
+    char rxBuf[SC_RXBUF_SIZE];
+    uint32_t rxBufCurLen;
 
 #if IS_EMMC
-    volatile uint32_t emmcTriggerCounter;
+    uint32_t emmcTriggerCounter;
 #endif
 
-    volatile bool trigger;
-    volatile bool xdrInitFail;
+    bool trigger;
+    bool xdrInitFail;
 
-    volatile bool success;
-    volatile bool shutdownSuccess;
-    volatile bool bringupSuccess;
+    bool success;
+    bool shutdownSuccess;
+    bool bringupSuccess;
 
-    volatile bool needReboot;
+    bool needReboot;
 
-    volatile struct Sc_SendCommandContext_s* sendCommandCtx;
+    struct Sc_SendCommandContext_s* sendCommandCtx;
 
-    volatile uint64_t lastScTxTimeInMs;
+    uint64_t lastScTxTimeInMs;
 };
 
 extern void Sc_Thread();
@@ -356,17 +356,17 @@ extern void Sc_Puts(const char* cmd);
 
 struct Sc_SendCommandContext_s
 {
-    volatile char cmd[SC_TXBUF_SIZE];
+    char cmd[SC_TXBUF_SIZE];
 
-    volatile char expectedResponse[SC_RXBUF_SIZE];
+    char expectedResponse[SC_RXBUF_SIZE];
 
-    volatile char response[SC_RXBUF_SIZE];
-    volatile uint32_t responseLen;
+    char response[SC_RXBUF_SIZE];
+    uint32_t responseLen;
 
-    volatile bool done;
+    bool done;
 };
 
-extern void Sc_SendCommand(volatile struct Sc_SendCommandContext_s* ctx);
+extern void Sc_SendCommand(struct Sc_SendCommandContext_s* ctx);
 
 //
 

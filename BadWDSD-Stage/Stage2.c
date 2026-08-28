@@ -559,9 +559,9 @@ FUNC_DEF void Stage2()
 
     eieio();
 
-    asm volatile("li 3, 0x100");
-    asm volatile("mtctr 3");
-    asm volatile("bctr");
+    ASM("li 3, 0x100");
+    ASM("mtctr 3");
+    ASM("bctr");
 }
 
 #if HDDKEYDUMPER_ENABLED
@@ -587,8 +587,8 @@ __attribute__((section("main2"))) void stage2_main(uint64_t in_r3)
 __attribute__((noreturn, section("entry2"))) void stage2_entry()
 {
     // set stage_entry_ra
-    asm volatile("bl 4");
-    asm volatile("mflr %0" : "=r"(stage_entry_ra)::);
+    ASM("bl 4");
+    ASM("mflr %0" : "=r"(stage_entry_ra)::);
     stage_entry_ra -= 4;
 
     // set is_lv1 to 0
@@ -603,22 +603,22 @@ __attribute__((noreturn, section("entry2"))) void stage2_entry()
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc
-    asm volatile("mr 2, %0" ::"r"(stage_rtoc) :);
+    ASM("mr 2, %0" ::"r"(stage_rtoc) :);
 
     // set stage_sp to 0xDFFFF00
     stage_sp = 0xDFFFF00;
 
     // set r1 to stage_sp
-    asm volatile("mr 1, %0" ::"r"(stage_sp) :);
+    ASM("mr 1, %0" ::"r"(stage_sp) :);
 
     // sync
-    asm volatile("sync");
+    ASM("sync");
 
     // push stack
-    asm volatile("addi 1, 1, -128");
+    ASM("addi 1, 1, -128");
 
     // jump to stage_main
-    asm volatile("b stage2_main");
+    ASM("b stage2_main");
 
     __builtin_unreachable();
 }

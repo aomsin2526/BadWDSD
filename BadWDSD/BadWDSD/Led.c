@@ -88,7 +88,7 @@ void Led_Thread()
 
     if (ledContext.status != ledContext.prevStatus)
     {
-        volatile uint32_t newStatus = ledContext.status;
+        uint32_t newStatus = ledContext.status;
 
         if (newStatus == LED_STATUS_ON)
         {

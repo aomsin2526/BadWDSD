@@ -17,7 +17,7 @@ struct __attribute__((aligned(8))) Stagex_spu_job_aes128_decrypt_ctr_context_s
     uint64_t size; // size to decrypt
 };
 
-void Stagex_spu_job_aes128_decrypt_ctr(const volatile struct Stagex_spu_job_aes128_decrypt_ctr_context_s *job_context, uint8_t *tmpBuf, uint32_t tmpBufSize)
+void Stagex_spu_job_aes128_decrypt_ctr(const struct Stagex_spu_job_aes128_decrypt_ctr_context_s *job_context, uint8_t *tmpBuf, uint32_t tmpBufSize)
 {
     if ((job_context->size == 0) /*|| ((job_context->size % 16) != 0)*/)
         stop(4);
@@ -71,7 +71,7 @@ struct __attribute__((aligned(8))) Stagex_spu_job_aes_decrypt_cbc_context_s
     uint64_t size; // size to decrypt
 };
 
-void Stagex_spu_job_aes_decrypt_cbc(const volatile struct Stagex_spu_job_aes_decrypt_cbc_context_s *job_context, uint8_t *tmpBuf, uint32_t tmpBufSize)
+void Stagex_spu_job_aes_decrypt_cbc(const struct Stagex_spu_job_aes_decrypt_cbc_context_s *job_context, uint8_t *tmpBuf, uint32_t tmpBufSize)
 {
     if ((job_context->size == 0) || ((job_context->size % 16) != 0))
         stop(4);
@@ -161,7 +161,7 @@ int32_t Stagex_spu_job_zlib_decompress_readSource_cb(struct uzlib_uncomp *uncomp
     return job_context->uzlib_inTmpBuf[0];
 }
 
-void Stagex_spu_job_zlib_decompress(volatile struct Stagex_spu_job_zlib_decompress_context_s *job_context)
+void Stagex_spu_job_zlib_decompress(struct Stagex_spu_job_zlib_decompress_context_s *job_context)
 {
     if (job_context->compressed_size == 0)
         stop(5);
@@ -506,7 +506,7 @@ struct __attribute__((aligned(8))) Stagex_spu_job_DecryptLv0Self_context_s
     uint64_t inSrcEa;
 };
 
-void Stagex_spu_job_DecryptLv0Self(const volatile struct Stagex_spu_job_DecryptLv0Self_context_s *job_context)
+void Stagex_spu_job_DecryptLv0Self(const struct Stagex_spu_job_DecryptLv0Self_context_s *job_context)
 {
     uint64_t curDestEa = job_context->inDestEa;
     uint64_t curSrcEa = job_context->inSrcEa;
@@ -601,7 +601,7 @@ void Stagex_spu_job_DecryptLv0Self(const volatile struct Stagex_spu_job_DecryptL
         uint64_t in_addr = (job_context->inSrcEa + h->segment_offset);
         uint64_t out_addr = (job_context->inDestEa + phdr->p_offset);
 
-        volatile struct Stagex_spu_job_aes128_decrypt_ctr_context_s decrypt;
+        struct Stagex_spu_job_aes128_decrypt_ctr_context_s decrypt;
 
         memcpy(decrypt.key, key->key, 16);
         memcpy(decrypt.iv, iv->key, 16);
@@ -625,7 +625,7 @@ struct __attribute__((aligned(8))) Stagex_spu_job_stage2_context_s
     uint8_t fsm_toggle; // 0x0 = exit, 0x1 = enter, other values = do nothing
 };
 
-void Stagex_spu_job_stage2_generic(const volatile struct Stagex_spu_job_stage2_context_s *job_context)
+void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s *job_context)
 {
     static const uint32_t tmpBufSize = (128 * 1024);
     uint8_t *tmpBuf = (uint8_t *)0x10000;
@@ -894,7 +894,7 @@ void Stagex_spu_job_stage2_generic(const volatile struct Stagex_spu_job_stage2_c
     }
 }
 
-void Stagex_spu_job_stage2_qcfw_jig(const volatile struct Stagex_spu_job_stage2_context_s *job_context)
+void Stagex_spu_job_stage2_qcfw_jig(const struct Stagex_spu_job_stage2_context_s *job_context)
 {
     static const uint32_t tmpBufSize = (128 * 1024);
     uint8_t *tmpBuf = (uint8_t *)0x10000;
@@ -968,7 +968,7 @@ void Stagex_spu_job_stage2_qcfw_jig(const volatile struct Stagex_spu_job_stage2_
         stop(8);
 }
 
-void Stagex_spu_job_stage2(const volatile struct Stagex_spu_job_stage2_context_s *job_context)
+void Stagex_spu_job_stage2(const struct Stagex_spu_job_stage2_context_s *job_context)
 {
     if (job_context->is_qcfw_jig)
         Stagex_spu_job_stage2_qcfw_jig(job_context);
@@ -978,15 +978,15 @@ void Stagex_spu_job_stage2(const volatile struct Stagex_spu_job_stage2_context_s
 
 void main()
 {
-    volatile uint64_t *jobStart = (volatile uint64_t *)0xf00;
-    volatile uint64_t *jobDone = (volatile uint64_t *)0xf08;
+    volatile uint64_t* jobStart = (volatile uint64_t*)0xf00;
+    volatile uint64_t* jobDone = (volatile uint64_t*)0xf08;
 
     *jobStart = 0;
     *jobDone = 0;
 
     sync();
 
-    volatile uint64_t *spuReady = (volatile uint64_t *)0xf10;
+    volatile uint64_t* spuReady = (volatile uint64_t*)0xf10;
     *spuReady = 1;
 
     sync();
@@ -998,20 +998,20 @@ void main()
             *jobStart = 0;
             sync();
 
-            const volatile struct Stagex_spu_context_s *context = (const volatile struct Stagex_spu_context_s *)0x100;
+            const struct Stagex_spu_context_s *context = (const struct Stagex_spu_context_s*)0x100;
 
             if (context->jobType == 1)
-                Stagex_spu_job_aes128_decrypt_ctr((const volatile struct Stagex_spu_job_aes128_decrypt_ctr_context_s *)0x200, (uint8_t *)0x10000, (128 * 1024));
+                Stagex_spu_job_aes128_decrypt_ctr((const struct Stagex_spu_job_aes128_decrypt_ctr_context_s*)0x200, (uint8_t*)0x10000, (128 * 1024));
             else if (context->jobType == 2)
-                Stagex_spu_job_zlib_decompress((volatile struct Stagex_spu_job_zlib_decompress_context_s *)0x200);
+                Stagex_spu_job_zlib_decompress((struct Stagex_spu_job_zlib_decompress_context_s*)0x200);
             else if (context->jobType == 3)
                 Stagex_spu_job_stage3();
             else if (context->jobType == 4)
-                Stagex_spu_job_DecryptLv0Self((const volatile struct Stagex_spu_job_DecryptLv0Self_context_s *)0x200);
+                Stagex_spu_job_DecryptLv0Self((const struct Stagex_spu_job_DecryptLv0Self_context_s*)0x200);
             else if (context->jobType == 5)
-                Stagex_spu_job_stage2((const volatile struct Stagex_spu_job_stage2_context_s *)0x200);
+                Stagex_spu_job_stage2((const struct Stagex_spu_job_stage2_context_s*)0x200);
             else if (context->jobType == 6)
-                Stagex_spu_job_aes_decrypt_cbc((const volatile struct Stagex_spu_job_aes_decrypt_cbc_context_s *)0x200, (uint8_t *)0x10000, (128 * 1024));
+                Stagex_spu_job_aes_decrypt_cbc((const struct Stagex_spu_job_aes_decrypt_cbc_context_s*)0x200, (uint8_t*)0x10000, (128 * 1024));
             else
                 stop(3);
 

@@ -72,7 +72,7 @@ struct __attribute__((aligned(8))) mymetldr_context_s
 
 void main()
 {
-    volatile struct mymetldr_context_s *ctx = (volatile struct mymetldr_context_s *)0x100;
+    struct mymetldr_context_s *ctx = (struct mymetldr_context_s *)0x100;
     LoadElfSpu(ctx->myldrElfAddress);
 
     //
@@ -214,8 +214,8 @@ void main()
 
     //
 
-    asm volatile("ila 3, 0x12C00");
-    asm volatile("bi 3");
+    ASM("ila 3, 0x12C00");
+    ASM("bi 3");
 
     //
 
@@ -245,8 +245,8 @@ void main()
 
     //
 
-    asm volatile("ila 3, 0x12C00");
-    asm volatile("bi 3");
+    ASM("ila 3, 0x12C00");
+    ASM("bi 3");
 
     while (1) {}
 

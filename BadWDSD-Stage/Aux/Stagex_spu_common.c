@@ -6,7 +6,6 @@
 //#include <string.h>
 
 #pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
-#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 
 // typedef char int8_t;
 // typedef unsigned char uint8_t;
@@ -26,8 +25,10 @@
 
 // #define NULL 0
 
-#define sync() asm volatile("sync")
-#define stop(...) asm volatile("stop %0" ::"i"(__VA_ARGS__) :)
+#define ASM(...) asm volatile(__VA_ARGS__)
+
+#define sync() ASM("sync")
+#define stop(...) ASM("stop %0" ::"i"(__VA_ARGS__) :)
 
 uint8_t IsPow2(uint64_t x)
 {

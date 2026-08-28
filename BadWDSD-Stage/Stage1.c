@@ -90,8 +90,8 @@ FUNC_DEF void WDSDTest_2()
             r3 = (0x100 + r5);
             r4 = 0;
 
-            asm volatile("stb %0, 0(%1)"::"r"(r4),"r"(r3):);
-            asm volatile("dcbf %0, %1"::"r"(r4),"r"(r3):);
+            ASM("stb %0, 0(%1)"::"r"(r4),"r"(r3):);
+            ASM("dcbf %0, %1"::"r"(r4),"r"(r3):);
             eieio();
         }
     }
@@ -133,16 +133,14 @@ FUNC_DEF void Stage1()
 
     print_pc();
 
-#if 0
-
+#if LOGGING_ENABLED
     {
-        const volatile uint32_t* spu_avail = (const volatile uint32_t*)0x20000509C38;
+        const uint32_t* spu_avail = (const uint32_t*)0x20000509C38;
 
         puts("spu_avail = ");
         print_hex(*spu_avail); // 0xef for [INFO]: SPU enable [0, 1, 2, 5, 6, 7] 11101111
         puts("\n");
     }
-
 #endif
 
     uint64_t myspu_id = calc_myspu_id();
@@ -519,16 +517,16 @@ FUNC_DEF void Stage1()
     }
 
     // write lv0 .vector
-    volatile uint64_t *ea0 = (volatile uint64_t *)0x0;
+    uint64_t *ea0 = (uint64_t *)0x0;
     *ea0 = 0x50001010000;
 
     puts("Booting lv0...\n");
 
     eieio();
 
-    asm volatile("li 3, 0x100");
-    asm volatile("mtctr 3");
-    asm volatile("bctr");
+    ASM("li 3, 0x100");
+    ASM("mtctr 3");
+    ASM("bctr");
 }
 
 __attribute__((section("main1"))) void stage1_main()
@@ -543,8 +541,8 @@ __attribute__((section("main1"))) void stage1_main()
 __attribute__((noreturn, section("entry1"))) void stage1_entry()
 {
     // set stage_entry_ra
-    asm volatile("bl 4");
-    asm volatile("mflr %0" : "=r"(stage_entry_ra)::);
+    ASM("bl 4");
+    ASM("mflr %0" : "=r"(stage_entry_ra)::);
     stage_entry_ra -= 4;
 
     // set is_lv1 to 0
@@ -554,7 +552,7 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
     stage_zero = 0;
 
     // call HW_Init
-    asm volatile("bl HW_Init");
+    ASM("bl HW_Init");
 
     // set stage_rtoc
     stage_rtoc = stage_entry_ra;
@@ -562,26 +560,26 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc
-    asm volatile("mr 2, %0" ::"r"(stage_rtoc) :);
+    ASM("mr 2, %0" ::"r"(stage_rtoc) :);
 
     // restore XDR now
     {
         // *XDR_CH0_SCMD = (XDR_SCMD(XDR_SCMD_SDW, 0, XDR_CFG) | XDR_SLE_DISABLED_X32);
-        // *((volatile uint32_t*)0x2000050A108) = 0x4000205
+        // *((uint32_t*)0x2000050A108) = 0x4000205
 
-        asm volatile("lis 3, 0x400");
-        asm volatile("ori 3, 3, 0x205");
+        ASM("lis 3, 0x400");
+        ASM("ori 3, 3, 0x205");
 
-        asm volatile("lis 4, 0x200");
-        asm volatile("ori 4, 4, 0x50");
-        asm volatile("sldi 4, 4, 16");
-        asm volatile("ori 4, 4, 0xA108");
+        ASM("lis 4, 0x200");
+        ASM("ori 4, 4, 0x50");
+        ASM("sldi 4, 4, 16");
+        ASM("ori 4, 4, 0xA108");
 
-        asm volatile("stw 3, 0(4)");
+        ASM("stw 3, 0(4)");
         eieio();
 
         // wait for it to finish
-        asm volatile("lwz 3, 8(4)");
+        ASM("lwz 3, 8(4)");
         eieio();
     }
 
@@ -589,22 +587,22 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
     stage_sp = 0xDFFFF00;
 
     // set r1 to stage_sp
-    asm volatile("mr 1, %0" ::"r"(stage_sp) :);
+    ASM("mr 1, %0" ::"r"(stage_sp) :);
 
 #if ENTRY_WAIT_IN_MS > 0
     // Can't use ram yet until pico releases it, so we wait using register only
-    asm volatile("li 3, %0" ::"i"(ENTRY_WAIT_IN_MS) :);
-    asm volatile("bl WaitInMs2");
+    ASM("li 3, %0" ::"i"(ENTRY_WAIT_IN_MS) :);
+    ASM("bl WaitInMs2");
 #endif
 
     // sync
-    asm volatile("sync");
+    ASM("sync");
 
     // push stack
-    asm volatile("addi 1, 1, -128");
+    ASM("addi 1, 1, -128");
 
     // jump to stage_main
-    asm volatile("b stage1_main");
+    ASM("b stage1_main");
 
     __builtin_unreachable();
 }

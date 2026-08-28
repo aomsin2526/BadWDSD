@@ -107,24 +107,22 @@ void Sc_RxFn()
                 scContext.needReboot = true;
                 sync();
             }
-
-            bool reset = false;
-
-            if ((get_time_in_ms() - scContext.lastScTxTimeInMs) > 5000)
-            {
-
-#if SC_IS_SW
-                if (strstr(scContext.rxBuf, "OK 00000000:3A"))
-#else
-                if (strstr(scContext.rxBuf, "[mullion]$"))
-#endif
-                    reset = true;
-
-            }
-
-            if (reset)
-                watchdog_reboot(0, 0, 0);
         }
+
+        bool reset = false;
+
+        if ((get_time_in_ms() - scContext.lastScTxTimeInMs) > 5000)
+        {
+#if SC_IS_SW
+            if (strstr(scContext.rxBuf, "OK 00000000:3A"))
+#else
+            if (strstr(scContext.rxBuf, "[mullion]$"))
+#endif
+                reset = true;
+        }
+
+        if (reset)
+            watchdog_reboot(0, 0, 0);
 
         if (strstr(scContext.rxBuf, "[mullion]$ "))
         {
@@ -134,7 +132,7 @@ void Sc_RxFn()
 
         if (isNewline || (scContext.rxBufCurLen >= (SC_RXBUF_SIZE - 1)))
         {
-            volatile struct Sc_SendCommandContext_s *ctx = scContext.sendCommandCtx;
+            struct Sc_SendCommandContext_s *ctx = scContext.sendCommandCtx;
             bool ctx_done = false;
 
             if (ctx != NULL)
@@ -209,7 +207,7 @@ bool Sc_GetScBanksel()
     return !Gpio_GetOnce(SC_BANKSEL_PIN_ID);
 }
 
-volatile struct Sc_SendCommandContext_s cmdCtx;
+struct Sc_SendCommandContext_s cmdCtx;
 
 WORD sc2tb_key_schedule[60];
 uint64_t sc2tb_key[2];
@@ -765,7 +763,7 @@ void Sc_Puts(const char *cmd)
 }
 
 // Can only be called from main core
-void Sc_SendCommand(volatile struct Sc_SendCommandContext_s *ctx)
+void Sc_SendCommand(struct Sc_SendCommandContext_s *ctx)
 {
     Sc_CheckIsInited();
 

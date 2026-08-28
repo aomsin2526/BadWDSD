@@ -20,7 +20,7 @@ void WaitInNs(uint64_t ns)
     // 1 cycle = 100 ns
     uint64_t waitCycle = 1 * (ns / 100);
 
-    volatile uint64_t junk = 0;
+    uint64_t junk = 0;
 
     while (1)
     {

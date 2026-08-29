@@ -627,6 +627,110 @@ FUNC_DEF_BCODE void WaitInMs2(uint64_t ms)
     ASM("mtlr %0" ::"r"(lr) :);
 }
 
+//
+
+FUNC_DEF uint8_t volatile_read_uint8(uint64_t addr)
+{
+    eieio();
+    uint8_t v = *((const volatile uint8_t*)addr);
+    eieio();
+
+    return v;
+}
+
+FUNC_DEF void volatile_write_uint8(uint64_t addr, uint8_t v)
+{
+    eieio();
+    *((volatile uint8_t*)addr) = v;
+    eieio();
+}
+
+FUNC_DEF uint16_t volatile_read_uint16(uint64_t addr)
+{
+    eieio();
+    uint16_t v = *((const volatile uint16_t*)addr);
+    eieio();
+
+    return v;
+}
+
+FUNC_DEF void volatile_write_uint16(uint64_t addr, uint16_t v)
+{
+    eieio();
+    *((volatile uint16_t*)addr) = v;
+    eieio();
+}
+
+FUNC_DEF uint32_t volatile_read_uint32(uint64_t addr)
+{
+    eieio();
+    uint32_t v = *((const volatile uint32_t*)addr);
+    eieio();
+
+    return v;
+}
+
+FUNC_DEF void volatile_write_uint32(uint64_t addr, uint32_t v)
+{
+    eieio();
+    *((volatile uint32_t*)addr) = v;
+    eieio();
+}
+
+FUNC_DEF uint64_t volatile_read_uint64(uint64_t addr)
+{
+    eieio();
+    uint64_t v = *((const volatile uint64_t*)addr);
+    eieio();
+
+    return v;
+}
+
+FUNC_DEF void volatile_write_uint64(uint64_t addr, uint64_t v)
+{
+    eieio();
+    *((volatile uint64_t*)addr) = v;
+    eieio();
+}
+
+FUNC_DEF void volatile_memcpy(volatile void* dest, const volatile void* src, uint64_t count)
+{
+    if ((((uint64_t)dest % 8) == 0) && (((uint64_t)src % 8) == 0) && ((count % 8) == 0))
+    {
+        volatile uint64_t* destt = (volatile uint64_t*)dest;
+        const volatile uint64_t* srcc = (const volatile uint64_t*)src;
+
+        for (uint64_t i = 0; i < (count / 8); ++i)
+            volatile_write_uint64((uint64_t)(&destt[i]), volatile_read_uint64((uint64_t)(&srcc[i])));
+    }
+    else if ((((uint64_t)dest % 4) == 0) && (((uint64_t)src % 4) == 0) && ((count % 4) == 0))
+    {
+        volatile uint32_t* destt = (volatile uint32_t*)dest;
+        const volatile uint32_t* srcc = (const volatile uint32_t*)src;
+
+        for (uint64_t i = 0; i < (count / 4); ++i)
+            volatile_write_uint32((uint64_t)(&destt[i]), volatile_read_uint32((uint64_t)(&srcc[i])));
+    }
+    else if ((((uint64_t)dest % 2) == 0) && (((uint64_t)src % 2) == 0) && ((count % 2) == 0))
+    {
+        volatile uint16_t* destt = (volatile uint16_t*)dest;
+        const volatile uint16_t* srcc = (const volatile uint16_t*)src;
+
+        for (uint64_t i = 0; i < (count / 2); ++i)
+            volatile_write_uint16((uint64_t)(&destt[i]), volatile_read_uint16((uint64_t)(&srcc[i])));
+    }
+    else
+    {
+        volatile uint8_t* destt = (volatile uint8_t*)dest;
+        const volatile uint8_t* srcc = (const volatile uint8_t*)src;
+
+        for (uint64_t i = 0; i < count; ++i)
+            volatile_write_uint8((uint64_t)(&destt[i]), volatile_read_uint8((uint64_t)(&srcc[i])));
+    }
+}
+
+//
+
 FUNC_DEF void memset(void *buf, uint8_t v, uint64_t count)
 {
     if ((((uint64_t)buf % 8) == 0) && ((count % 8) == 0))
@@ -731,44 +835,6 @@ FUNC_DEF void memcpy(void *dest, const void *src, uint64_t count)
         for (uint64_t i = 0; i < count; ++i)
             destt[i] = srcc[i];
     }
-}
-
-FUNC_DEF void volatile_memcpy(volatile void* dest, const volatile void* src, uint64_t count)
-{
-    if ((((uint64_t)dest % 8) == 0) && (((uint64_t)src % 8) == 0) && ((count % 8) == 0))
-    {
-        volatile uint64_t* destt = (volatile uint64_t*)dest;
-        const volatile uint64_t* srcc = (const volatile uint64_t*)src;
-
-        for (uint64_t i = 0; i < (count / 8); ++i)
-            destt[i] = srcc[i];
-    }
-    else if ((((uint64_t)dest % 4) == 0) && (((uint64_t)src % 4) == 0) && ((count % 4) == 0))
-    {
-        volatile uint32_t* destt = (volatile uint32_t*)dest;
-        const volatile uint32_t* srcc = (const volatile uint32_t*)src;
-
-        for (uint64_t i = 0; i < (count / 4); ++i)
-            destt[i] = srcc[i];
-    }
-    else if ((((uint64_t)dest % 2) == 0) && (((uint64_t)src % 2) == 0) && ((count % 2) == 0))
-    {
-        volatile uint16_t* destt = (volatile uint16_t*)dest;
-        const volatile uint16_t* srcc = (const volatile uint16_t*)src;
-
-        for (uint64_t i = 0; i < (count / 2); ++i)
-            destt[i] = srcc[i];
-    }
-    else
-    {
-        volatile uint8_t* destt = (volatile uint8_t*)dest;
-        const volatile uint8_t* srcc = (const volatile uint8_t*)src;
-
-        for (uint64_t i = 0; i < count; ++i)
-            destt[i] = srcc[i];
-    }
-
-    eieio();
 }
 
 FUNC_DEF void memcpy8(void *dest, const void *src, uint64_t count)
@@ -892,6 +958,26 @@ FUNC_DEF uint8_t SearchMemory(const void *in_data, uint64_t dataSize, const void
     return 0;
 }
 
+#if LOGGING_ENABLED
+
+FUNC_DEF void sb_putc(char c)
+{
+    while ((volatile_read_uint32(0x24000FFF308) & 0x100) == 0) {}
+
+    volatile_write_uint32(0x24000FFF31C, c);
+}
+
+FUNC_DEF void sb_puts(const char* str)
+{
+    while (*str)
+    {
+        sb_putc(*str);
+        ++str;
+    }
+}
+
+#endif
+
 FUNC_DEF uint16_t sc_real_packet_header_calc_cksum(const struct sc_real_packet_header_s *pkt_hdr)
 {
     uint8_t *ptr;
@@ -925,19 +1011,20 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
 
     //
 
-    volatile uint32_t* send_packet_counter_cell = (volatile uint32_t*)0x2400008DFF0;
+    static const uint64_t a_send_packet_counter_cell = 0x2400008DFF0;
 
-    volatile uint32_t* send_packet_data = (volatile uint32_t*)0x2400008D000;
-    volatile uint32_t* send_packet_kick = (volatile uint32_t*)0x2400008E100;
+    static const uint64_t a_send_packet_data = 0x2400008D000;
+    static const uint64_t a_send_packet_kick = 0x2400008E100;
 
     //
 
-    volatile uint32_t* recieve_packet_counter_sc = (volatile uint32_t*)0x2400008CFF0;
-    volatile uint32_t* recieve_packet_counter_cell = (volatile uint32_t*)0x2400008DFF4;
+    static const uint64_t a_recieve_packet_counter_sc = 0x2400008CFF0;
+    static const uint64_t a_recieve_packet_counter_cell = 0x2400008DFF4;
 
-    volatile uint32_t* recieve_packet_test = (volatile uint32_t*)0x2400008E000;
+    static const uint64_t a_recieve_packet_test = 0x2400008E000;
 
-    volatile uint32_t* recieve_packet_data = (volatile uint32_t*)0x2400008C000;
+    static const uint64_t a_recieve_packet_data = 0x2400008C000;
+    const volatile uint32_t* p_recieve_packet_data = (const volatile uint32_t*)a_recieve_packet_data;
 
     //
 
@@ -1001,46 +1088,48 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
             curSize += sizeof(uint32_t);
 
             {
-                uint32_t *p = (uint32_t *)buf;
+                const uint32_t* p = (const uint32_t*)buf;
 
                 for (uint32_t i = 0; i < (512 / 4); ++i)
-                    send_packet_data[i] = p[i];
+                    volatile_write_uint32((a_send_packet_data + (i * 4)), p[i]);
             }
         }
 
         {
-            uint32_t value = *send_packet_counter_cell;
+            uint32_t value = volatile_read_uint32(a_send_packet_counter_cell);
 
             value = value + 1;
             value &= 0xffff;
             value = (value << 16) | value;
 
-            *send_packet_counter_cell = value;
+            volatile_write_uint32(a_send_packet_counter_cell, value);
         }
 
-        uint32_t old_recieve_packet_counter_sc = *recieve_packet_counter_sc;
+        const uint32_t old_recieve_packet_counter_sc = volatile_read_uint32(a_recieve_packet_counter_sc);
 
-        eieio();
-        *send_packet_kick = 0x1;
-        eieio();
+        volatile_write_uint32(a_send_packet_kick, 0x1);
 
-        *recieve_packet_test |= 0xFFFFFFFD;
-        eieio();
+        {
+            uint32_t v = volatile_read_uint32(a_recieve_packet_test);
+            v |= 0xFFFFFFFD;
+
+            volatile_write_uint32(a_recieve_packet_test, v);
+        }
 
         while (1)
         {
-            if (*recieve_packet_counter_sc != old_recieve_packet_counter_sc)
+            if (volatile_read_uint32(a_recieve_packet_counter_sc) != old_recieve_packet_counter_sc)
                 break;
         }
 
         {
-            uint32_t value = *recieve_packet_counter_cell;
+            uint32_t value = volatile_read_uint32(a_recieve_packet_counter_cell);
 
             value = value + 1;
             value &= 0xffff;
             value = (value << 16) | value;
 
-            *recieve_packet_counter_cell = value;
+            volatile_write_uint32(a_recieve_packet_counter_cell, value);
         }
 
         struct sc_real_packet_header_s out_real_pkt_hdr;
@@ -1049,7 +1138,7 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
             uint32_t *p = (uint32_t *)&out_real_pkt_hdr;
 
             for (uint32_t i = 0; i < 4; i++)
-                p[i] = recieve_packet_data[i];
+                p[i] = p_recieve_packet_data[i];
         }
 
         if (out_real_pkt_hdr.tag != tag)
@@ -1066,7 +1155,7 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
                 uint32_t *p = (uint32_t *)out->data;
 
                 for (uint32_t i = 0; i < (256 / 4); ++i)
-                    p[i] = recieve_packet_data[i + 4];
+                    p[i] = p_recieve_packet_data[(i + 4)];
             }
         }
     }
@@ -1804,12 +1893,12 @@ FUNC_DEF struct Stagex_Context_s* GetStagexContext()
 
 FUNC_DEF uint32_t read_sb_version()
 {
-    return *((const volatile uint32_t*)0x24000087000);
+    return volatile_read_uint32(0x24000087000);
 }
 
 FUNC_DEF uint32_t read_spu_avail()
 {
-    return *((const volatile uint32_t*)0x20000509C38);
+    return volatile_read_uint32(0x20000509C38);
 }
 
 //

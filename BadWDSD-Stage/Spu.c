@@ -31,110 +31,72 @@ FUNC_DEF uint64_t SPU_CalcMMIOAddress_P1(uint64_t spu_id, uint64_t offset)
 
 FUNC_DEF uint64_t SPU_LS_Read64(uint64_t spu_id, uint64_t offset)
 {
-    eieio();
-    return *((const volatile uint64_t *)SPU_CalcMMIOAddress_LS(spu_id, offset));
+    return volatile_read_uint64(SPU_CalcMMIOAddress_LS(spu_id, offset));
 }
 
 FUNC_DEF void SPU_LS_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
 {
-    *((volatile uint64_t *)SPU_CalcMMIOAddress_LS(spu_id, offset)) = value;
-    eieio();
+    volatile_write_uint64(SPU_CalcMMIOAddress_LS(spu_id, offset), value);
 }
 
 FUNC_DEF uint32_t SPU_LS_Read32(uint64_t spu_id, uint64_t offset)
 {
-    eieio();
-    return *((const volatile uint32_t *)SPU_CalcMMIOAddress_LS(spu_id, offset));
+    return volatile_read_uint32(SPU_CalcMMIOAddress_LS(spu_id, offset));
 }
 
 FUNC_DEF void SPU_LS_Write32(uint64_t spu_id, uint64_t offset, uint32_t value)
 {
-    *((volatile uint32_t *)SPU_CalcMMIOAddress_LS(spu_id, offset)) = value;
-    eieio();
+    volatile_write_uint32(SPU_CalcMMIOAddress_LS(spu_id, offset), value);
 }
 
-FUNC_DEF uint32_t SPU_LS_Read8(uint64_t spu_id, uint64_t offset)
+FUNC_DEF uint16_t SPU_LS_Read16(uint64_t spu_id, uint64_t offset)
 {
-    eieio();
-    return *((const volatile uint8_t *)SPU_CalcMMIOAddress_LS(spu_id, offset));
+    return volatile_read_uint16(SPU_CalcMMIOAddress_LS(spu_id, offset));
+}
+
+FUNC_DEF void SPU_LS_Write16(uint64_t spu_id, uint64_t offset, uint16_t value)
+{
+    volatile_write_uint16(SPU_CalcMMIOAddress_LS(spu_id, offset), value);
+}
+
+FUNC_DEF uint8_t SPU_LS_Read8(uint64_t spu_id, uint64_t offset)
+{
+    return volatile_read_uint8(SPU_CalcMMIOAddress_LS(spu_id, offset));
 }
 
 FUNC_DEF void SPU_LS_Write8(uint64_t spu_id, uint64_t offset, uint8_t value)
 {
-    *((volatile uint8_t *)SPU_CalcMMIOAddress_LS(spu_id, offset)) = value;
-    eieio();
-}
-
-FUNC_DEF uint64_t SPU_PS_Read64(uint64_t spu_id, uint64_t offset)
-{
-    eieio();
-    return *((const volatile uint64_t *)SPU_CalcMMIOAddress_PS(spu_id, offset));
-}
-
-FUNC_DEF void SPU_PS_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
-{
-    *((volatile uint64_t *)SPU_CalcMMIOAddress_PS(spu_id, offset)) = value;
-    eieio();
+    volatile_write_uint8(SPU_CalcMMIOAddress_LS(spu_id, offset), value);
 }
 
 FUNC_DEF uint32_t SPU_PS_Read32(uint64_t spu_id, uint64_t offset)
 {
-    eieio();
-    return *((const volatile uint32_t *)SPU_CalcMMIOAddress_PS(spu_id, offset));
+    return volatile_read_uint32(SPU_CalcMMIOAddress_PS(spu_id, offset));
 }
 
 FUNC_DEF void SPU_PS_Write32(uint64_t spu_id, uint64_t offset, uint32_t value)
 {
-    *((volatile uint32_t *)SPU_CalcMMIOAddress_PS(spu_id, offset)) = value;
-    eieio();
+    volatile_write_uint32(SPU_CalcMMIOAddress_PS(spu_id, offset), value);
 }
 
 FUNC_DEF uint64_t SPU_P2_Read64(uint64_t spu_id, uint64_t offset)
 {
-    eieio();
-    return *((const volatile uint64_t *)SPU_CalcMMIOAddress_P2(spu_id, offset));
+    return volatile_read_uint64(SPU_CalcMMIOAddress_P2(spu_id, offset));
 }
 
 FUNC_DEF void SPU_P2_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
 {
-    *((volatile uint64_t *)SPU_CalcMMIOAddress_P2(spu_id, offset)) = value;
-    eieio();
-}
-
-FUNC_DEF uint32_t SPU_P2_Read32(uint64_t spu_id, uint64_t offset)
-{
-    eieio();
-    return *((const volatile uint32_t *)SPU_CalcMMIOAddress_P2(spu_id, offset));
-}
-
-FUNC_DEF void SPU_P2_Write32(uint64_t spu_id, uint64_t offset, uint32_t value)
-{
-    *((volatile uint32_t *)SPU_CalcMMIOAddress_P2(spu_id, offset)) = value;
-    eieio();
+    volatile_write_uint64(SPU_CalcMMIOAddress_P2(spu_id, offset), value);
 }
 
 FUNC_DEF uint64_t SPU_P1_Read64(uint64_t spu_id, uint64_t offset)
 {
-    eieio();
-    return *((const volatile uint64_t *)SPU_CalcMMIOAddress_P1(spu_id, offset));
+    return volatile_read_uint64(SPU_CalcMMIOAddress_P1(spu_id, offset));
 }
 
 FUNC_DEF void SPU_P1_Write64(uint64_t spu_id, uint64_t offset, uint64_t value)
 {
-    *((volatile uint64_t *)SPU_CalcMMIOAddress_P1(spu_id, offset)) = value;
-    eieio();
-}
-
-FUNC_DEF uint32_t SPU_P1_Read32(uint64_t spu_id, uint64_t offset)
-{
-    eieio();
-    return *((const volatile uint32_t *)SPU_CalcMMIOAddress_P1(spu_id, offset));
-}
-
-FUNC_DEF void SPU_P1_Write32(uint64_t spu_id, uint64_t offset, uint32_t value)
-{
-    *((volatile uint32_t *)SPU_CalcMMIOAddress_P1(spu_id, offset)) = value;
-    eieio();
+    volatile_write_uint64(SPU_CalcMMIOAddress_P1(spu_id, offset), value);
 }
 
 FUNC_DEF uint32_t SPU_Read_SPU_STATUS(uint64_t spu_id)
@@ -641,8 +603,6 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet
     // SPU_NPC[0:29] = entry (LS)
     SPU_Write_SPU_NPC(spu_id, elfHdr->e_entry);
 
-    eieio();
-
     if (!quiet)
         puts("LoadElfSpu() done.\n");
 }
@@ -676,12 +636,8 @@ FUNC_DEF void HW_Init_SPU()
     }
 
     {
-        uint64_t eib_cfg_or_value = 0x0018000000000000;
-
-        volatile uint64_t* p = (volatile uint64_t*)0x20000511870;
-        *p |= eib_cfg_or_value;
-
-        eieio();
+        // EIB_Cfg
+        volatile_write_uint64(0x20000511870, 0x0018000000000000);
     }
 
     puts("HW_Init_SPU() done.\n");

@@ -4,14 +4,14 @@ FUNC_DEF uint8_t FetchIsEmmc()
 {
     //return (sc_read_flash_type() == 0x67) ? 1 : 0;
 
-    const uint32_t* sbVersion = (const uint32_t*)0x24000087000;
+    const volatile uint32_t* sbVersion = (const volatile uint32_t*)0x24000087000;
 
     if ((*sbVersion & 0xFF000000) != 0x04000000)
         return 0;
 
-    const uint32_t* a = (const uint32_t*)0x24000FFF020;
-    const uint32_t* b = (const uint32_t*)0x24000FFF028;
-    const uint32_t* c = (const uint32_t*)0x24000FFF02C;
+    const volatile uint32_t* a = (const volatile uint32_t*)0x24000FFF020;
+    const volatile uint32_t* b = (const volatile uint32_t*)0x24000FFF028;
+    const volatile uint32_t* c = (const volatile uint32_t*)0x24000FFF02C;
 
     if (*a != 0x1fc0000c)
         return 0;
@@ -47,6 +47,12 @@ FUNC_DEF uint8_t emmc_is_sector_idx_valid_for_write(uint32_t sector_idx)
     // don't write to lv0ldr!!!
     if (sector_idx < (0x40000 / emmc_sector_size))
         return 0;
+
+#if 1
+    // only allow write to ros header...
+    if (sector_idx != (0xC0000 / emmc_sector_size))
+        return 0;
+#endif
 
     return 1;
 }
@@ -496,6 +502,8 @@ struct ros_s
 
     uint64_t unknown; // 0
 };
+
+_Static_assert((sizeof(struct ros_s) == 32), "ros_s too big!");
 
 FUNC_DEF void check_ros(const struct ros_s* ros)
 {

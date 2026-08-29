@@ -215,6 +215,120 @@ void Sc_Thread_x32_Stage0_emmc()
     }
 }
 
+#elif IS_EMMC_ON_NOR
+
+#include "../Stage0_emmc.bin.c"
+#include "../Stage0b_emmc.bin.c"
+
+#include "../Stagexldr_emmc.bin.c"
+
+uint32_t cached_EnableSLE;
+uint32_t cached_WDSDs[64];
+
+void Sc_Thread_x32_Stage0_emmc_on_nor()
+{
+    PrintLog("Sc_Thread_x32_Stage0_emmc_on_nor()\n");
+
+    Led_SetBlinkIntervalInMs(1000);
+    Led_SetStatus(LED_STATUS_BLINK);
+
+    Sc_Init();
+    Hold_Init();
+
+    uint8_t wdslData0[64];
+    uint8_t data[64];
+
+    if (sizeof(bin2c_Stage0_emmc_bin) > 64)
+    {
+        PrintLog("bin2c_Stage0_emmc_bin size is bad!!!\n");
+        dead();
+    }
+
+    if (sizeof(bin2c_Stage0b_emmc_bin) > 128)
+    {
+        PrintLog("bin2c_Stage0b_emmc_bin size is bad!!!\n");
+        dead();
+    }
+
+    memcpy(data, bin2c_Stage0_emmc_bin, sizeof(bin2c_Stage0_emmc_bin));
+    Xdr_GenerateReadyWDSLData_x32(data, wdslData0);
+
+    //
+
+    cached_EnableSLE = Xdr_PrepareSendEnableSLE_x32_PerDeviceRaw(0);
+    Xdr_PrepareSendWDSD_x32_PerDeviceRaw(0, wdslData0, cached_WDSDs);
+
+    //
+
+    Led_SetStatus(LED_STATUS_ON);
+
+    while (1)
+    {
+        if (Sc_GetTrigger())
+        {
+            //
+
+            Sc_ClearSuccess();
+            Sc_ClearNeedReboot();
+
+            //
+
+            uint64_t t1 = get_time_in_us();
+
+            Xdr_SendRawCmd(cached_EnableSLE);
+
+            for (uint32_t i = 0; i < 64; ++i)
+                Xdr_SendRawCmd(cached_WDSDs[i]);
+
+            uint64_t t2 = get_time_in_us();
+
+            //
+
+            Led_SetBlinkIntervalInMs(100);
+            Led_SetStatus(LED_STATUS_BLINK);
+
+            //
+
+            busy_wait_ms(600);
+
+            //
+
+            DebugUart_Uninit();
+            Sb_Init();
+
+            for (size_t i = 0; i < sizeof(bin2c_Stage0b_emmc_bin); ++i)
+                Sb_Putc(bin2c_Stage0b_emmc_bin[i]);
+
+            busy_wait_ms(1);
+
+            for (size_t i = 0; i < sizeof(bin2c_Stagexldr_emmc_bin); ++i)
+            {
+                Sb_Putc(bin2c_Stagexldr_emmc_bin[i]);
+                busy_wait_us(100);
+            }
+
+            Sb_Uninit();
+            DebugUart_Init();
+
+            //
+
+            Led_SetStatus(LED_STATUS_ON);
+
+            //
+
+            Watchdog();
+
+            //
+
+            Sc_ClearTrigger();
+
+            //
+        }
+
+        XdrInitFail_Watchdog();
+    }
+}
+
 #elif XDR_IS_X32
 
 void Sc_Thread_x32_Stage0_nor()
@@ -439,6 +553,8 @@ void main()
 
 #if IS_EMMC
     PrintLog("Flash is eMMC\n");
+#elif IS_EMMC_ON_NOR
+    PrintLog("Flash is eMMC on NOR\n");
 #else
     PrintLog("Flash is NOR\n");
 #endif
@@ -450,6 +566,8 @@ void main()
 
 #if IS_EMMC
     Sc_Thread_x32_Stage0_emmc();
+#elif IS_EMMC_ON_NOR
+    Sc_Thread_x32_Stage0_emmc_on_nor();
 #elif XDR_IS_X32
     Sc_Thread_x32_Stage0_nor();
 #else

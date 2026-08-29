@@ -143,6 +143,42 @@ void memcpy(void *dest, const void *src, uint32_t count)
     }
 }
 
+void volatile_memcpy(volatile void *dest, const volatile void *src, uint32_t count)
+{
+    if ((((uint32_t)dest % 8) == 0) && (((uint32_t)src % 8) == 0) && ((count % 8) == 0))
+    {
+        volatile uint64_t *destt = (volatile uint64_t *)dest;
+        const volatile uint64_t *srcc = (const volatile uint64_t *)src;
+
+        for (uint32_t i = 0; i < (count / 8); ++i)
+            destt[i] = srcc[i];
+    }
+    else if ((((uint32_t)dest % 4) == 0) && (((uint32_t)src % 4) == 0) && ((count % 4) == 0))
+    {
+        volatile uint32_t *destt = (volatile uint32_t *)dest;
+        const volatile uint32_t *srcc = (const volatile uint32_t *)src;
+
+        for (uint32_t i = 0; i < (count / 4); ++i)
+            destt[i] = srcc[i];
+    }
+    else if ((((uint32_t)dest % 2) == 0) && (((uint32_t)src % 2) == 0) && ((count % 2) == 0))
+    {
+        volatile uint16_t *destt = (volatile uint16_t *)dest;
+        const volatile uint16_t *srcc = (const volatile uint16_t *)src;
+
+        for (uint32_t i = 0; i < (count / 2); ++i)
+            destt[i] = srcc[i];
+    }
+    else
+    {
+        volatile uint8_t *destt = (volatile uint8_t *)dest;
+        const volatile uint8_t *srcc = (const volatile uint8_t *)src;
+
+        for (uint32_t i = 0; i < count; ++i)
+            destt[i] = srcc[i];
+    }
+}
+
 uint8_t memcmp(const void *p1, const void *p2, uint32_t count)
 {
     const uint8_t *pp1 = (const uint8_t *)p1;

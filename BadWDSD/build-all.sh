@@ -28,6 +28,14 @@ cp -a BadWDSD/build/BadWDSD.uf2 out/BadWDSD_SW_x32_eMMC_Pico.uf2 || exit 1
 #
 
 mkdir BadWDSD/build
+echo -e '#define PICO_TYPE PICO_TYPE_E_PICO\n#define SC_IS_SW 1\n#define XDR_IS_X32 1\n#define IS_EMMC_ON_NOR 1' > BadWDSD/build/Config.h || exit 1
+./build.sh || exit 1
+
+cp -a BadWDSD/build/BadWDSD.uf2 out/BadWDSD_SW_x32_eMMC_on_NOR_Pico.uf2 || exit 1
+
+#
+
+mkdir BadWDSD/build
 echo -e '#define PICO_TYPE PICO_TYPE_E_RP2040_ZERO\n#define SC_IS_SW 1\n#define XDR_IS_X32 1' > BadWDSD/build/Config.h || exit 1
 ./build.sh || exit 1
 

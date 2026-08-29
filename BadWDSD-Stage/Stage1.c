@@ -135,10 +135,10 @@ FUNC_DEF void Stage1()
 
 #if LOGGING_ENABLED
     {
-        const uint32_t* spu_avail = (const uint32_t*)0x20000509C38;
+        uint32_t spu_avail = read_spu_avail();
 
         puts("spu_avail = ");
-        print_hex(*spu_avail); // 0xef for [INFO]: SPU enable [0, 1, 2, 5, 6, 7] 11101111
+        print_hex(spu_avail); // 0xef for [INFO]: SPU enable [0, 1, 2, 5, 6, 7] 11101111
         puts("\n");
     }
 #endif
@@ -367,7 +367,7 @@ FUNC_DEF void Stage1()
     uint64_t new_stagex_addr = 0x1010000;
 
     if (!is_emmc)
-        Stagex_Relocate((const void*)0x2401FF21000, 0x2401FF21000, new_stagex_addr);
+        Stagex_Relocate((const volatile void*)0x2401FF21000, 0x2401FF21000, new_stagex_addr);
 
     //
 
@@ -522,8 +522,6 @@ FUNC_DEF void Stage1()
 
     puts("Booting lv0...\n");
 
-    eieio();
-
     ASM("li 3, 0x100");
     ASM("mtctr 3");
     ASM("bctr");
@@ -531,10 +529,11 @@ FUNC_DEF void Stage1()
 
 __attribute__((section("main1"))) void stage1_main()
 {
+    memset((void*)0x0, 0x0, 0xA00);
+
     sc_puts_init();
 
     Stage1();
-
     dead_beep();
 }
 
@@ -565,7 +564,7 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
     // restore XDR now
     {
         // *XDR_CH0_SCMD = (XDR_SCMD(XDR_SCMD_SDW, 0, XDR_CFG) | XDR_SLE_DISABLED_X32);
-        // *((uint32_t*)0x2000050A108) = 0x4000205
+        // *((volatile uint32_t*)0x2000050A108) = 0x4000205
 
         ASM("lis 3, 0x400");
         ASM("ori 3, 3, 0x205");

@@ -22,7 +22,7 @@
 
 // Stagex:
 // 0xA00 - 0xBFF = Stagex_Context_s
-// 0xD000000 = sc_puts_buffer
+// 0xD000000 = sc_puts_buffer (pre lv1 only)
 
 // Stage1:
 // 0x1010000 = stagex on ram
@@ -37,10 +37,12 @@
 // 0xDFFFF00 = stage_sp
 
 // Stage3:
+// 0x9FF0000 = temp Stagex_spu.elf (64KiB max)
 // 0xB000000 = temp lv2DiffFileAddress
 // 0xC000000 = temp lv2DiffFileAddress2
 
 // Stage4:
+// 0x9FF0000 = temp Stagex_spu.elf (64KiB max)
 // 0xC000000 = temp lv2FileAddress
 // 0xB000000 = temp lv2ElfFileAddress
 // 0xA000000 = temp decryptBuf
@@ -48,4 +50,5 @@
 // Stage5:
 
 // Stage6:
+// 0x9FF0000 = temp Stagex_spu.elf (64KiB max)
 // 0xB000000 = temp lv0

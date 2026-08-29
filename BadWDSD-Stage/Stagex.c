@@ -4,16 +4,16 @@
 #define FUNC_DECL __attribute__((section("code")))
 #define FUNC_DEF FUNC_DECL
 
-// branch code
-#define FUNC_DECL_NONSTATIC __attribute__((section("bcode")))
-#define FUNC_DEF_NONSTATIC FUNC_DECL_NONSTATIC
+// branch-able code
+#define FUNC_DECL_BCODE __attribute__((section("bcode")))
+#define FUNC_DEF_BCODE FUNC_DECL_BCODE
 
 #define SC_PUTS_BUFFER_ENABLED 1
 
 //#define LOGGING_ENABLED 1
-//#define SC_LV1_LOGGING_ENABLED 1
 
-//#define STAGE5_LOG_ENABLED 1
+#define SC_LV1_LOGGING_ENABLED 1
+#define STAGE5_LOG_ENABLED 1
 
 #define ZLIB_SPU_ONLY_ENABLED 1
 #define STAGE0_DECRYPTLV0SELF_SPU_ENABLED 1
@@ -26,6 +26,12 @@
 //#endif
 
 //#define STAGEX_DEBUG_ENABLED 1
+
+#if !LOGGING_ENABLED
+#undef SC_PUTS_BUFFER_ENABLED
+#undef SC_LV1_LOGGING_ENABLED
+#undef STAGE5_LOG_ENABLED
+#endif
 
 typedef char int8_t;
 typedef unsigned char uint8_t;
@@ -80,8 +86,8 @@ FUNC_DECL void WaitInUs(uint64_t us);
 FUNC_DECL uint64_t GetTimeInMs();
 FUNC_DECL void WaitInMs(uint64_t ms);
 
-FUNC_DECL_NONSTATIC uint64_t GetTimeInMs2();
-FUNC_DECL_NONSTATIC void WaitInMs2(uint64_t ms);
+FUNC_DECL_BCODE uint64_t GetTimeInMs2();
+FUNC_DECL_BCODE void WaitInMs2(uint64_t ms);
 
 FUNC_DECL void memset(void *buf, uint8_t v, uint64_t count);
 FUNC_DECL void memcpy(void *dest, const void *src, uint64_t count);
@@ -148,9 +154,16 @@ struct Stagex_Context_s
 {
     uint64_t magic; // 0xca8fe91729035026
 
+#if SC_PUTS_BUFFER_ENABLED
+    uint64_t sc_puts_buflen;
+    char* sc_puts_buf;
+#endif
+
     uint8_t* cached_Stagex;
 
-    uint8_t* cached_StagexSpuElf;
+    uint32_t cached_StagexSpuElf_FileFlashOffset;
+    uint32_t cached_StagexSpuElf_FileSize;
+
     uint8_t* cached_mymetldrElf;
 
     uint8_t* cached_lv2ldr_meta; // [0x370]
@@ -189,6 +202,8 @@ struct Stagex_Context_s
     // 1 = lv2ldr, 2 = appldr, 3 = mylv2ldr, 4 = myappldr
     uint8_t cached_sharedLdr_CurKind;
 };
+
+_Static_assert((sizeof(struct Stagex_Context_s) <= 0x200), "Stagex_Context_s too big!");
 
 FUNC_DECL struct Stagex_Context_s* GetStagexContext_Unchecked();
 FUNC_DECL struct Stagex_Context_s* GetStagexContext();
@@ -253,7 +268,7 @@ FUNC_DEF uint64_t intr_disable()
 //
 
 // PPU core init
-FUNC_DEF_NONSTATIC void HW_Init()
+FUNC_DEF_BCODE void HW_Init()
 {
     register uint64_t lr asm("r9");
     ASM("mflr %0" : "=r"(lr)::);
@@ -562,7 +577,7 @@ FUNC_DEF void WaitInMs(uint64_t ms)
     }
 }
 
-FUNC_DEF_NONSTATIC uint64_t GetTimeInMs2()
+FUNC_DEF_BCODE uint64_t GetTimeInMs2()
 {
     register uint64_t my_timebase asm("r4") = 79800000;
     register uint64_t MUL_MS asm("r5") = 1000;
@@ -575,7 +590,7 @@ FUNC_DEF_NONSTATIC uint64_t GetTimeInMs2()
     return (cur_tb_ms / my_timebase);
 }
 
-FUNC_DEF_NONSTATIC void WaitInMs2(uint64_t ms)
+FUNC_DEF_BCODE void WaitInMs2(uint64_t ms)
 {
     // save lr
     register uint64_t lr asm("r0");
@@ -716,6 +731,44 @@ FUNC_DEF void memcpy(void *dest, const void *src, uint64_t count)
         for (uint64_t i = 0; i < count; ++i)
             destt[i] = srcc[i];
     }
+}
+
+FUNC_DEF void volatile_memcpy(volatile void* dest, const volatile void* src, uint64_t count)
+{
+    if ((((uint64_t)dest % 8) == 0) && (((uint64_t)src % 8) == 0) && ((count % 8) == 0))
+    {
+        volatile uint64_t* destt = (volatile uint64_t*)dest;
+        const volatile uint64_t* srcc = (const volatile uint64_t*)src;
+
+        for (uint64_t i = 0; i < (count / 8); ++i)
+            destt[i] = srcc[i];
+    }
+    else if ((((uint64_t)dest % 4) == 0) && (((uint64_t)src % 4) == 0) && ((count % 4) == 0))
+    {
+        volatile uint32_t* destt = (volatile uint32_t*)dest;
+        const volatile uint32_t* srcc = (const volatile uint32_t*)src;
+
+        for (uint64_t i = 0; i < (count / 4); ++i)
+            destt[i] = srcc[i];
+    }
+    else if ((((uint64_t)dest % 2) == 0) && (((uint64_t)src % 2) == 0) && ((count % 2) == 0))
+    {
+        volatile uint16_t* destt = (volatile uint16_t*)dest;
+        const volatile uint16_t* srcc = (const volatile uint16_t*)src;
+
+        for (uint64_t i = 0; i < (count / 2); ++i)
+            destt[i] = srcc[i];
+    }
+    else
+    {
+        volatile uint8_t* destt = (volatile uint8_t*)dest;
+        const volatile uint8_t* srcc = (const volatile uint8_t*)src;
+
+        for (uint64_t i = 0; i < count; ++i)
+            destt[i] = srcc[i];
+    }
+
+    eieio();
 }
 
 FUNC_DEF void memcpy8(void *dest, const void *src, uint64_t count)
@@ -1169,11 +1222,29 @@ FUNC_DEF void sc_led_short_red_long_yellow()
     sc_led_control(2, 1);
 }
 
+#if SC_PUTS_BUFFER_ENABLED
+FUNC_DEF uint64_t* get_sc_puts_buflen()
+{
+    if (IsLv1())
+        return &GetStagexContext()->sc_puts_buflen;
+
+    return (uint64_t*)0xD000000;
+}
+
+FUNC_DEF char* get_sc_puts_buf()
+{
+    if (IsLv1())
+        return GetStagexContext()->sc_puts_buf;
+
+    return (char*)0xD000010;
+}
+#endif
+
 FUNC_DEF void real_sc_puts_init()
 {
 #if SC_PUTS_BUFFER_ENABLED
-    uint64_t *sc_puts_buflen = (uint64_t *)0xD000000;
-    char *sc_puts_buf = (char *)0xD000010;
+    uint64_t* sc_puts_buflen = get_sc_puts_buflen();
+    char* sc_puts_buf = get_sc_puts_buf();
 
     *sc_puts_buflen = 0;
     sc_puts_buf[*sc_puts_buflen] = 0;
@@ -1200,8 +1271,8 @@ FUNC_DEF void sc_puts(const char *str)
 
 #if SC_PUTS_BUFFER_ENABLED
 
-    uint64_t *sc_puts_buflen = (uint64_t *)0xD000000;
-    char *sc_puts_buf = (char *)0xD000010;
+    uint64_t* sc_puts_buflen = get_sc_puts_buflen();
+    char* sc_puts_buf = get_sc_puts_buf();
 
     // just drop the whole string
     if ((*sc_puts_buflen + len) > 199)
@@ -1247,7 +1318,7 @@ FUNC_DEF void sc_puts(const char *str)
     pkt.data[0] = 0x00;
 
     memcpy(&pkt.data[pkt.payload_size], str, (len + 1));
-    pkt.payload_size += len + 1;
+    pkt.payload_size += (len + 1);
 
     sc_send_packet(&pkt, NULL);
 
@@ -1731,17 +1802,29 @@ FUNC_DEF struct Stagex_Context_s* GetStagexContext()
 
 //
 
+FUNC_DEF uint32_t read_sb_version()
+{
+    return *((const volatile uint32_t*)0x24000087000);
+}
+
+FUNC_DEF uint32_t read_spu_avail()
+{
+    return *((const volatile uint32_t*)0x20000509C38);
+}
+
+//
+
 #include "Stagex_critical.c"
 
 //
 
-#define XDR_SCMD_SBW 0x1 /* Serial Broadcast Write */
+//#define XDR_SCMD_SBW 0x1 /* Serial Broadcast Write */
 #define XDR_SCMD_SDW 0x0 /* Serial Device Write */
 
 #define XDR_CFG 0x02  /* Configuration */
-#define XDR_PM 0x03   /* Power management */
+//#define XDR_PM 0x03   /* Power management */
 #define XDR_WDSL 0x04 /* Write data serial load control */
-#define XDR_DLY 0x1f  /* Delay control */
+//#define XDR_DLY 0x1f  /* Delay control */
 
 #define XDR_SLE_ENABLED_X32 0x15
 #define XDR_SLE_DISABLED_X32 0x5
@@ -1759,11 +1842,11 @@ FUNC_DEF struct Stagex_Context_s* GetStagexContext()
 //#define YREG_YDRAM_DTA_1 0x148
 //#define MIC_YREG_STAT_1 0x150
 
-#define XDR_CH0_SCMD ((uint32_t*)0x2000050A108)
-#define XDR_CH0_SCMD_STAT ((uint32_t*)0x2000050A110)
+//#define XDR_CH0_SCMD ((volatile uint32_t*)0x2000050A108)
+//#define XDR_CH0_SCMD_STAT ((volatile uint32_t*)0x2000050A110)
 
-#define XDR_CH1_SCMD ((uint32_t*)0x2000050A148)
-#define XDR_CH1_SCMD_STAT ((uint32_t*)0x2000050A150)
+//#define XDR_CH1_SCMD ((volatile uint32_t*)0x2000050A148)
+//#define XDR_CH1_SCMD_STAT ((volatile uint32_t*)0x2000050A150)
 
 FUNC_DEF void Xdr_Ch0_SendScmd(uint32_t data)
 {
@@ -1826,7 +1909,7 @@ FUNC_DEF uint64_t calc_myspu_id()
     uint8_t found = 0;
     uint64_t myspu_id = 0;
 
-    uint32_t spu_avail = *((const uint32_t*)0x20000509C38);
+    uint32_t spu_avail = read_spu_avail();
 
     for (uint32_t i = 0; i < 8; ++i)
     {
@@ -1854,7 +1937,7 @@ FUNC_DEF uint64_t calc_myspu_id_exclude(uint64_t exclude_spu_id)
     uint8_t found = 0;
     uint64_t myspu_id = 0;
 
-    uint32_t spu_avail = *((const uint32_t*)0x20000509C38);
+    uint32_t spu_avail = read_spu_avail();
 
     for (uint32_t i = 0; i < 8; ++i)
     {
@@ -2154,8 +2237,6 @@ FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset, uint8
 
         ++phdr;
     }
-
-    eieio();
 }
 
 #include "Spu.c"
@@ -2595,7 +2676,13 @@ FUNC_DEF void ZelfDecompress(uint64_t zelfFileAddress, void *destAddress, uint64
         //
 
         uint64_t spu_id = calc_myspu_id();
-        uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id, stagexSpuElf);
+
+        uint64_t spu_old_mfc_sr1;
+
+        if (stagexSpuElf != NULL)
+            spu_old_mfc_sr1 = SpuAux_Init(spu_id, stagexSpuElf);
+        else
+            spu_old_mfc_sr1 = SpuAux_Init_lv1(spu_id);
 
         spu_zlib_decompress(spu_id, compressed_data, compressed_size, destAddress, &yyy);
 
@@ -2655,7 +2742,7 @@ FUNC_DEF void DecryptLv2Self(void *inDest, const void *inSrc, void* decryptBuf, 
     uint64_t spu_old_mfc_sr1 = 0;
 
     if (use_spu)
-        spu_old_mfc_sr1 = SpuAux_Init(spu_id, GetStagexContext()->cached_StagexSpuElf);
+        spu_old_mfc_sr1 = SpuAux_Init_lv1(spu_id);
 
     uint8_t *dest = (uint8_t *)inDest;
     const uint8_t *src = (const uint8_t *)inSrc;
@@ -3047,7 +3134,7 @@ FUNC_DEF void print_pc()
 #endif
 }
 
-FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)
+FUNC_DEF void Stagex_Relocate(const volatile void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)
 {
     puts("Stagex_Relocate,  ");
 
@@ -3059,7 +3146,7 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
 
     static const uint64_t stagex_size = stagex_max_size;
 
-    memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
+    volatile_memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
 
     const uint64_t* signature = (const uint64_t*)(new_stagex_addr + 0x908);
 
@@ -3126,7 +3213,7 @@ FUNC_DEF uint8_t* SimpleHeap_Alloc(struct SimpleHeap_s* ctx, uint64_t size, uint
     {
         puts("Heap full!, needs ");
         print_decimal(ctx->curPtr - endPlusOne);
-        puts("bytes more\n");
+        puts(" bytes more\n");
 
         dead_beep();
     }

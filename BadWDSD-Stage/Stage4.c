@@ -110,7 +110,7 @@ FUNC_DEF void LoadLv2(uint64_t srcAddr, uint64_t loadme_addr)
                 lv1_puts("ZELF/ZELF2 detected\n");
 
                 uint64_t sz = (16 * 1024 * 1024);
-                ZelfDecompress(file_data, (void *)0xB000000, &sz, 1, GetStagexContext()->cached_StagexSpuElf);
+                ZelfDecompress(file_data, (void *)0xB000000, &sz, 1, NULL);
 
                 lv1_puts("Loading elf...\n");
 
@@ -168,6 +168,4 @@ FUNC_DEF void Stage4()
         ApplyLv2Diff(loadme_addr, 1, 0);
 
     lv1_puts("Stage4 done.\n");
-
-    eieio();
 }

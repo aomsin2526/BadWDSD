@@ -55,7 +55,7 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
 
                 uint64_t myspu_id = calc_myspu_id_exclude(spu_id);
 
-                uint32_t old_mfc_sr1 = SpuAux_Init(myspu_id, ctx->cached_StagexSpuElf);
+                uint32_t old_mfc_sr1 = SpuAux_Init_lv1(myspu_id);
                 SPU_DecryptLv0Self(myspu_id, lv0Elf, lv0Self);
                 SpuAux_Uninit(myspu_id, old_mfc_sr1);
 
@@ -95,7 +95,7 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
 
                 uint64_t myspu_id = calc_myspu_id_exclude(spu_id);
 
-                uint32_t old_mfc_sr1 = SpuAux_Init(myspu_id, ctx->cached_StagexSpuElf);
+                uint32_t old_mfc_sr1 = SpuAux_Init_lv1(myspu_id);
                 SPU_DecryptLv0Self(myspu_id, lv0Elf, lv0Self);
                 SpuAux_Uninit(myspu_id, old_mfc_sr1);
 
@@ -138,27 +138,18 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
         mctx.myldrElfAddress = (uint64_t)myldrElf;
         mctx.fwVersion = ctx->cached_fwVersion;
 
-        memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &mctx, sizeof(mctx));
+        volatile_memcpy((volatile void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &mctx, sizeof(mctx));
     }
 
     {
         // idps
-        //const uint64_t* idps = (const uint64_t*)0x2401F02F070;
-
-        //SPU_LS_Write64(spu_id, 0x39050, idps[0]);
-        //SPU_LS_Write64(spu_id, 0x39058, idps[1]);
-
         SPU_LS_Write64(spu_id, 0x39050, 0x0000000100820001);
         SPU_LS_Write64(spu_id, 0x39058, 0x040034D1807DED30);
 
         // tid
-        //const uint8_t* tid = (const uint8_t*)0x2401F02F075;
-        //SPU_LS_Write64(spu_id, 0x39060, *tid);
-
         SPU_LS_Write64(spu_id, 0x39060, 0x82);
     }
 
-    eieio();
     SPU_StartRequest(spu_id);
 }
 
@@ -175,42 +166,6 @@ FUNC_DEF uint32_t Stage6_GetSpuStatus(uint64_t spu_id)
     if (((status & SPU_STATUS_ISOLATED_MASK) == 0) && (SPU_LS_Read64(spu_id, 0x39100) == 0x123456789))
         status |= SPU_STATUS_ISOLATED_MASK;
 
-#if 0
-
-    lv1_puts("status = ");
-    lv1_print_hex(status);
-    lv1_puts("\n");
-
-    uint32_t npc = SPU_PS_Read32(spu_id, 0x04034);
-    lv1_puts("npc = ");
-    lv1_print_hex(npc);
-    lv1_puts("\n");
-
-#if 1
-
-    struct Stagex_spu_DMACmd_s dmaCmd;
-    memcpy(&dmaCmd, (const void*)SPU_CalcMMIOAddress_LS(spu_id, 0x10), sizeof(dmaCmd));
-
-    lv1_puts("dmaCmd.ls = ");
-    lv1_print_hex(dmaCmd.ls);
-    lv1_puts("\n");
-
-    lv1_puts("dmaCmd.ea = ");
-    lv1_print_hex(dmaCmd.ea);
-    lv1_puts("\n");
-
-    lv1_puts("dmaCmd.size = ");
-    lv1_print_decimal(dmaCmd.size);
-    lv1_puts("\n");
-
-    lv1_puts("dmaCmd.cmd = ");
-    lv1_print_hex(dmaCmd.cmd);
-    lv1_puts("\n");
-
-#endif
-
-#endif
-
     return status;
 }
 
@@ -222,10 +177,7 @@ FUNC_DEF void Stage6_RequestExitIsolation(uint64_t spu_id)
         uint32_t status = SPU_Read_SPU_STATUS(spu_id);
 
         if (((status & SPU_STATUS_ISOLATED_MASK) == 0) && (SPU_LS_Read64(spu_id, 0x39100) == 0x123456789))
-        {
-            //lv1_puts("xxx\n");
             SPU_LS_Write64(spu_id, 0x39100, 0x0);
-        }
     }
 
     SPU_DoIsoExitRequest(spu_id);
@@ -264,15 +216,8 @@ FUNC_DEF void Stage6_UpdateSPUStatusAndTransitionNotifierInShadowRegArea(uint64_
 
     {
         if (((status & SPU_STATUS_ISOLATED_MASK) == 0) && (SPU_LS_Read64(spu_id, 0x39100) == 0x123456789))
-        {
-            //lv1_puts("yyy\n");
             status |= SPU_STATUS_ISOLATED_MASK;
-        }
     }
-
-    //lv1_puts("status = ");
-    //lv1_print_hex(status);
-    //lv1_puts("\n");
 
     *(uint32_t*)(shadow_addr + 0x30) = status;
 

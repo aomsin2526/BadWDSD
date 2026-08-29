@@ -54,8 +54,7 @@ FUNC_DEF void HDDKeyDumper_Init(struct HDDKeyDumper_Context_s* ctx, uint64_t spu
         SpuAux_Init(ctx->myspu_id, stagexSpuElf);
     }
 
-    const uint32_t* sbVersionPtr = (const uint32_t*)0x24000087000;
-    uint32_t sbVersion = *sbVersionPtr;
+    uint32_t sbVersion = read_sb_version();
 
     if ((sbVersion & 0xFF000000) == 0x03000000)
     {
@@ -296,7 +295,7 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
 
     {
         // 0x80C8080 -> 0x3E800
-        memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x3E800), (const void*)0x80C8080, 0x80);
+        volatile_memcpy((volatile void*)SPU_CalcMMIOAddress_LS(spu_id, 0x3E800), (const void*)0x80C8080, 0x80);
     }
 
     SPU_EnableRelocate(spu_id);
@@ -426,7 +425,7 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
                         //puts(") :\n");
 
                         // tmpEa <- foundEntry.ea
-                        memcpy((void*)tmpEa, (const void*)foundEntry.ea, foundEntry.realSize);
+                        volatile_memcpy((void*)tmpEa, (const volatile void*)foundEntry.ea, foundEntry.realSize);
 
                         //hexdump((const void*)tmpEa, foundEntry.realSize);
                         //puts("\n");
@@ -444,7 +443,7 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
                         //puts(") :\n");
 
                         // tmpEa <- foundEntry.ls
-                        memcpy((void*)tmpEa, (const void*)SPU_CalcMMIOAddress_LS(spu_id, foundEntry.ls), foundEntry.realSize);
+                        volatile_memcpy((void*)tmpEa, (const volatile void*)SPU_CalcMMIOAddress_LS(spu_id, foundEntry.ls), foundEntry.realSize);
 
                         //hexdump((const void*)tmpEa, foundEntry.realSize);
                         //puts("\n");
@@ -452,7 +451,7 @@ FUNC_DEF void Stage2_HDDKeyDumper(uint64_t spu_id)
                         HDDKeyDumper_ProcessMFCCommand(&context, 0, foundEntry.ea, foundEntry.ls, (const void*)tmpEa, foundEntry.realSize);
 
                         // foundEntry.ea <- tmpEa
-                        memcpy((void*)foundEntry.ea, (const void*)tmpEa, foundEntry.realSize);
+                        volatile_memcpy((volatile void*)foundEntry.ea, (const void*)tmpEa, foundEntry.realSize);
                     }
                     else
                     {

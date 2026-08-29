@@ -4,9 +4,9 @@
 #define FUNC_DECL __attribute__((section("code")))
 #define FUNC_DEF FUNC_DECL
 
-// branch code
-#define FUNC_DECL_NONSTATIC __attribute__((section("bcode")))
-#define FUNC_DEF_NONSTATIC FUNC_DECL_NONSTATIC
+// branch-able code
+#define FUNC_DECL_BCODE __attribute__((section("bcode")))
+#define FUNC_DEF_BCODE FUNC_DECL_BCODE
 
 #define LOGGING_ENABLED 1
 
@@ -45,7 +45,7 @@ typedef uint64_t uintptr_t;
 
 register uint64_t is_emmc asm("r16");
 
-FUNC_DEF_NONSTATIC void HW_Init()
+FUNC_DEF_BCODE void HW_Init()
 {
     register uint64_t lr asm("r9");
     ASM("mflr %0" : "=r"(lr)::);
@@ -352,6 +352,17 @@ FUNC_DEF void memcpy(void *dest, const void *src, uint64_t count)
         destt[i] = srcc[i];
 }
 
+FUNC_DEF void volatile_memcpy(volatile void *dest, const volatile void *src, uint64_t count)
+{
+    volatile uint8_t *destt = (volatile uint8_t *)dest;
+    const volatile uint8_t *srcc = (const volatile uint8_t *)src;
+
+    for (uint64_t i = 0; i < count; ++i)
+        destt[i] = srcc[i];
+
+    eieio();
+}
+
 FUNC_DEF uint8_t memcmp(const void *p1, const void *p2, uint64_t count)
 {
     const uint8_t *pp1 = (const uint8_t *)p1;
@@ -402,10 +413,10 @@ FUNC_DEF uint8_t strcmp(const char *str1, const char *str2)
 
 FUNC_DEF void sb_putc(char c)
 {
-    const uint32_t* status = (const uint32_t*)0x24000FFF308;
+    const volatile uint32_t* status = (const volatile uint32_t*)0x24000FFF308;
     while ((*status & 0x100) == 0) {}
 
-    uint32_t* putc = (uint32_t*)0x24000FFF31C;
+    volatile uint32_t* putc = (volatile uint32_t*)0x24000FFF31C;
     *putc = c;
 }
 
@@ -767,6 +778,30 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
     }
 }
 
+FUNC_DEF void sc_puts(const char *str)
+{
+    uint64_t len = strlen(str);
+
+    if (len == 0)
+        return;
+
+    if (len > 199)
+        dead();
+
+    struct sc_packet_s pkt;
+
+    pkt.service_id = 0x20;
+    pkt.communication_tag = 1;
+
+    pkt.payload_size = 1;
+    pkt.data[0] = 0x00;
+
+    memcpy(&pkt.data[pkt.payload_size], str, (len + 1));
+    pkt.payload_size += (len + 1);
+
+    sc_send_packet(&pkt, NULL);
+}
+
 FUNC_DEF uint8_t sc_read_eeprom8(uint8_t block_id, uint8_t offset)
 {
     struct sc_packet_s pkt;
@@ -965,7 +1000,7 @@ FUNC_DEF void dead_beep()
 
 static const uint64_t stagex_max_size = (60 * 1024);
 
-FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)
+FUNC_DEF void Stagex_Relocate(const volatile void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)
 {
     puts("Stagex_Relocate,  ");
 
@@ -977,7 +1012,7 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
 
     static const uint64_t stagex_size = stagex_max_size;
 
-    memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
+    volatile_memcpy((void*)new_stagex_addr, stagex_data, stagex_size);
 
     const uint64_t* signature = (const uint64_t*)(new_stagex_addr + 0x908);
 
@@ -1009,7 +1044,7 @@ FUNC_DEF void Stagex_Relocate(const void* stagex_data, uint64_t old_stagex_addr,
     }
 }
 
-FUNC_DEF void RelocateStagexAndJumpToStage1(const void* stagex_data)
+FUNC_DEF void RelocateStagexAndJumpToStage1(const volatile void* stagex_data)
 {
     static const uint64_t new_stagex_addr = 0x1010000;
     Stagex_Relocate(stagex_data, 0x2401FF21000, new_stagex_addr);
@@ -1065,7 +1100,7 @@ FUNC_DEF void Stagexldr()
     {
         puts("Flash is NOR\n");
 
-        RelocateStagexAndJumpToStage1((const void*)0x2401FF21000);
+        RelocateStagexAndJumpToStage1((const volatile void*)0x2401FF21000);
         dead_beep();
     }
 
@@ -1119,6 +1154,13 @@ FUNC_DEF void Stagexldr()
 
         sc_write_request_os_bank_indicator(0xff);
 
+        if (request_os_bank_indicator != 0xff)
+        {
+            // inform modchip that we are good...
+            sc_puts("BadWDSD ok!\n");
+            WaitInMs(5000);
+        }
+
         if (request_os_bank_indicator == 0x1)
             switch_ros(0xff);
         else if (request_os_bank_indicator == 0x2)
@@ -1145,7 +1187,7 @@ FUNC_DEF void Stagexldr()
     //
 
     {
-        static uint64_t offset = 0xEF9A000;
+        static const uint64_t offset = 0xEF9A000;
 
         uint8_t buf[emmc_sector_size];
 
@@ -1185,6 +1227,8 @@ FUNC_DEF void Stagexldr()
 
 __attribute__((section("main"))) void stagexldr_main()
 {
+    memset((void*)0x0, 0x0, 0xA00);
+
     Stagexldr();
     dead_beep();
 }

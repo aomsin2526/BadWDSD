@@ -153,7 +153,7 @@ FUNC_DEF void Stage3()
 
     {
         uint64_t spu_id = calc_myspu_id();
-        uint64_t spu_old_mfc_sr1 = SpuAux_Init(spu_id, GetStagexContext()->cached_StagexSpuElf);
+        uint64_t spu_old_mfc_sr1 = SpuAux_Init_lv1(spu_id);
         spu_stage3(spu_id);
         SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
     }
@@ -161,7 +161,6 @@ FUNC_DEF void Stage3()
     // qcfw marker
     *((uint64_t*)0x240) = 0x11223344aabbccdd;
 
-    eieio();
     lv1_puts("Stage3 done.\n");
 }
 
@@ -259,7 +258,6 @@ FUNC_DEF void ApplyLv2Diff2(uint64_t lv2DiffFileAddress, uint64_t lv2AreaAddr, u
         }
     }
 
-    eieio();
     lv1_puts("ApplyLv2Diff2() done.\n");
 }
 
@@ -335,7 +333,7 @@ FUNC_DEF void ApplyLv2Diff(uint64_t lv2AreaAddr, uint8_t useNewVal, uint8_t veri
                 lv1_puts("ZELF/ZELF2 detected\n");
 
                 uint64_t sz = (16 * 1024 * 1024);
-                ZelfDecompress(lv2DiffFileAddress, (void *)0xB000000, &sz, 1, GetStagexContext()->cached_StagexSpuElf);
+                ZelfDecompress(lv2DiffFileAddress, (void *)0xB000000, &sz, 1, NULL);
 
                 lv2DiffFileAddress = 0xB000000;
                 lv2DiffFileSize = sz;
@@ -364,7 +362,6 @@ FUNC_DEF void EnableLoadCobraFromUSB(uint64_t lv2AreaAddr)
 
     uint8_t *enableLoadCobraFromUSB = (uint8_t *)(lv2AreaAddr + 0x30);
     *enableLoadCobraFromUSB = 1;
-    eieio();
 
     sc_triple_beep();
 }
@@ -400,8 +397,6 @@ FUNC_DEF void Stage3_AuthLv2(uint64_t laid)
             if (qcfw_lite_flag == 0x1)
                 EnableLoadCobraFromUSB(lv2AreaAddrRa);
         }
-
-        eieio();
     }
 
     lv1_puts("Stage3_AuthLv2() done.\n");

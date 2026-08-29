@@ -58,7 +58,6 @@ FUNC_DEF void ApplyLv1Diff(uint64_t lv1DiffFileAddress, uint8_t verifyOrig)
         *((uint8_t *)(uint64_t)addr) = newVal;
     }
 
-    eieio();
     puts("ApplyLv1Diff() done.\n");
 }
 
@@ -279,16 +278,6 @@ FUNC_DEF void Stage2()
 
             //
 
-            // 0 = lv1ldr
-            // 1 = metldr
-            // 2 = lv2ldr
-            // 3 = isoldr
-            // 4 = appldr
-            // 5 = eid0
-            // 6 = is_qa_flag
-            // 7 = qa_token_bin
-            // 8 = trace_level
-
             static const uint8_t lv1ldr_idx = 0;
             //static const uint8_t metldr_idx = 1;
             static const uint8_t lv2ldr_idx = 2;
@@ -353,23 +342,29 @@ FUNC_DEF void Stage2()
                 }
             }
 
+#if SC_PUTS_BUFFER_ENABLED
+            ctx->sc_puts_buflen = 0;
+            ctx->sc_puts_buf = (char*)SimpleHeap_Alloc(&heap, 512, 8);
+
+            puts("sc_puts_buf = ");
+            print_hex((uint64_t)ctx->sc_puts_buf);
+            puts("\n");
+#endif
+
+            if (CoreOS2_FindFileEntry_Aux("Stagex_spu.elf", &ctx->cached_StagexSpuElf_FileFlashOffset, &ctx->cached_StagexSpuElf_FileSize))
             {
-                ctx->cached_StagexSpuElf = NULL;
-
-                {
-                    uint32_t fileFlashOffset = 0;
-                    uint32_t fileSize = 0;
-
-                    if (CoreOS2_FindFileEntry_Aux("Stagex_spu.elf", &fileFlashOffset, &fileSize))
-                    {
-                        ctx->cached_StagexSpuElf = SimpleHeap_Alloc(&heap, fileSize, 32);
-                        FlashRead(fileFlashOffset, ctx->cached_StagexSpuElf, fileSize);
-                    }
-                }
-
-                puts("cached_StagexSpuElf = ");
-                print_hex((uint64_t)ctx->cached_StagexSpuElf);
+                puts("cached_StagexSpuElf_FileFlashOffset = ");
+                print_hex(ctx->cached_StagexSpuElf_FileFlashOffset);
                 puts("\n");
+
+                puts("cached_StagexSpuElf_FileSize = ");
+                print_decimal(ctx->cached_StagexSpuElf_FileSize);
+                puts("\n");
+            }
+            else
+            {
+                puts("Stagex_spu.elf not found!\n");
+                dead_beep();
             }
 
             {
@@ -556,8 +551,6 @@ FUNC_DEF void Stage2()
         sc_led_static_green();
 
     puts("Booting lv1...\n");
-
-    eieio();
 
     ASM("li 3, 0x100");
     ASM("mtctr 3");

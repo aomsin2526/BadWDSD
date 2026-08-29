@@ -15,23 +15,15 @@ FUNC_DEF void Stage5(uint64_t type)
 
     if (type == 0x1)
     {
-        const uint64_t* isDisableMyappldr = (const uint64_t*)0x230;
-
-        if (*isDisableMyappldr != 1)
-            ctx->stage6_isAppldr = 1;
-
+        ctx->stage6_isAppldr = 1;
         //lv1_puts("appldr\n");
 
         {
             uint64_t *lv1_lv2AreaAddrPtr = (uint64_t *)0x370F20;
             uint64_t *lv1_lv2AreaSizePtr = (uint64_t *)0x370F28;
 
-            *lv1_lv2AreaAddrPtr = 0x8000000000000000; // 0x8000000000000000
+            *lv1_lv2AreaAddrPtr = 0x8000000000000000;
             *lv1_lv2AreaSizePtr = 16;
-
-            // Sc_Rx: after_lv1_lv2AreaHash[0] = 0xfa60f9a679d561e2
-            // Sc_Rx: after_lv1_lv2AreaHash[1] = 0x4766aa39b90084b0
-            // Sc_Rx: after_lv1_lv2AreaHash[2] = 0xb27d2ff00000000
 
             uint64_t *lv1_lv2AreaHashPtr = (uint64_t *)0x370F30;
 
@@ -43,13 +35,11 @@ FUNC_DEF void Stage5(uint64_t type)
     else if (type == 0x2)
     {
         ctx->stage6_isLv2ldr = 1;
-
         //lv1_puts("lv2ldr\n");
     }
     else if (type == 0x3)
     {
         ctx->stage6_isLv2ldr_rvk = 1;
-
         //lv1_puts("lv2ldr_rvk\n");
     }
 

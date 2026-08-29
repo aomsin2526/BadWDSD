@@ -1057,6 +1057,11 @@ FUNC_DEF void RelocateStagexAndJumpToStage1(const volatile void* stagex_data)
     dead_beep();
 }
 
+FUNC_DEF void badwdsd_ok()
+{
+    sc_puts("BadWDSD ok!\n");
+}
+
 FUNC_DEF void Stagexldr()
 {
     puts("\nStagexldr by Kafuu(aomsin2526)" " (Build Date: " __DATE__ " " __TIME__ ")\n");
@@ -1113,6 +1118,9 @@ FUNC_DEF void Stagexldr()
 #if 0
     // print lv0ldr region
     {
+        // inform modchip that we are good...
+        badwdsd_ok();
+
         static const uint64_t dumpSize = (256 * 1024);
 
         uint8_t buf[dumpSize];
@@ -1138,8 +1146,12 @@ FUNC_DEF void Stagexldr()
             dead_beep();
         }
 
+        puts("start\n");
         hexdump(buf, dumpSize);
         puts("\n");
+        puts("end\n");
+
+        dead_beep();
     }
 #endif
 
@@ -1157,8 +1169,8 @@ FUNC_DEF void Stagexldr()
         if (request_os_bank_indicator != 0xff)
         {
             // inform modchip that we are good...
-            sc_puts("BadWDSD ok!\n");
-            WaitInMs(5000);
+            badwdsd_ok();
+            WaitInMs(10000);
         }
 
         if (request_os_bank_indicator == 0x1)

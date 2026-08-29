@@ -722,6 +722,8 @@ FUNC_DEF void SPU_ReadMFCContextEntry(uint64_t spu_id, uint32_t entryIdx, struct
     outEntry->realSize = (outEntry->qw)?16*outEntry->size:outEntry->size;
 }
 
+#if 0
+
 // treat EA as 42 bits?
 FUNC_DEF void SPU_ModifyMFCContextEntry_EA(uint64_t spu_id, uint32_t entryIdx, uint64_t ea)
 {
@@ -811,6 +813,8 @@ FUNC_DEF uint8_t SPU_FindMFCContextEntryByLS(uint64_t spu_id, uint64_t ls, uint3
 
     return 0;
 }
+
+#endif
 
 #if 0
 

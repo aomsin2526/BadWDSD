@@ -1,9 +1,25 @@
-#include "Include.h"
+#include "Include.hpp"
 
-volatile bool debugUartIsInited = false;
-volatile struct DebugUartContext_s debugUartContext;
+bool debugUartIsInited = false;
+struct DebugUartContext_s debugUartContext;
 
 recursive_mutex_t debugUartMutex;
+
+class DebugUartMutexHolder
+{
+public:
+    DebugUartMutexHolder()
+    {
+        recursive_mutex_enter_blocking(&debugUartMutex);
+    };
+
+    ~DebugUartMutexHolder()
+    {
+        recursive_mutex_exit(&debugUartMutex);
+    };
+};
+
+#define DEBUG_UART_MUTEX_HOLDER DebugUartMutexHolder mutexHolder
 
 bool DebugUart_IsInited()
 {
@@ -12,6 +28,8 @@ bool DebugUart_IsInited()
 
 void DebugUart_Flush()
 {
+    DEBUG_UART_MUTEX_HOLDER;
+
     if (debugUartContext.txBufCurLen == 0)
         return;
 
@@ -23,6 +41,8 @@ void DebugUart_Flush()
 
 void DebugUart_RxFn()
 {
+    DEBUG_UART_MUTEX_HOLDER;
+
     while (uart_is_readable(debugUartContext.uartId))
     {
         char ch = uart_getc(debugUartContext.uartId);
@@ -46,20 +66,23 @@ void DebugUart_RxFn()
 
 void DebugUart_Thread()
 {
+    if (get_core_num() != 1)
+        dead();
+
+    DEBUG_UART_MUTEX_HOLDER;
+
     if (!DebugUart_IsInited())
         return;
 
-    recursive_mutex_enter_blocking(&debugUartMutex);
     DebugUart_RxFn();
-    recursive_mutex_exit(&debugUartMutex);
 }
 
 void DebugUart_Init()
 {
+    DEBUG_UART_MUTEX_HOLDER;
+
     if (DebugUart_IsInited())
         return;
-
-    recursive_mutex_init(&debugUartMutex);
 
     debugUartContext.uartId = uart1;
 
@@ -69,40 +92,33 @@ void DebugUart_Init()
     debugUartContext.lastRxTimeInMs = 0;
 
     Uart_Init(debugUartContext.uartId, DEBUG_UART_BAUD, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID);
-
     debugUartIsInited = true;
-    sync();
 }
 
 void DebugUart_Uninit()
 {
-    if (!DebugUart_IsInited())
-        return;
+    DEBUG_UART_MUTEX_HOLDER;
 
-    recursive_mutex_enter_blocking(&debugUartMutex);
     debugUartIsInited = false;
-    sync();
-    recursive_mutex_exit(&debugUartMutex);
-
     Uart_Uninit(debugUartContext.uartId, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID);
 }
 
 void DebugUart_Putc(char c)
 {
+    DEBUG_UART_MUTEX_HOLDER;
+
     if (!DebugUart_IsInited())
         return;
 
-    recursive_mutex_enter_blocking(&debugUartMutex);
     Uart_Putc(debugUartContext.uartId, c);
-    recursive_mutex_exit(&debugUartMutex);
 }
 
 void DebugUart_Puts(const char* buf)
 {
+    DEBUG_UART_MUTEX_HOLDER;
+
     if (!DebugUart_IsInited())
         return;
 
-    recursive_mutex_enter_blocking(&debugUartMutex);
     Uart_Puts(debugUartContext.uartId, buf);
-    recursive_mutex_exit(&debugUartMutex);
 }

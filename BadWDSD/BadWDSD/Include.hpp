@@ -22,6 +22,7 @@
 #include "hardware/vreg.h"
 #include "hardware/watchdog.h"
 
+#include "pico/platform.h"
 #include "pico/multicore.h"
 #include "pico/rand.h"
 #include "pico/mutex.h"
@@ -29,8 +30,6 @@
 #if PICO_TYPE == PICO_TYPE_E_PICO_W
 #include "pico/cyw43_arch.h"
 #endif
-
-#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 
 #define sync() __dsb()
 
@@ -316,6 +315,8 @@ struct ScContext_s
     uint64_t lastScTxTimeInMs;
 };
 
+extern recursive_mutex_t scMutex;
+
 extern void Sc_Thread();
 
 extern bool Sc_IsInited();
@@ -389,6 +390,8 @@ struct DebugUartContext_s
     uint64_t lastRxTimeInMs;
 };
 
+extern recursive_mutex_t debugUartMutex;
+
 extern void DebugUart_Thread();
 
 extern bool DebugUart_IsInited();
@@ -421,7 +424,9 @@ extern void Sb_Putc(char c);
 
 // aes
 
+extern "C" {
 #include "Aes.h"
+};
 
 //
 

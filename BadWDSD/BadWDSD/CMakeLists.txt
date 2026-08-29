@@ -18,11 +18,11 @@ pico_sdk_init()
 # rest of your project
 
 add_executable(BadWDSD
-    Main.c Hold.c Led.c Timer.c Xdr.c Gpio.c Uart.c Sc.c Sb.c DebugUart.c Aes.c
+    Main.cpp Hold.cpp Led.cpp Timer.cpp Xdr.cpp Gpio.cpp Uart.cpp Sc.cpp Sb.cpp DebugUart.cpp Aes.c
 )
 
 # Add pico_stdlib library which aggregates commonly used features
-target_link_libraries(BadWDSD pico_stdlib hardware_resets hardware_irq pico_multicore pico_rand pico_sync)
+target_link_libraries(BadWDSD pico_stdlib hardware_resets hardware_irq pico_multicore pico_rand pico_sync pico_platform)
 
 # WS2812
 pico_generate_pio_header(BadWDSD ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/build/generated)

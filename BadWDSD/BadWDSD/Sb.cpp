@@ -1,7 +1,7 @@
-#include "Include.h"
+#include "Include.hpp"
 
-volatile bool sbIsInited = false;
-volatile struct SbContext_s sbContext;
+bool sbIsInited = false;
+struct SbContext_s sbContext;
 
 bool Sb_IsInited()
 {

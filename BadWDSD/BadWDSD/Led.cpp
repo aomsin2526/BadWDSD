@@ -1,4 +1,4 @@
-#include "Include.h"
+#include "Include.hpp"
 
 #if LED_IS_WS2812
 #include "hardware/pio.h"
@@ -24,8 +24,8 @@ void ws2812_init()
 }
 #endif
 
-volatile bool ledIsInited = false;
-volatile struct LedContext_s ledContext;
+bool ledIsInited = false;
+struct LedContext_s ledContext;
 
 void Led_SetStatus(uint32_t status)
 {
@@ -65,7 +65,6 @@ void Led_Init()
 #endif
 
     ledIsInited = true;
-    sync();
 }
 
 #if LED_IS_WS2812
@@ -83,6 +82,9 @@ void Led_Init()
 
 void Led_Thread()
 {
+    if (get_core_num() != 1)
+        dead();
+
     if (!Led_IsInited())
         return;
 

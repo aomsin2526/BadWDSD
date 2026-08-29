@@ -1,13 +1,31 @@
-#include "Include.h"
+#include "Include.hpp"
 
-volatile bool scIsInited = false;
-volatile bool scIsReadyForUser = false;
-volatile struct ScContext_s scContext;
+bool scIsInited = false;
+bool scIsReadyForUser = false;
+struct ScContext_s scContext;
 
 recursive_mutex_t scMutex;
 
+class ScMutexHolder
+{
+public:
+    ScMutexHolder()
+    {
+        recursive_mutex_enter_blocking(&scMutex);
+    };
+
+    ~ScMutexHolder()
+    {
+        recursive_mutex_exit(&scMutex);
+    };
+};
+
+#define SC_MUTEX_HOLDER ScMutexHolder mutexHolder
+
 void Sc_RxFn()
 {
+    SC_MUTEX_HOLDER;
+
     while (uart_is_readable(scContext.uartId))
     {
         char ch = uart_getc(scContext.uartId);
@@ -45,10 +63,7 @@ void Sc_RxFn()
 #endif
 
             if (trigger)
-            {
                 scContext.trigger = true;
-                sync();
-            }
 
             bool xdrInitFail = false;
 
@@ -56,10 +71,7 @@ void Sc_RxFn()
                 xdrInitFail = true;
 
             if (xdrInitFail)
-            {
                 scContext.xdrInitFail = true;
-                sync();
-            }
 
             bool success = false;
 
@@ -67,10 +79,7 @@ void Sc_RxFn()
                 success = true;
 
             if (success)
-            {
                 scContext.success = true;
-                sync();
-            }
 
             bool shutdownSuccess = false;
 
@@ -78,10 +87,7 @@ void Sc_RxFn()
                 shutdownSuccess = true;
 
             if (shutdownSuccess)
-            {
                 scContext.shutdownSuccess = true;
-                sync();
-            }
 
             bool bringupSuccess = false;
 
@@ -89,10 +95,7 @@ void Sc_RxFn()
                 bringupSuccess = true;
 
             if (bringupSuccess)
-            {
                 scContext.bringupSuccess = true;
-                sync();
-            }
 
             bool needReboot = false;
 
@@ -103,10 +106,7 @@ void Sc_RxFn()
                 needReboot = true;
 
             if (needReboot)
-            {
                 scContext.needReboot = true;
-                sync();
-            }
         }
 
         bool reset = false;
@@ -181,6 +181,11 @@ void Sc_RxFn()
 
 void Sc_Thread()
 {
+    if (get_core_num() != 1)
+        dead();
+
+    SC_MUTEX_HOLDER;
+
     if (!Sc_IsInited())
         return;
 
@@ -217,8 +222,6 @@ uint64_t tb2sc_key[2];
 
 void Sc_Init()
 {
-    recursive_mutex_init(&scMutex);
-
     scContext.uartId = uart0;
 
     scContext.rxBufCurLen = 0;
@@ -244,7 +247,6 @@ void Sc_Init()
     Uart_Init(scContext.uartId, SC_UART_BAUD, true, SC_UART_RX_PIN_ID, true, SC_UART_TX_PIN_ID);
 
     scIsInited = true;
-    sync();
 
     {
         PrintLog("SC Auth...\n");
@@ -602,7 +604,6 @@ void Sc_Init()
     }
 
     scIsReadyForUser = true;
-    sync();
 }
 
 bool Sc_GetTrigger()
@@ -677,6 +678,8 @@ void Sc_CheckIsInited()
 
 void Sc_Puts(const char *cmd)
 {
+    SC_MUTEX_HOLDER;
+
     Sc_CheckIsInited();
 
     size_t cmd_StrLen = strlen(cmd);
@@ -718,8 +721,6 @@ void Sc_Puts(const char *cmd)
         return;
     }
 
-    recursive_mutex_enter_blocking(&scMutex);
-
     uint32_t checksum = 0;
 
     PrintLog("Sc_Tx: ");
@@ -758,16 +759,15 @@ void Sc_Puts(const char *cmd)
     Uart_Puts(scContext.uartId, "\r\n");
 
     scContext.lastScTxTimeInMs = get_time_in_ms();
-
-    recursive_mutex_exit(&scMutex);
 }
 
 // Can only be called from main core
 void Sc_SendCommand(struct Sc_SendCommandContext_s *ctx)
 {
-    Sc_CheckIsInited();
+    if (get_core_num() != 0)
+        dead();
 
-    recursive_mutex_enter_blocking(&scMutex);
+    Sc_CheckIsInited();
 
     ctx->done = false;
     sync();
@@ -776,7 +776,6 @@ void Sc_SendCommand(struct Sc_SendCommandContext_s *ctx)
     sync();
 
     Sc_Puts(ctx->cmd);
-    sync();
 
     uint64_t t1 = get_time_in_ms();
 
@@ -787,8 +786,4 @@ void Sc_SendCommand(struct Sc_SendCommandContext_s *ctx)
         if ((t2 - t1) > 2000)
             watchdog_reboot(0, 0, 0);
     }
-
-    //scContext.sendCommandCtx = NULL;
-
-    recursive_mutex_exit(&scMutex);
 }

@@ -1,4 +1,4 @@
-#include "Include.h"
+#include "Include.hpp"
 
 uint16_t swap_uint16(uint16_t val)
 {
@@ -506,23 +506,21 @@ void Core1_Thread()
 {
     while (1)
     {
-        if (Led_IsInited())
-            Led_Thread();
-
-        if (Sc_IsInited())
-            Sc_Thread();
-
-        if (DebugUart_IsInited())
-            DebugUart_Thread();
+        Led_Thread();
+        Sc_Thread();
+        DebugUart_Thread();
     }
 }
 
-void main()
+int main()
 {
 #if IS_EMMC
     vreg_set_voltage(VREG_VOLTAGE_1_30);
     set_sys_clock_khz(250000, true);
 #endif
+
+    recursive_mutex_init(&debugUartMutex);
+    recursive_mutex_init(&scMutex);
 
 #if PICO_TYPE == PICO_TYPE_E_PICO_W
     if (cyw43_arch_init())
@@ -575,4 +573,5 @@ void main()
 #endif
 
     dead();
+    return 0;
 }

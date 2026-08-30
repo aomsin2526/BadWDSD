@@ -76,6 +76,12 @@ FUNC_DEF uint64_t SpuAux_Init(uint64_t spu_id, const void* elfFileData)
 
 FUNC_DEF uint64_t SpuAux_Init_lv1(uint64_t spu_id)
 {
+    if (!IsLv1())
+    {
+        puts("lv1 only!\n");
+        dead_beep();
+    }
+
     const struct Stagex_Context_s* ctx = GetStagexContext();
 
     if (ctx->cached_StagexSpuElf_FileSize > stagex_aux_max_size)
@@ -84,7 +90,7 @@ FUNC_DEF uint64_t SpuAux_Init_lv1(uint64_t spu_id)
         dead_beep();
     }
 
-    uint8_t* elfFileData = (uint8_t*)0x9FF0000;
+    uint8_t* elfFileData = (uint8_t*)0xD000000;
     FlashRead(ctx->cached_StagexSpuElf_FileFlashOffset, elfFileData, ctx->cached_StagexSpuElf_FileSize);
 
     return SpuAux_Init(spu_id, elfFileData);

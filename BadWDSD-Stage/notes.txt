@@ -37,12 +37,12 @@
 // 0xDFFFF00 = stage_sp
 
 // Stage3:
-// 0x9FF0000 = temp Stagex_spu.elf (64KiB max)
+// 0xD000000 = temp Stagex_spu.elf (64KiB max)
 // 0xB000000 = temp lv2DiffFileAddress
 // 0xC000000 = temp lv2DiffFileAddress2
 
 // Stage4:
-// 0x9FF0000 = temp Stagex_spu.elf (64KiB max)
+// 0xD000000 = temp Stagex_spu.elf (64KiB max)
 // 0xC000000 = temp lv2FileAddress
 // 0xB000000 = temp lv2ElfFileAddress
 // 0xA000000 = temp decryptBuf
@@ -50,5 +50,5 @@
 // Stage5:
 
 // Stage6:
-// 0x9FF0000 = temp Stagex_spu.elf (64KiB max)
+// 0xD000000 = temp Stagex_spu.elf (64KiB max)
 // 0xB000000 = temp lv0

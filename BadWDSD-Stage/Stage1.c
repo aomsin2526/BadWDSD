@@ -366,7 +366,7 @@ FUNC_DEF void Stage1()
 
     uint64_t new_stagex_addr = 0x1010000;
 
-    if (!is_emmc)
+    if (!is_emmc && (get_pc() >= 0x2401FF21000))
         Stagex_Relocate((const volatile void*)0x2401FF21000, 0x2401FF21000, new_stagex_addr);
 
     //
@@ -593,9 +593,6 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
     ASM("li 3, %0" ::"i"(ENTRY_WAIT_IN_MS) :);
     ASM("bl WaitInMs2");
 #endif
-
-    // sync
-    ASM("sync");
 
     // push stack
     ASM("addi 1, 1, -128");

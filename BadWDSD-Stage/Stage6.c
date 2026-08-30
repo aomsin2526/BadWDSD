@@ -334,9 +334,6 @@ __attribute__((noreturn, section("entry6"))) void stage6_entry()
     // set r1 to stage_sp
     //ASM("mr 1, %0" ::"r"(stage_sp) :);
 
-    // sync
-    ASM("sync");
-
     // push stack
     ASM("addi 1, 1, -128");
 
@@ -398,9 +395,6 @@ __attribute__((noreturn, section("entry6"))) void stage6_entry()
 
     // pop stack
     ASM("addi 1, 1, 512");
-
-    // sync
-    ASM("sync");
 
     //
     ASM("blr");

@@ -20,7 +20,6 @@ typedef uint64_t size_t;
 #define ASM(...) asm volatile(__VA_ARGS__)
 
 #define SC()              \
-    ASM("sync"); \
     ASM("sc" :"=r"(r3), "=r"(r4), "=r"(r5), "=r"(r6), "=r"(r7):"r"(r11), "r"(r3), "r"(r4), "r"(r5), "r"(r6), "r"(r7):)
 
 #define dead() \

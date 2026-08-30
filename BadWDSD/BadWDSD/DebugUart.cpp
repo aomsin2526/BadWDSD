@@ -43,6 +43,9 @@ void DebugUart_RxFn()
 {
     DEBUG_UART_MUTEX_HOLDER;
 
+    if (!DebugUart_IsInited())
+        return;
+
     while (uart_is_readable(debugUartContext.uartId))
     {
         char ch = uart_getc(debugUartContext.uartId);
@@ -82,7 +85,7 @@ void DebugUart_Init()
     DEBUG_UART_MUTEX_HOLDER;
 
     if (DebugUart_IsInited())
-        return;
+        dead();
 
     debugUartContext.uartId = uart1;
 
@@ -98,6 +101,9 @@ void DebugUart_Init()
 void DebugUart_Uninit()
 {
     DEBUG_UART_MUTEX_HOLDER;
+
+    if (!DebugUart_IsInited())
+        dead();
 
     debugUartIsInited = false;
     Uart_Uninit(debugUartContext.uartId, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID);

@@ -26,6 +26,9 @@ void Sc_RxFn()
 {
     SC_MUTEX_HOLDER;
 
+    if (!Sc_IsInited())
+        return;
+
     while (uart_is_readable(scContext.uartId))
     {
         char ch = uart_getc(scContext.uartId);
@@ -222,6 +225,12 @@ uint64_t tb2sc_key[2];
 
 void Sc_Init()
 {
+    if (get_core_num() != 0)
+        dead();
+
+    if (Sc_IsInited())
+        dead();
+
     scContext.uartId = uart0;
 
     scContext.rxBufCurLen = 0;
@@ -772,10 +781,14 @@ void Sc_SendCommand(struct Sc_SendCommandContext_s *ctx)
     ctx->done = false;
     sync();
 
-    scContext.sendCommandCtx = ctx;
-    sync();
+    {
+        SC_MUTEX_HOLDER;
 
-    Sc_Puts(ctx->cmd);
+        scContext.sendCommandCtx = ctx;
+        sync();
+
+        Sc_Puts(ctx->cmd);
+    }
 
     uint64_t t1 = get_time_in_ms();
 

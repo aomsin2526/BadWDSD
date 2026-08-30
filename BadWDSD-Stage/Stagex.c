@@ -1139,6 +1139,8 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
 
             for (uint32_t i = 0; i < 4; i++)
                 p[i] = p_recieve_packet_data[i];
+
+            eieio();
         }
 
         if (out_real_pkt_hdr.tag != tag)
@@ -1156,6 +1158,8 @@ FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *o
 
                 for (uint32_t i = 0; i < (256 / 4); ++i)
                     p[i] = p_recieve_packet_data[(i + 4)];
+
+                eieio();
             }
         }
     }

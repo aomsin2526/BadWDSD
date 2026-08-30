@@ -4,22 +4,22 @@ FUNC_DEF uint8_t FetchIsEmmc()
 {
     //return (sc_read_flash_type() == 0x67) ? 1 : 0;
 
-    const volatile uint32_t* sbVersion = (const volatile uint32_t*)0x24000087000;
+    const uint32_t sbVersion = volatile_read_uint32(0x24000087000);
 
-    if ((*sbVersion & 0xFF000000) != 0x04000000)
+    if ((sbVersion & 0xFF000000) != 0x04000000)
         return 0;
 
-    const volatile uint32_t* a = (const volatile uint32_t*)0x24000FFF020;
-    const volatile uint32_t* b = (const volatile uint32_t*)0x24000FFF028;
-    const volatile uint32_t* c = (const volatile uint32_t*)0x24000FFF02C;
+    const uint32_t a = volatile_read_uint32(0x24000FFF020);
+    const uint32_t b = volatile_read_uint32(0x24000FFF028);
+    const uint32_t c = volatile_read_uint32(0x24000FFF02C);
 
-    if (*a != 0x1fc0000c)
+    if (a != 0x1fc0000c)
         return 0;
 
-    if (*b != 0x203)
+    if (b != 0x203)
         return 0;
 
-    if (*c != 0x1fc00000)
+    if (c != 0x1fc00000)
         return 0;
 
     return 1;
@@ -62,9 +62,9 @@ FUNC_DEF uint8_t emmc_is_interrupt_asserted()
     if (!is_emmc)
         dead_beep();
 
-    const volatile uint32_t* v = (const volatile uint32_t*)0x24000FFF504;
+    const uint32_t v = volatile_read_uint32(0x24000FFF504);
 
-    if ((*v & 1) == 0)
+    if ((v & 1) == 0)
         return 1;
 
     return 0;
@@ -95,30 +95,33 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         }
     }
 
+    //
+
+    static const uint64_t a_data = 0x2401FC44000;
+
+    static const uint64_t a_count = 0x2401FC44006;
+
+    static const uint64_t a_high = 0x2401FC44008;
+    static const uint64_t a_low = 0x2401FC4400A;
+
+    static const uint64_t a_cmd = 0x2401FC4400C;
+
+    static const uint64_t a_intreg = 0x2401FC44010;
+    static const uint64_t a_intenreg = 0x2401FC44012;
+
     // start_read_sector
 
     {
         {
-            volatile uint16_t* p_intenreg = (volatile uint16_t*)0x2401FC44012;
-            volatile uint16_t* p_count = (volatile uint16_t*)0x2401FC44006;
+            volatile_write_uint16(a_intenreg, 9);
+            volatile_write_uint16(a_count, 0);
 
-            volatile uint16_t* p_high = (volatile uint16_t*)0x2401FC44008;
-            volatile uint16_t* p_low = (volatile uint16_t*)0x2401FC4400A;
-
-            *p_intenreg = 9;
-            *p_count = 0;
-
-            *p_high = (uint16_t)(sector_idx / 0x10000);
-            *p_low = (uint16_t)sector_idx;
-
-            eieio();
+            volatile_write_uint16(a_high, (uint16_t)(sector_idx / 0x10000));
+            volatile_write_uint16(a_low, (uint16_t)sector_idx);
         }
 
         {
-            volatile uint16_t* p_cmd = (volatile uint16_t*)0x2401FC4400C;
-            *p_cmd = 0x18; // !!!!!! READ !!!!!!
-
-            eieio();
+            volatile_write_uint16(a_cmd, 0x18); // !!!!!! READ !!!!!!
         }
     }
 
@@ -134,23 +137,24 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
 
         //
 
-        volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401FC44010;
+        uint16_t v_intreg = volatile_read_uint16(a_intreg);
 
-        if (!((*p_intreg & 9) == 1))
+        if (!((v_intreg & 9) == 1))
         {
             puts("read_sector failed\n");
             dead_beep();
         }
 
-        *p_intreg &= 9;
+        v_intreg &= 9;
+        volatile_write_uint16(a_intreg, v_intreg);
 
         //
 
         for (uint32_t i2 = 0; i2 < (emmc_sector_size / 2); ++i2)
         {
-            const volatile uint16_t* p_data = (const volatile uint16_t*)0x2401FC44000;
+            const uint16_t v_data = volatile_read_uint16(a_data);
 
-            *((uint16_t*)(&outBuf_u8[curOutBufOffset])) = *p_data;
+            *((uint16_t*)(&outBuf_u8[curOutBufOffset])) = v_data;
             curOutBufOffset += 2;
         }
 
@@ -167,28 +171,16 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         //
 
         {
-            volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401FC44010;
-            volatile uint16_t* p_intenreg = (volatile uint16_t*)0x2401FC44012;
-            volatile uint16_t* p_count = (volatile uint16_t*)0x2401FC44006;
+            volatile_write_uint16(a_intreg, 0xf);
+            volatile_write_uint16(a_intenreg, 4);
+            volatile_write_uint16(a_count, 0);
 
-            volatile uint16_t* p_high = (volatile uint16_t*)0x2401FC44008;
-            volatile uint16_t* p_low = (volatile uint16_t*)0x2401FC4400A;
-
-            *p_intreg = 0xf;
-            *p_intenreg = 4;
-            *p_count = 0;
-
-            *p_high = 0;
-            *p_low = 0;
-
-            eieio();
+            volatile_write_uint16(a_high, 0);
+            volatile_write_uint16(a_low, 0);
         }
 
         {
-            volatile uint16_t* p_cmd = (volatile uint16_t*)0x2401FC4400C;
-            *p_cmd = 0xc; // !!!!!! IDLE !!!!!!
-
-            eieio();
+            volatile_write_uint16(a_cmd, 0xc); // !!!!!! IDLE !!!!!!
         }
 
         //
@@ -203,18 +195,21 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
 
         //
 
-        volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401FC44010;
+        uint16_t v_intreg = volatile_read_uint16(a_intreg);
 
-        if (!((*p_intreg & 0xc) == 4))
+        if (!((v_intreg & 0xc) == 4))
         {
             puts("read_sector idle failed\n");
             dead_beep();
         }
 
-        *p_intreg &= 0xc;
+        v_intreg &= 0xc;
+        volatile_write_uint16(a_intreg, v_intreg);
 
         //
     }
+
+    //
 }
 
 FUNC_DEF void emmc_erase_sector(uint32_t sector_idx)
@@ -230,30 +225,31 @@ FUNC_DEF void emmc_erase_sector(uint32_t sector_idx)
         dead_beep();
     }
 
+    //
+
+    static const uint64_t a_count = 0x2401FC44006;
+
+    static const uint64_t a_high = 0x2401FC44008;
+    static const uint64_t a_low = 0x2401FC4400A;
+
+    static const uint64_t a_cmd = 0x2401FC4400C;
+
+    static const uint64_t a_intreg = 0x2401FC44010;
+    static const uint64_t a_intenreg = 0x2401FC44012;
+
     // start_erase_sector
 
     {
         {
-            volatile uint16_t* p_intenreg = (volatile uint16_t*)0x2401FC44012;
-            volatile uint16_t* p_count = (volatile uint16_t*)0x2401FC44006;
+            volatile_write_uint16(a_intenreg, 0xc);
+            volatile_write_uint16(a_count, 1);
 
-            volatile uint16_t* p_high = (volatile uint16_t*)0x2401FC44008;
-            volatile uint16_t* p_low = (volatile uint16_t*)0x2401FC4400A;
-
-            *p_intenreg = 0xc;
-            *p_count = 1;
-
-            *p_high = (uint16_t)(sector_idx / 0x10000);
-            *p_low = (uint16_t)sector_idx;
-
-            eieio();
+            volatile_write_uint16(a_high, (uint16_t)(sector_idx / 0x10000));
+            volatile_write_uint16(a_low, (uint16_t)sector_idx);
         }
 
         {
-            volatile uint16_t* p_cmd = (volatile uint16_t*)0x2401FC4400C;
-            *p_cmd = 0x40; // !!!!!! ERASE !!!!!!
-
-            eieio();
+            volatile_write_uint16(a_cmd, 0x40); // !!!!!! ERASE !!!!!!
         }
     }
 
@@ -266,15 +262,16 @@ FUNC_DEF void emmc_erase_sector(uint32_t sector_idx)
 
         //
 
-        volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401FC44010;
+        uint16_t v_intreg = volatile_read_uint16(a_intreg);
 
-        if (!((*p_intreg & 0xc) == 4))
+        if (!((v_intreg & 0xc) == 4))
         {
             puts("erase_sector erase failed\n");
             dead_beep();
         }
 
-        *p_intreg &= 0xc;
+        v_intreg &= 0xc;
+        volatile_write_uint16(a_intreg, v_intreg);
 
         //
     }
@@ -292,30 +289,33 @@ FUNC_DEF void emmc_write_sector(uint32_t sector_idx, const void* inBuf)
 
     emmc_erase_sector(sector_idx);
 
+    //
+
+    static const uint64_t a_data = 0x2401FC44000;
+
+    static const uint64_t a_count = 0x2401FC44006;
+
+    static const uint64_t a_high = 0x2401FC44008;
+    static const uint64_t a_low = 0x2401FC4400A;
+
+    static const uint64_t a_cmd = 0x2401FC4400C;
+
+    static const uint64_t a_intreg = 0x2401FC44010;
+    static const uint64_t a_intenreg = 0x2401FC44012;
+
     // start_write_sector
 
     {
         {
-            volatile uint16_t* p_intenreg = (volatile uint16_t*)0x2401FC44012;
-            volatile uint16_t* p_count = (volatile uint16_t*)0x2401FC44006;
+            volatile_write_uint16(a_intenreg, 0xe);
+            volatile_write_uint16(a_count, 1);
 
-            volatile uint16_t* p_high = (volatile uint16_t*)0x2401FC44008;
-            volatile uint16_t* p_low = (volatile uint16_t*)0x2401FC4400A;
-
-            *p_intenreg = 0xe;
-            *p_count = 1;
-
-            *p_high = (uint16_t)(sector_idx / 0x10000);
-            *p_low = (uint16_t)sector_idx;
-
-            eieio();
+            volatile_write_uint16(a_high, (uint16_t)(sector_idx / 0x10000));
+            volatile_write_uint16(a_low, (uint16_t)sector_idx);
         }
 
         {
-            volatile uint16_t* p_cmd = (volatile uint16_t*)0x2401FC4400C;
-            *p_cmd = 0x38; // !!!!!! WRITE !!!!!!
-
-            eieio();
+            volatile_write_uint16(a_cmd, 0x38); // !!!!!! WRITE !!!!!!
         }
     }
 
@@ -330,23 +330,22 @@ FUNC_DEF void emmc_write_sector(uint32_t sector_idx, const void* inBuf)
 
         //
 
-        volatile uint16_t* p_intreg = (volatile uint16_t*)0x2401FC44010;
+        uint16_t v_intreg = volatile_read_uint16(a_intreg);
 
-        if (!((*p_intreg & 2) != 0))
+        if (!((v_intreg & 2) != 0))
         {
             puts("write_sector failed 1\n");
             dead_beep();
         }
 
-        *p_intreg = 2;
+        v_intreg = 2;
+        volatile_write_uint16(a_intreg, v_intreg);
 
         //
 
         for (uint32_t i2 = 0; i2 < (emmc_sector_size / 2); ++i2)
         {
-            volatile uint16_t* p_data = (volatile uint16_t*)0x2401FC44000;
-
-            *p_data = *((const uint16_t*)(&inBuf_u8[curInBufOffset]));
+            volatile_write_uint16(a_data, *((const uint16_t*)(&inBuf_u8[curInBufOffset])));
             curInBufOffset += 2;
         }
 
@@ -356,13 +355,16 @@ FUNC_DEF void emmc_write_sector(uint32_t sector_idx, const void* inBuf)
 
         //
 
-        if (!((*p_intreg & 4) != 0))
+        v_intreg = volatile_read_uint16(a_intreg);
+
+        if (!((v_intreg & 4) != 0))
         {
             puts("write_sector failed 2\n");
             dead_beep();
         }
 
-        *p_intreg = 4;
+        v_intreg = 4;
+        volatile_write_uint16(a_intreg, v_intreg);
 
         //
     }

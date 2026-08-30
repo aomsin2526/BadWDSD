@@ -11,7 +11,7 @@ bool Sb_IsInited()
 void Sb_Init()
 {
     if (Sb_IsInited())
-        return;
+        dead();
 
     sbContext.uartId = uart1;
 
@@ -22,7 +22,7 @@ void Sb_Init()
 void Sb_Uninit()
 {
     if (!Sb_IsInited())
-        return;
+        dead();
 
     sbIsInited = false;
     Uart_Uninit(sbContext.uartId, false, 0, true, SB_UART_TX_PIN_ID);
@@ -31,7 +31,7 @@ void Sb_Uninit()
 void Sb_Putc(char c)
 {
     if (!Sb_IsInited())
-        return;
+        dead();
 
     Uart_Putc(sbContext.uartId, c);
 }

@@ -1134,14 +1134,14 @@ FUNC_DEF void Stagexldr()
         print_hex(request_os_bank_indicator);
         puts("\n");
 
-        sc_write_request_os_bank_indicator(0xff);
-
         if (request_os_bank_indicator != 0xff)
         {
             // inform modchip that we are good...
             badwdsd_ok();
             WaitInMs(10000);
         }
+
+        sc_write_request_os_bank_indicator(0xff);
 
         if (request_os_bank_indicator == 0x1)
             switch_ros(0xff);

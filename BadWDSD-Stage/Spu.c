@@ -584,6 +584,24 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet
             puts("\n");
         }
 
+        if (phdr->p_memsz < phdr->p_filesz)
+        {
+            puts("bad p_memsz/p_filesz!!!\n");
+            dead_beep();
+        }
+
+        if ((phdr->p_filesz % 8) != 0)
+        {
+            puts("bad p_filesz!!!\n");
+            dead_beep();
+        }
+
+        if ((phdr->p_memsz % 8) != 0)
+        {
+            puts("bad p_memsz!!!\n");
+            dead_beep();
+        }
+
         {
             uint64_t clearSize = (phdr->p_memsz - phdr->p_filesz);
 
@@ -593,7 +611,7 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet
 
         for (uint64_t i = 0; i < phdr->p_filesz; i += 8)
         {
-            uint64_t v = *((uint64_t *)(elfFileAddress + phdr->p_offset + i));
+            uint64_t v = *((const uint64_t *)(elfFileAddress + phdr->p_offset + i));
             SPU_LS_Write64(spu_id, (phdr->p_vaddr + i), v);
         }
 

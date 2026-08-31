@@ -2320,12 +2320,18 @@ FUNC_DEF void LoadElf(uint64_t elfFileAddress, uint64_t destAddressOffset, uint8
 
         puts("\n");
 
+        if (phdr->p_memsz < phdr->p_filesz)
+        {
+            puts("bad p_memsz/p_filesz!!!\n");
+            dead_beep();
+        }
+
         if (doZero)
         {
             uint64_t clearSize = (phdr->p_memsz - phdr->p_filesz);
             memset((void *)(loadAddress + phdr->p_filesz), 0, clearSize);
         }
-            
+
         memcpy((void *)(loadAddress), (const void *)(elfFileAddress + phdr->p_offset), phdr->p_filesz);
 
         ++phdr;

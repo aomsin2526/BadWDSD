@@ -50,6 +50,9 @@ void LoadElfSpu(uint64_t elfFileAddress)
         struct ElfPhdr32_s phdr;
         DMARead(&phdr, curPhdrAddress, sizeof(phdr));
 
+        if (phdr.p_memsz < phdr.p_filesz)
+            stop(0x69);
+
         {
             {
                 uint32_t clearSize = (phdr.p_memsz - phdr.p_filesz);

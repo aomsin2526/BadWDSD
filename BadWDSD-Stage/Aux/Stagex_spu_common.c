@@ -3,27 +3,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-//#include <string.h>
 
 #pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
-
-// typedef char int8_t;
-// typedef unsigned char uint8_t;
-
-// typedef short int16_t;
-// typedef unsigned short uint16_t;
-
-// typedef int int32_t;
-// typedef unsigned int uint32_t;
-
-// typedef long long int64_t;
-// typedef unsigned long long uint64_t;
-
-// typedef uint32_t size_t;
-
-// typedef uint32_t uintptr_t;
-
-// #define NULL 0
 
 #define ASM(...) asm volatile(__VA_ARGS__)
 
@@ -137,42 +118,6 @@ void memcpy(void *dest, const void *src, uint32_t count)
     {
         uint8_t *destt = (uint8_t *)dest;
         const uint8_t *srcc = (const uint8_t *)src;
-
-        for (uint32_t i = 0; i < count; ++i)
-            destt[i] = srcc[i];
-    }
-}
-
-void volatile_memcpy(volatile void *dest, const volatile void *src, uint32_t count)
-{
-    if ((((uint32_t)dest % 8) == 0) && (((uint32_t)src % 8) == 0) && ((count % 8) == 0))
-    {
-        volatile uint64_t *destt = (volatile uint64_t *)dest;
-        const volatile uint64_t *srcc = (const volatile uint64_t *)src;
-
-        for (uint32_t i = 0; i < (count / 8); ++i)
-            destt[i] = srcc[i];
-    }
-    else if ((((uint32_t)dest % 4) == 0) && (((uint32_t)src % 4) == 0) && ((count % 4) == 0))
-    {
-        volatile uint32_t *destt = (volatile uint32_t *)dest;
-        const volatile uint32_t *srcc = (const volatile uint32_t *)src;
-
-        for (uint32_t i = 0; i < (count / 4); ++i)
-            destt[i] = srcc[i];
-    }
-    else if ((((uint32_t)dest % 2) == 0) && (((uint32_t)src % 2) == 0) && ((count % 2) == 0))
-    {
-        volatile uint16_t *destt = (volatile uint16_t *)dest;
-        const volatile uint16_t *srcc = (const volatile uint16_t *)src;
-
-        for (uint32_t i = 0; i < (count / 2); ++i)
-            destt[i] = srcc[i];
-    }
-    else
-    {
-        volatile uint8_t *destt = (volatile uint8_t *)dest;
-        const volatile uint8_t *srcc = (const volatile uint8_t *)src;
 
         for (uint32_t i = 0; i < count; ++i)
             destt[i] = srcc[i];

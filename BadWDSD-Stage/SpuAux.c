@@ -76,6 +76,8 @@ FUNC_DEF uint64_t SpuAux_Init(uint64_t spu_id, const void* elfFileData)
 
 FUNC_DEF uint64_t SpuAux_Init_lv1(uint64_t spu_id)
 {
+    puts("SpuAux_Init_lv1()\n");
+
     if (!IsLv1())
     {
         puts("lv1 only!\n");
@@ -93,7 +95,10 @@ FUNC_DEF uint64_t SpuAux_Init_lv1(uint64_t spu_id)
     uint8_t* elfFileData = (uint8_t*)0xD000000;
     FlashRead(ctx->cached_StagexSpuElf_FileFlashOffset, elfFileData, ctx->cached_StagexSpuElf_FileSize);
 
-    return SpuAux_Init(spu_id, elfFileData);
+    uint64_t v = SpuAux_Init(spu_id, elfFileData);
+
+    puts("SpuAux_Init_lv1() done\n");
+    return v;
 }
 
 struct __attribute__((aligned(8))) Stagex_spu_DMACmd_s

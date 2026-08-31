@@ -1,12 +1,4 @@
-#pragma GCC optimize("align-functions=8")
-#pragma GCC diagnostic ignored "-Wunused-function"
-
-#define FUNC_DECL __attribute__((section("code")))
-#define FUNC_DEF FUNC_DECL
-
-// branch-able code
-#define FUNC_DECL_BCODE __attribute__((section("bcode")))
-#define FUNC_DEF_BCODE FUNC_DECL_BCODE
+#include "Stagexldr_emmc_critical_asm.c"
 
 #define LOGGING_ENABLED 1
 
@@ -27,8 +19,6 @@ typedef uint64_t size_t;
 typedef uint64_t uintptr_t;
 
 #define NULL 0
-
-#include "Stagexldr_emmc_critical_asm.c"
 
 register uint64_t is_emmc asm("r16");
 
@@ -224,12 +214,7 @@ FUNC_DEF_BCODE void HW_Init()
     ASM("mtlr %0" : "=r"(lr)::);
 }
 
-FUNC_DEF void dead()
-{
-    while (1)
-    {
-    }
-}
+#include "Stagexldr_emmc_critical_dead.c"
 
 #define SYS_TIMEBASE_GET(tb)                          \
     do                                                \
@@ -977,11 +962,7 @@ FUNC_DEF void sc_soft_restart()
     dead();
 }
 
-FUNC_DEF void dead_beep()
-{
-    sc_continuous_beep();
-    dead();
-}
+#include "Stagexldr_emmc_critical_dead_beep.c"
 
 #include "Stagexldr_emmc_critical.c"
 

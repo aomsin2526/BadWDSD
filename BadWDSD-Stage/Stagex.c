@@ -1,12 +1,4 @@
-#pragma GCC optimize("align-functions=8")
-#pragma GCC diagnostic ignored "-Wunused-function"
-
-#define FUNC_DECL __attribute__((section("code")))
-#define FUNC_DEF FUNC_DECL
-
-// branch-able code
-#define FUNC_DECL_BCODE __attribute__((section("bcode")))
-#define FUNC_DEF_BCODE FUNC_DECL_BCODE
+#include "Stagex_critical_asm.c"
 
 #define SC_PUTS_BUFFER_ENABLED 1
 
@@ -50,8 +42,6 @@ typedef uint64_t size_t;
 typedef uint64_t uintptr_t;
 
 #define NULL 0
-
-#include "Stagex_critical_asm.c"
 
 static const uint64_t stagex_max_size = (60 * 1024);
 static const uint64_t stagex_aux_max_size = (64 * 1024);
@@ -441,12 +431,7 @@ FUNC_DEF_BCODE void HW_Init()
     ASM("mtlr %0" : "=r"(lr)::);
 }
 
-FUNC_DEF void dead()
-{
-    while (1)
-    {
-    }
-}
+#include "Stagex_critical_dead.c"
 
 // get program counter for debugging
 FUNC_DEF uint64_t get_pc()
@@ -1748,13 +1733,7 @@ FUNC_DEF void real_hexdump(const void* ptr, uint64_t sz)
 
 //
 
-FUNC_DEF void dead_beep()
-{
-    WaitInMs(2000);
-
-    sc_continuous_beep();
-    dead();
-}
+#include "Stagex_critical_dead_beep.c"
 
 //
 

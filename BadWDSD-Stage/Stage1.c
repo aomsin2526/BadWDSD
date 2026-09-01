@@ -128,7 +128,7 @@ FUNC_DEF void Stage1()
 {
     //
 
-    real_sc_puts_init();
+    sc_puts_init();
     sc_puts("Bad_WDSD Stage1 by Kafuu(aomsin2526)" " (Build Date: " __DATE__ " " __TIME__ ")\n");
 
     print_pc();

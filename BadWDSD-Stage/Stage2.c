@@ -563,7 +563,7 @@ FUNC_DEF void Stage2()
 
 __attribute__((section("main2"))) void stage2_main(uint64_t in_r3)
 {
-    real_sc_puts_init();
+    sc_puts_init();
     is_emmc = FetchIsEmmc();
 
 #if HDDKEYDUMPER_ENABLED

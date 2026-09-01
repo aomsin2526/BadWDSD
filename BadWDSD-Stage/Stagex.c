@@ -986,7 +986,7 @@ FUNC_DEF char* get_sc_puts_buf()
 }
 #endif
 
-FUNC_DEF void real_sc_puts_init()
+FUNC_DEF void sc_puts_init()
 {
 #if SC_PUTS_BUFFER_ENABLED
     uint64_t* sc_puts_buflen = get_sc_puts_buflen();
@@ -995,14 +995,6 @@ FUNC_DEF void real_sc_puts_init()
     *sc_puts_buflen = 0;
     sc_puts_buf[*sc_puts_buflen] = 0;
 #endif
-}
-
-FUNC_DEF void sc_puts_init()
-{
-    if (!IsLogEnabled())
-        return;
-
-    real_sc_puts_init();
 }
 
 FUNC_DEF void sc_puts(const char *str)

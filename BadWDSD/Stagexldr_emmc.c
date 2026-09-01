@@ -399,10 +399,7 @@ FUNC_DEF uint16_t sc_real_packet_header_calc_cksum(const struct sc_real_packet_h
 FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *out)
 {
     if (in->payload_size > 256)
-    {
-        // printf("payload too big!\n");
         dead();
-    }
 
     //
 

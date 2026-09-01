@@ -650,10 +650,7 @@ FUNC_DEF uint16_t sc_real_packet_header_calc_cksum(const struct sc_real_packet_h
 FUNC_DEF void sc_send_packet(const struct sc_packet_s *in, struct sc_packet_s *out)
 {
     if (in->payload_size > 256)
-    {
-        // printf("payload too big!\n");
         dead();
-    }
 
     //
 
@@ -1012,14 +1009,8 @@ FUNC_DEF void sc_puts(const char *str)
     uint64_t* sc_puts_buflen = get_sc_puts_buflen();
     char* sc_puts_buf = get_sc_puts_buf();
 
-    // just drop the whole string
     if ((*sc_puts_buflen + len) > 199)
-    {
-        *sc_puts_buflen = 0;
-        sc_puts_buf[*sc_puts_buflen] = 0;
-
-        return;
-    }
+        dead();
 
     memcpy(&sc_puts_buf[*sc_puts_buflen], str, len);
 

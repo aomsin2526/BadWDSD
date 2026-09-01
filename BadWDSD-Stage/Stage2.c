@@ -158,20 +158,38 @@ FUNC_DEF void Stage2()
             }
             else
             {
-                job_context.patch_aim = 0;
-                job_context.patch_inspect_package_tophalf = 0;
-
                 if (isqCFW)
                 {
+                    job_context.patch_aim = 0;
+                    job_context.patch_inspect_package_tophalf = 0;
+
                     if (CoreOS2_FindFileEntry_Bank(os_bank_indicator, "lv2Rkernel.self", NULL, NULL))
                     {
                         uint8_t tid = read_targetid();
 
                         if (tid != 0x82)
                         {
+                            puts("patch_aim\n");
+
                             job_context.patch_aim = 1;
                             job_context.patch_inspect_package_tophalf = 1;
                         }
+                    }
+                }
+
+                {
+                    job_context.patch_nobd = 0;
+
+                    uint8_t nobd_toggle_flag = sc_read_nobd_toggle_flag();
+
+                    puts("nobd_toggle_flag = ");
+                    print_hex(nobd_toggle_flag);
+                    puts("\n");
+
+                    if (((nobd_toggle_flag == 0x1) && isqCFW) || (nobd_toggle_flag == 0x2))
+                    {
+                        puts("patch_nobd\n");
+                        job_context.patch_nobd = 1;
                     }
                 }
 

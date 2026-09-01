@@ -623,6 +623,8 @@ struct __attribute__((aligned(8))) Stagex_spu_job_stage2_context_s
     uint8_t patch_inspect_package_tophalf;
 
     uint8_t fsm_toggle; // 0x0 = exit, 0x1 = enter, other values = do nothing
+
+    uint8_t patch_nobd;
 };
 
 void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s *job_context)
@@ -646,9 +648,16 @@ void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s 
 
     uint8_t found_ps2_fan_control = 0;
 
+    uint8_t found_acl = 0;
+    uint8_t found_stor_access = 0;
+
+    uint8_t found_nobd_1 = 0;
+    uint8_t found_nobd_2 = 0;
+    uint8_t found_nobd_3 = 0;
+    uint8_t found_nobd_4 = 0;
+
     uint8_t found_aim_get_device_type = 0;
     uint8_t found_aim_get_device_id = 0;
-
     uint8_t found_aim_get_ps_code = 0;
 
     uint8_t found_inspect_package_tophalf = 0;
@@ -761,7 +770,7 @@ void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s 
                 // puts("Patching get_version_and_hash (ANTI BRICK & Downgrading)...\n");
 
                 __attribute__((aligned(16))) static const uint8_t searchData[] = {0x4B, 0xFF, 0x45, 0xD1, 0xE8, 0x1F, 0x00, 0x80, 0xF8, 0x1C, 0x00, 0x00, 0x38, 0x9D, 0x00, 0x08};
-                __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x38, 0x00, 0x40, 0x08, 0x78, 0x00, 0x26, 0xC6, 0xF8, 0x1C, 0x00, 0x00, 0x38, 0x9D, 0x00, 0x08};
+                __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x38, 0x00, 0x30, 0x06, 0x78, 0x00, 0x26, 0xC6, 0xF8, 0x1C, 0x00, 0x00, 0x38, 0x9D, 0x00, 0x08};
 
                 if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
                 {
@@ -809,6 +818,81 @@ void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s 
                 {
                     DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
                     found_ps2_fan_control = 1;
+                }
+            }
+
+            if (!found_acl)
+            {
+                __attribute__((aligned(16))) static const uint8_t searchData[] = {0x54, 0x63, 0x06, 0x3E, 0x2F, 0x83, 0x00, 0x00, 0x41, 0x9E, 0x00, 0x14, 0xE8, 0x01, 0x00, 0x70, 0x54, 0x00, 0x07, 0xFE, 0x2F, 0x80, 0x00, 0x00, 0x40, 0x9E, 0x00, 0x18};
+                __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x38, 0x60, 0x00, 0x01, 0x2F, 0x83, 0x00, 0x00, 0x41, 0x9E, 0x00, 0x14, 0x38, 0x00, 0x00, 0x01, 0x54, 0x00, 0x07, 0xFE, 0x2F, 0x80, 0x00, 0x00, 0x40, 0x9E, 0x00, 0x18};
+
+                if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                {
+                    DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                    found_acl = 1;
+                }
+            }
+
+            if (!found_stor_access)
+            {
+                __attribute__((aligned(16))) static const uint8_t searchData[] = {0x98, 0x1F, 0x00, 0x00, 0x38, 0x00, 0x00, 0x01, 0xF9, 0x21, 0x00, 0x80};
+                __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x60, 0x00, 0x00, 0x00};
+
+                if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                {
+                    DMAWrite(replaceData, (curEaAddr + 28), sizeof(replaceData));
+                    found_stor_access = 1;
+                }
+            }
+
+            if (job_context->patch_nobd)
+            {
+                if (!found_nobd_1)
+                {
+                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0xF9, 0x21, 0x00, 0x78, 0x40, 0x9D, 0x00, 0x14};
+                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0xF9, 0x21, 0x00, 0x78, 0x60, 0x00, 0x00, 0x00};
+
+                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                    {
+                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                        found_nobd_1 = 1;
+                    }
+                }
+
+                if (!found_nobd_2)
+                {
+                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0x2F, 0xBF, 0x00, 0xA7, 0x41, 0x9E, 0x00, 0x0C, 0x2F, 0xBF, 0x00, 0xA5, 0x40, 0x9E, 0x00, 0x54};
+                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x2F, 0xBF, 0x00, 0xA7, 0x41, 0x9E, 0x00, 0x0C, 0x2F, 0xBF, 0x00, 0xA5, 0x60, 0x00, 0x00, 0x00};
+
+                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                    {
+                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                        found_nobd_2 = 1;
+                    }
+                }
+
+                if (!found_nobd_3)
+                {
+                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0x78, 0x84, 0x00, 0x20, 0xF8, 0x01, 0x00, 0x70, 0xF9, 0x21, 0x00, 0x78, 0x40, 0x9E, 0x00, 0x0C};
+                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x78, 0x84, 0x00, 0x20, 0xF8, 0x01, 0x00, 0x70, 0xF9, 0x21, 0x00, 0x78, 0x60, 0x00, 0x00, 0x00};
+
+                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                    {
+                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                        found_nobd_3 = 1;
+                    }
+                }
+
+                if (!found_nobd_4)
+                {
+                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0xF8, 0x01, 0x00, 0x90, 0x4B, 0xFF, 0xFF, 0x99, 0x2F, 0x83, 0x00, 0x00, 0x78, 0x63, 0x00, 0x20, 0x40, 0x9E, 0x00, 0x18};
+                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0xF8, 0x01, 0x00, 0x90, 0x4B, 0xFF, 0xFF, 0x99, 0x2F, 0x83, 0x00, 0x00, 0x78, 0x63, 0x00, 0x20, 0x60, 0x00, 0x00, 0x00};
+
+                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                    {
+                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                        found_nobd_4 = 1;
+                    }
                 }
             }
 
@@ -868,6 +952,11 @@ void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s 
         }
     }
 
+    if (!found_UpdateMgrCoreOSHashCheck)
+        stop(8);
+    if (!found_SysmgrCoreOSHashCheck)
+        stop(8);
+
     if (job_context->fsm_toggle == 0x1) // enter
     {
         if (!found_disable_erase_hash_standby_bank_and_enter_fsm)
@@ -876,6 +965,8 @@ void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s 
     else if (job_context->fsm_toggle == 0x0) // exit
     {
         if (!found_disable_erase_hash_standby_bank_and_exit_fsm)
+            stop(8);
+        if (!found_fsm)
             stop(8);
     }
     else // do nothing
@@ -886,6 +977,41 @@ void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s 
 
     if (!found_get_version_and_hash)
         stop(8);
+
+    if (!found_hvcall_114_1)
+        stop(8);
+    if (!found_hvcall_114_2)
+        stop(8);
+
+    if (!found_ps2_fan_control)
+        stop(8);
+
+    if (!found_acl)
+        stop(8);
+    if (!found_stor_access)
+        stop(8);
+
+    if (job_context->patch_nobd)
+    {
+        if (!found_nobd_1)
+            stop(8);
+        if (!found_nobd_2)
+            stop(8);
+        if (!found_nobd_3)
+            stop(8);
+        if (!found_nobd_4)
+            stop(8);
+    }
+
+    if (job_context->patch_aim)
+    {
+        if (!found_aim_get_device_type)
+            stop(8);
+        if (!found_aim_get_device_id)
+            stop(8);
+        if (!found_aim_get_ps_code)
+            stop(8);
+    }
 
     if (job_context->patch_inspect_package_tophalf)
     {

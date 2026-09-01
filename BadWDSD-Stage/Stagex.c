@@ -1223,6 +1223,13 @@ FUNC_DEF uint8_t sc_read_flash_type()
     return sc_read_eeprom8(0x20, 0x7);
 }
 
+FUNC_DEF uint8_t sc_read_nobd_toggle_flag()
+{
+    // block id (0x3000)
+    // offset (0x3011)
+    return sc_read_eeprom8(0x20, 0x11);
+}
+
 // in[32]
 FUNC_DEF void sc_write_ata_data_key(const uint8_t* in)
 {

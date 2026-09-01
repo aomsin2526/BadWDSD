@@ -1093,8 +1093,7 @@ FUNC_DEF void sc_write_eeprom8(uint8_t block_id, uint8_t offset, uint8_t value)
 
     pkt.data[4] = value; // value
 
-    struct sc_packet_s outpkt;
-    sc_send_packet(&pkt, &outpkt);
+    sc_send_packet(&pkt, NULL);
 }
 
 FUNC_DEF uint8_t sc_read_os_bank_indicator()

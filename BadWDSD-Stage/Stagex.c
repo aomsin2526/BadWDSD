@@ -1230,6 +1230,13 @@ FUNC_DEF uint8_t sc_read_nobd_toggle_flag()
     return sc_read_eeprom8(0x20, 0x11);
 }
 
+FUNC_DEF uint8_t sc_read_dex_spoof_flag()
+{
+    // block id (0x3000)
+    // offset (0x3012)
+    return sc_read_eeprom8(0x20, 0x12);
+}
+
 // in[32]
 FUNC_DEF void sc_write_ata_data_key(const uint8_t* in)
 {

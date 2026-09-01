@@ -408,8 +408,7 @@ __attribute__((section("main3"))) void stage3_main(
     uint64_t in_r3, uint64_t in_r4, uint64_t in_r5, uint64_t in_r6, uint64_t in_r7, uint64_t in_r8
 )
 {
-    //lv1_puts("stage3_main()\n");
-
+    sc_puts_init();
     is_emmc = FetchIsEmmc();
 
     // r5 = options
@@ -435,8 +434,6 @@ __attribute__((section("main3"))) void stage3_main(
     // auth lv2
     if (in_r5 == 0x30)
     {
-        sc_puts_init();
-
         // r6 = laid
         Stage3_AuthLv2(in_r6);
         return;
@@ -458,7 +455,6 @@ __attribute__((section("main3"))) void stage3_main(
     if (ctx->stage3_alreadyDone == 0x69)
         return;
 
-    sc_puts_init();
     Stage3();
 
     ctx->stage3_alreadyDone = 0x69;

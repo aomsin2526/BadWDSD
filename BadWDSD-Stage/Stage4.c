@@ -137,8 +137,6 @@ FUNC_DEF void LoadLv2(uint64_t srcAddr, uint64_t loadme_addr)
 
 FUNC_DEF void Stage4()
 {
-    sc_puts_init();
-
     lv1_puts("BadWDSD Stage4 by Kafuu(aomsin2526)\n");
 
     lv1_puts("(Build Date: ");

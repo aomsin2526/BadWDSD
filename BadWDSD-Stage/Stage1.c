@@ -531,8 +531,6 @@ __attribute__((section("main1"))) void stage1_main()
 {
     memset((void*)0x0, 0x0, 0xA00);
 
-    sc_puts_init();
-
     Stage1();
     dead_beep();
 }

@@ -230,8 +230,8 @@ __attribute__((section("main6"))) uint64_t stage6_main(
     uint64_t in_r3, uint64_t in_r4, uint64_t in_r5, uint64_t in_r6, uint64_t in_r7, uint64_t in_r8, uint64_t in_r9, uint64_t in_r10
 )
 {
-    is_emmc = FetchIsEmmc();
     sc_puts_init();
+    is_emmc = FetchIsEmmc();
 
     if (in_r10 == 1)
         Stage6_IsoLoadRequest(in_r3);

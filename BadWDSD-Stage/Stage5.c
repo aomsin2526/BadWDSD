@@ -50,8 +50,8 @@ __attribute__((section("main5"))) void stage5_main(
     uint64_t in_r3, uint64_t in_r4, uint64_t in_r5, uint64_t in_r6, uint64_t in_r7, uint64_t in_r8, uint64_t in_r9, uint64_t in_r10
 )
 {
-    is_emmc = FetchIsEmmc();
     sc_puts_init();
+    is_emmc = FetchIsEmmc();
 
     Stage5(in_r10);
 }

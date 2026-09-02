@@ -158,28 +158,30 @@ FUNC_DEF void Stage2()
             }
             else
             {
-                if (isqCFW)
                 {
                     job_context.patch_aim = 0;
                     job_context.patch_inspect_package_tophalf = 0;
 
-                    if (CoreOS2_FindFileEntry_Bank(os_bank_indicator, "lv2Rkernel.self", NULL, NULL))
+                    if (isqCFW)
                     {
-                        uint8_t tid = read_targetid();
-
-                        uint8_t dex_spoof_flag = sc_read_dex_spoof_flag();
-
-                        puts("dex_spoof_flag = ");
-                        print_hex(dex_spoof_flag);
-                        puts("\n");
-
-                        if ((tid != 0x82) && (dex_spoof_flag != 0x1))
+                        if (CoreOS2_FindFileEntry_Bank(os_bank_indicator, "lv2Rkernel.self", NULL, NULL))
                         {
-                            puts("patch_aim\n");
-                            puts("patch_inspect_package_tophalf\n");
+                            uint8_t tid = read_targetid();
 
-                            job_context.patch_aim = 1;
-                            job_context.patch_inspect_package_tophalf = 1;
+                            uint8_t dex_spoof_flag = sc_read_dex_spoof_flag();
+
+                            puts("dex_spoof_flag = ");
+                            print_hex(dex_spoof_flag);
+                            puts("\n");
+
+                            if ((tid != 0x82) && (dex_spoof_flag != 0x1))
+                            {
+                                puts("patch_aim\n");
+                                puts("patch_inspect_package_tophalf\n");
+
+                                job_context.patch_aim = 1;
+                                job_context.patch_inspect_package_tophalf = 1;
+                            }
                         }
                     }
                 }

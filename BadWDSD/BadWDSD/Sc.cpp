@@ -108,6 +108,9 @@ void Sc_RxFn()
             if (strstr(scContext.rxBuf, "[SSM] Fataldown Start"))
                 needReboot = true;
 
+            if (strstr(scContext.rxBuf, "[ERROR]:"))
+                needReboot = true;
+
             if (needReboot)
                 scContext.needReboot = true;
         }

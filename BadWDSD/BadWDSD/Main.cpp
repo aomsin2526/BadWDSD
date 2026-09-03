@@ -102,6 +102,10 @@ void Sc_Thread_x32_Stage0_emmc()
 {
     PrintLog("Sc_Thread_x32_Stage0_emmc()\n");
 
+#if IS_AOMSIN
+    PrintLog("Aomsin mode\n");
+#endif
+
     Led_SetBlinkIntervalInMs(1000);
     Led_SetStatus(LED_STATUS_BLINK);
 
@@ -152,7 +156,13 @@ void Sc_Thread_x32_Stage0_emmc()
             // 85 = pass but crash
 
             //busy_wait_ms(75);
+
+#if IS_AOMSIN
+            busy_wait_us(74650);
+#else
             busy_wait_us(75000);
+#endif
+
             //PrintLog("trigger2!!!\n");
 
             //
@@ -202,7 +212,7 @@ void Sc_Thread_x32_Stage0_emmc()
 
             //
 
-            //Watchdog();
+            Watchdog();
 
             //
 
@@ -514,7 +524,10 @@ void Core1_Thread()
 
 int main()
 {
-#if IS_EMMC
+#if IS_AOMSIN
+    vreg_set_voltage(VREG_VOLTAGE_1_30);
+    set_sys_clock_khz(300000, true);
+#elif IS_EMMC
     vreg_set_voltage(VREG_VOLTAGE_1_30);
     set_sys_clock_khz(250000, true);
 #endif

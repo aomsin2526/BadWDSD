@@ -239,12 +239,12 @@ void create_coreos(const char *inDir, const char *rosPath)
     printf("inDir = %s\n", inDir);
     printf("rosPath = %s\n", rosPath);
 
-    DIR *dp;
-    dp = opendir(inDir);
+    dirent** dents;
+    int32_t dirEntCount = scandir(inDir, &dents, NULL, alphasort);
 
-    if (dp == NULL)
+    if (dirEntCount <= 0)
     {
-        printf("opendir fail!\n");
+        printf("scandir failed!\n");
 
         abort();
         return;
@@ -274,15 +274,15 @@ void create_coreos(const char *inDir, const char *rosPath)
         coreos_entry_s *entrys = new coreos_entry_s[256];
         memset(entrys, 0, (sizeof(coreos_entry_s) * 256));
 
-        while (1)
+        for (int32_t i = 0; i < dirEntCount; ++i)
         {
-            dent = readdir(dp);
-
-            if (dent == NULL)
-                break;
+            dent = dents[i];
 
             if (dent->d_type != DT_REG)
+            {
+                free(dent);
                 continue;
+            }
 
             if (header.entry_count == 256)
             {
@@ -320,6 +320,8 @@ void create_coreos(const char *inDir, const char *rosPath)
             entry->length = get_file_size(f);
 
             fclose(f);
+
+            free(dent);
         }
 
         printf("entry_count = %u\n", header.entry_count);
@@ -436,7 +438,7 @@ void create_coreos(const char *inDir, const char *rosPath)
 
     fclose(rosFile);
 
-    closedir(dp);
+    free(dents);
 
     {
         FILE* inFile = fopen(tmpRosPath, "rb");

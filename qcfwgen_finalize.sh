@@ -18,7 +18,7 @@ Coreos_crc32=$(crc32 CoreOS.bin)
 echo -n $Coreos_crc32 | xxd -r -p >> qcfw.crc32 || exit 1
 
 # modchip v2
-echo -n 00 | xxd -r -p >> qcfw.crc32 || exit 1
+echo -n 000000 | xxd -r -p >> qcfw.crc32 || exit 1
 
 #
 

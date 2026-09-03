@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
 
+if (IS_AOMSIN)
+set(PICO_COPY_TO_RAM 1)
+endif()
+
 if (IS_PICO_W)
 set(PICO_BOARD pico_w)
 endif()

@@ -90,13 +90,8 @@ extern bool Led_IsInited();
 static const uint32_t XDR_GPO_CLK_PIN_ID = 6;
 static const uint32_t XDR_GPO_CMD_PIN_ID = 10;
 
-#if IS_EMMC
-static const uint32_t XDR_GPO_CLK_PIN_ID2 = XDR_GPO_CLK_PIN_ID;
-static const uint32_t XDR_GPO_CMD_PIN_ID2 = XDR_GPO_CMD_PIN_ID;
-#else
 static const uint32_t XDR_GPO_CLK_PIN_ID2 = 7;
 static const uint32_t XDR_GPO_CMD_PIN_ID2 = 11;
-#endif
 
 #if !IS_EMMC
 #define XDR_GPO_DELAY_ENABLED 1

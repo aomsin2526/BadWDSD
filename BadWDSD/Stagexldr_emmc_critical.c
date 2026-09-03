@@ -529,8 +529,15 @@ FUNC_DEF void check_ros(const struct ros_s* ros)
 
     if (ros->offset1 != ros->offset2)
     {
-        puts("bad offsets!\n");
-        dead_beep();
+        puts("ros->offset1 != ros->offset2!\n");
+
+        puts("offset1 = ");
+        print_hex(ros->offset1);
+        puts("\n");
+
+        puts("offset2 = ");
+        print_hex(ros->offset2);
+        puts("\n");
     }
 
     if (ros->region_size != 0xE00000)
@@ -552,7 +559,7 @@ FUNC_DEF uint8_t get_os_bank_indicator_from_ros()
     emmc_read(0xC0000, &ros, sizeof(ros));
     check_ros(&ros);
 
-    uint64_t offset = ros.offset1;
+    uint64_t offset = ros.offset1; // lv0ldr use this
 
     if (offset == 0x20) // ros0
         return 0xff;

@@ -975,33 +975,6 @@ FUNC_DEF void Stagexldr()
     //
 
     {
-        static const uint64_t offset = 0xEF9A000;
-
-        uint8_t buf[emmc_sector_size];
-
-        emmc_read(offset, buf, emmc_sector_size);
-        puts("before:\n");
-        hexdump(buf, emmc_sector_size);
-        puts("\n");
-
-        uint8_t v = 0x23;
-        emmc_write(offset + 45, &v, 1);
-
-        v = 0x69;
-        emmc_write(offset + 49, &v, 1);
-
-        v = 0xff;
-        emmc_write(offset + 50, &v, 1);
-
-        emmc_read(offset, buf, emmc_sector_size);
-        puts("after:\n");
-        hexdump(buf, emmc_sector_size);
-        puts("\n");
-    }
-
-    //
-
-    {
         static const uint64_t stagex_addr = 0x1010000;
 
         emmc_read(0xA1000, (void*)stagex_addr, stagex_max_size);

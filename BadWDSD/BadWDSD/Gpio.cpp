@@ -33,8 +33,8 @@ void GPIO_FLOATTOLOW2(uint32_t pinId1, uint32_t pinId2)
 {
     GPIO_FLOATTOLOW(pinId1);
 
-#if !IS_EMMC
-    if (pinId2 != pinId1)
+#if !IS_EMMC || IS_AOMSIN
+    //if (pinId2 != pinId1)
         GPIO_FLOATTOLOW(pinId2);
 #endif
 }
@@ -43,8 +43,8 @@ void GPIO_FLOAT2(uint32_t pinId1, uint32_t pinId2)
 {
     GPIO_FLOAT(pinId1);
 
-#if !IS_EMMC
-    if (pinId2 != pinId1)
+#if !IS_EMMC || IS_AOMSIN
+    //if (pinId2 != pinId1)
         GPIO_FLOAT(pinId2);
 #endif
 }

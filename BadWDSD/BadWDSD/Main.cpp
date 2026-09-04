@@ -155,7 +155,11 @@ void Sc_Thread_x32_Stage0_emmc()
             //
 
             uint64_t t1 = get_time_in_us();
+
+            GPIO_FLOATTOLOW(SB_UART_RX_PIN_ID); // short SB_TX (if connected to pico) to ground during this made it more stable
             Xdr_SendRawCmd_Fast(cached_Cmds, 65); // must not takes more than 150us!!!
+            GPIO_FLOAT(SB_UART_RX_PIN_ID);
+
             uint64_t t2 = get_time_in_us();
 
             PrintLog("Xdr_SendRawCmd_Fast takes %lluus!\n", (t2 - t1));

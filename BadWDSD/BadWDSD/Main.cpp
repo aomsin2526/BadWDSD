@@ -97,9 +97,9 @@ void XdrInitFail_Watchdog()
 
 uint32_t cached_Cmds[65];
 
-void Sc_Thread_x32_Stage0_emmc()
+void Core0_Thread_x32_Stage0_emmc()
 {
-    PrintLog("Sc_Thread_x32_Stage0_emmc()\n");
+    PrintLog("Core0_Thread_x32_Stage0_emmc()\n");
 
     Led_SetBlinkIntervalInMs(1000);
     Led_SetStatus(LED_STATUS_BLINK);
@@ -221,9 +221,9 @@ void Sc_Thread_x32_Stage0_emmc()
 uint32_t cached_EnableSLE;
 uint32_t cached_WDSDs[64];
 
-void Sc_Thread_x32_Stage0_emmc_on_nor()
+void Core0_Thread_x32_Stage0_emmc_on_nor()
 {
-    PrintLog("Sc_Thread_x32_Stage0_emmc_on_nor()\n");
+    PrintLog("Core0_Thread_x32_Stage0_emmc_on_nor()\n");
 
     Led_SetBlinkIntervalInMs(1000);
     Led_SetStatus(LED_STATUS_BLINK);
@@ -327,9 +327,9 @@ void Sc_Thread_x32_Stage0_emmc_on_nor()
 
 #elif XDR_IS_X32
 
-void Sc_Thread_x32_Stage0_nor()
+void Core0_Thread_x32_Stage0_nor()
 {
-    PrintLog("Sc_Thread_x32_Stage0_nor()\n");
+    PrintLog("Core0_Thread_x32_Stage0_nor()\n");
 
     Led_SetBlinkIntervalInMs(1000);
     Led_SetStatus(LED_STATUS_BLINK);
@@ -409,9 +409,9 @@ void Sc_Thread_x32_Stage0_nor()
 
 #else
 
-void Sc_Thread_x16_Stage0_nor()
+void Core0_Thread_x16_Stage0_nor()
 {
-    PrintLog("Sc_Thread_x16_Stage0_nor()\n");
+    PrintLog("Core0_Thread_x16_Stage0_nor()\n");
 
     Led_SetBlinkIntervalInMs(1000);
     Led_SetStatus(LED_STATUS_BLINK);
@@ -559,13 +559,13 @@ int main()
     multicore_launch_core1(Core1_Thread);
 
 #if IS_EMMC
-    Sc_Thread_x32_Stage0_emmc();
+    Core0_Thread_x32_Stage0_emmc();
 #elif IS_EMMC_ON_NOR
-    Sc_Thread_x32_Stage0_emmc_on_nor();
+    Core0_Thread_x32_Stage0_emmc_on_nor();
 #elif XDR_IS_X32
-    Sc_Thread_x32_Stage0_nor();
+    Core0_Thread_x32_Stage0_nor();
 #else
-    Sc_Thread_x16_Stage0_nor();
+    Core0_Thread_x16_Stage0_nor();
 #endif
 
     dead();

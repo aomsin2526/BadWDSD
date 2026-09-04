@@ -95,16 +95,11 @@ void XdrInitFail_Watchdog()
 
 #include "../Stagexldr_emmc.bin.c"
 
-uint32_t cached_EnableSLE;
-uint32_t cached_WDSDs[64];
+uint32_t cached_Cmds[65];
 
 void Sc_Thread_x32_Stage0_emmc()
 {
     PrintLog("Sc_Thread_x32_Stage0_emmc()\n");
-
-#if IS_AOMSIN
-    PrintLog("Aomsin mode\n");
-#endif
 
     Led_SetBlinkIntervalInMs(1000);
     Led_SetStatus(LED_STATUS_BLINK);
@@ -132,8 +127,8 @@ void Sc_Thread_x32_Stage0_emmc()
 
     //
 
-    cached_EnableSLE = Xdr_PrepareSendEnableSLE_x32_PerDeviceRaw(0);
-    Xdr_PrepareSendWDSD_x32_PerDeviceRaw(0, wdslData0, cached_WDSDs);
+    cached_Cmds[0] = Xdr_PrepareSendEnableSLE_x32_PerDeviceRaw(0);
+    Xdr_PrepareSendWDSD_x32_PerDeviceRaw(0, wdslData0, &cached_Cmds[1]);
 
     //
 
@@ -155,28 +150,15 @@ void Sc_Thread_x32_Stage0_emmc()
             // 80 = lv0 auth fail
             // 85 = pass but crash
 
-            //busy_wait_ms(75);
-
-#if IS_AOMSIN
-            busy_wait_us(74650);
-#else
-            busy_wait_us(75000);
-#endif
-
-            //PrintLog("trigger2!!!\n");
+            busy_wait_us(76100); // perfect at 250mhz?
 
             //
 
             uint64_t t1 = get_time_in_us();
-
-            Xdr_SendRawCmd(cached_EnableSLE);
-
-            for (uint32_t i = 0; i < 64; ++i)
-                Xdr_SendRawCmd(cached_WDSDs[i]);
-
+            Xdr_SendRawCmd_Fast(cached_Cmds, 65); // must not takes more than 150us!!!
             uint64_t t2 = get_time_in_us();
 
-            PrintLog("trigger3!!!, takes %lluus\n", (t2 - t1));
+            PrintLog("Xdr_SendRawCmd_Fast takes %lluus!\n", (t2 - t1));
 
             //
 
@@ -524,10 +506,7 @@ void Core1_Thread()
 
 int main()
 {
-#if IS_AOMSIN
-    vreg_set_voltage(VREG_VOLTAGE_1_30);
-    set_sys_clock_khz(300000, true);
-#elif IS_EMMC
+#if IS_EMMC
     vreg_set_voltage(VREG_VOLTAGE_1_30);
     set_sys_clock_khz(250000, true);
 #endif

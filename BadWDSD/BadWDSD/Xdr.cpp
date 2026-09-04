@@ -118,6 +118,103 @@ void Xdr_SendRawCmd(uint32_t value)
     GPIO_FLOAT2(XDR_GPO_CMD_PIN_ID, XDR_GPO_CMD_PIN_ID2);
 }
 
+void Xdr_SendRawCmd_Fast(const uint32_t* values, uint32_t count)
+{
+    //
+
+    gpio_put(XDR_GPO_CLK_PIN_ID, false);
+    gpio_set_dir(XDR_GPO_CLK_PIN_ID, GPIO_IN);
+    gpio_set_function(XDR_GPO_CLK_PIN_ID, GPIO_FUNC_SIO);
+
+    gpio_put(XDR_GPO_CMD_PIN_ID, false);
+    gpio_set_dir(XDR_GPO_CMD_PIN_ID, GPIO_IN);
+    gpio_set_function(XDR_GPO_CMD_PIN_ID, GPIO_FUNC_SIO);
+
+    //
+
+#if XDR_SENDRAWCMD_FAST_SECOND_PIN_ENABLED
+    gpio_put(XDR_GPO_CLK_PIN_ID2, false);
+    gpio_set_dir(XDR_GPO_CLK_PIN_ID2, GPIO_IN);
+    gpio_set_function(XDR_GPO_CLK_PIN_ID2, GPIO_FUNC_SIO);
+
+    gpio_put(XDR_GPO_CMD_PIN_ID2, false);
+    gpio_set_dir(XDR_GPO_CMD_PIN_ID2, GPIO_IN);
+    gpio_set_function(XDR_GPO_CMD_PIN_ID2, GPIO_FUNC_SIO);
+#endif
+
+    //
+
+    for (uint32_t value_i = 0; value_i < count; ++value_i)
+    {
+        uint32_t value = values[value_i];
+
+        {
+            uint32_t i = 31;
+
+            while (1)
+            {
+                //
+
+                gpio_set_dir(XDR_GPO_CLK_PIN_ID, GPIO_IN);
+
+#if XDR_SENDRAWCMD_FAST_SECOND_PIN_ENABLED
+                gpio_set_dir(XDR_GPO_CLK_PIN_ID2, GPIO_IN);
+#endif
+
+                //
+
+                bool b = ((value & (1 << i)) != 0);
+
+                if (b)
+                {
+                    gpio_set_dir(XDR_GPO_CMD_PIN_ID, GPIO_OUT);
+
+#if XDR_SENDRAWCMD_FAST_SECOND_PIN_ENABLED
+                    gpio_set_dir(XDR_GPO_CMD_PIN_ID2, GPIO_OUT);
+#endif
+                }
+                else
+                {
+                    gpio_set_dir(XDR_GPO_CMD_PIN_ID, GPIO_IN);
+
+#if XDR_SENDRAWCMD_FAST_SECOND_PIN_ENABLED
+                    gpio_set_dir(XDR_GPO_CMD_PIN_ID2, GPIO_IN);
+#endif
+                }
+
+                //
+
+                gpio_set_dir(XDR_GPO_CLK_PIN_ID, GPIO_OUT);
+
+#if XDR_SENDRAWCMD_FAST_SECOND_PIN_ENABLED
+                gpio_set_dir(XDR_GPO_CLK_PIN_ID2, GPIO_OUT);
+#endif
+
+                //
+
+                if (i == 0)
+                    break;
+
+                --i;
+            }
+        }
+    }
+
+    //
+
+#if XDR_SENDRAWCMD_FAST_SECOND_PIN_ENABLED
+    io_bank0_hw->io[XDR_GPO_CMD_PIN_ID2].ctrl = GPIO_FUNC_NULL << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
+    io_bank0_hw->io[XDR_GPO_CLK_PIN_ID2].ctrl = GPIO_FUNC_NULL << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
+#endif
+
+    //
+
+    io_bank0_hw->io[XDR_GPO_CMD_PIN_ID].ctrl = GPIO_FUNC_NULL << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
+    io_bank0_hw->io[XDR_GPO_CLK_PIN_ID].ctrl = GPIO_FUNC_NULL << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
+
+    //
+}
+
 void Xdr_SendCmd(struct XdrCmd_s cmd)
 {
     Xdr_SendRawCmd(XdrCmd_GetValueForSendRaw(cmd));

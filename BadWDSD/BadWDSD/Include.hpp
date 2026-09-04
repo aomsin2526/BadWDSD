@@ -87,20 +87,16 @@ extern bool Led_IsInited();
 
 // XDRs
 
+#define XDR_SENDRAWCMD_FAST_SECOND_PIN_ENABLED 1
+
 static const uint32_t XDR_GPO_CLK_PIN_ID = 6;
 static const uint32_t XDR_GPO_CMD_PIN_ID = 10;
 
 static const uint32_t XDR_GPO_CLK_PIN_ID2 = 7;
 static const uint32_t XDR_GPO_CMD_PIN_ID2 = 11;
 
-#if !IS_EMMC
 #define XDR_GPO_DELAY_ENABLED 1
-#endif
-
-#define XDR_GPO_DELAY_VALUE_IN_US 1 // 4000ns/250khz per cycle
-//#define XDR_GPO_DELAY_VALUE_IN_US 2 // 8000ns/125khz per cycle
-//#define XDR_GPO_DELAY_VALUE_IN_US 4 // 16000ns/62.5khz per cycle
-//#define XDR_GPO_DELAY_VALUE_IN_US 8 // 32000ns/31.25khz per cycle
+#define XDR_GPO_DELAY_VALUE_IN_US 1
 
 #if XDR_GPO_DELAY_ENABLED
 #define XDR_GPO_DELAY() busy_wait_us(XDR_GPO_DELAY_VALUE_IN_US)
@@ -191,6 +187,8 @@ extern void XdrCmd_SetJunk2(struct XdrCmd_s* cmd, uint8_t value);
 extern uint32_t XdrCmd_GetValueForSendRaw(struct XdrCmd_s cmd);
 
 extern void Xdr_SendRawCmd(uint32_t value);
+
+extern void Xdr_SendRawCmd_Fast(const uint32_t* values, uint32_t count);
 
 extern void Xdr_SendCmd(struct XdrCmd_s cmd);
 

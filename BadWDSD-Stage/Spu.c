@@ -479,22 +479,37 @@ FUNC_DEF uint64_t SPU_SetTLB(uint64_t spu_id, uint64_t va, uint64_t ra)
     return tlbIndex;
 }
 
-FUNC_DEF void SPU_StopRequest(uint64_t spu_id)
+FUNC_DEF uint8_t SPU_IsRunning(uint64_t spu_id)
 {
     uint32_t status = SPU_Read_SPU_STATUS(spu_id);
+    return ((status & SPU_STATUS_RUN_MASK) != 0) ? 1 : 0;
+}
 
-    if ((status & SPU_STATUS_RUN_MASK) != 0)
+FUNC_DEF uint8_t SPU_IsIsolated(uint64_t spu_id)
+{
+    uint32_t status = SPU_Read_SPU_STATUS(spu_id);
+    return ((status & SPU_STATUS_ISOLATED_MASK) != 0) ? 1 : 0;
+}
+
+FUNC_DEF void SPU_StopRequest(uint64_t spu_id)
+{
+    if (SPU_IsRunning(spu_id))
     {
         // stop request
         SPU_Write_SPU_RUNCNTL(spu_id, 0x0);
 
-        while ((status & SPU_STATUS_RUN_MASK) != 0)
-            status = SPU_Read_SPU_STATUS(spu_id);
+        while (SPU_IsRunning(spu_id)) {}
     }
 }
 
 FUNC_DEF void SPU_StartRequest(uint64_t spu_id)
 {
+    if (SPU_IsRunning(spu_id))
+    {
+        puts("spu must be stopped first!\n");
+        dead_beep();
+    }
+
     SPU_Write_SPU_RUNCNTL(spu_id, 0x1);
 }
 
@@ -505,20 +520,23 @@ FUNC_DEF void SPU_DoIsoExitRequest(uint64_t spu_id)
 
 FUNC_DEF void SPU_IsoExitRequest(uint64_t spu_id)
 {
-    uint32_t status = SPU_Read_SPU_STATUS(spu_id);
-    
-    if ((status & SPU_STATUS_ISOLATED_MASK) != 0)
+    if (SPU_IsIsolated(spu_id))
     {
         // iso exit request
         SPU_DoIsoExitRequest(spu_id);
 
-        while ((status & SPU_STATUS_ISOLATED_MASK) != 0)
-            status = SPU_Read_SPU_STATUS(spu_id);
+        while (SPU_IsIsolated(spu_id)) {}
     }
 }
 
 FUNC_DEF void SPU_IsoLoadRequest(uint64_t spu_id)
 {
+    if (SPU_IsRunning(spu_id))
+    {
+        puts("spu must be stopped first!\n");
+        dead_beep();
+    }
+
     SPU_Write_SPU_RUNCNTL(spu_id, 0x3);
 }
 

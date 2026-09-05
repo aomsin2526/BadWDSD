@@ -686,6 +686,43 @@ FUNC_DEF uint32_t sc_read_ros1_crc32()
     return v;
 }
 
+FUNC_DEF uint8_t sc_read_lv0ldr_region_dump_status()
+{
+    // block id (0x3000)
+    // offset (0x3013)
+    return sc_read_eeprom8(0x20, 0x13);
+}
+
+FUNC_DEF void sc_write_lv0ldr_region_dump_status(uint8_t val)
+{
+    // block id (0x3000)
+    // offset (0x3013)
+    sc_write_eeprom8(0x20, 0x13, val);
+}
+
+FUNC_DEF uint32_t sc_read_lv0ldr_region_crc32()
+{
+    uint32_t v;
+    uint8_t* v2 = (uint8_t*)&v;
+
+    // block id (0x3000)
+    // offset (0x30c8 - 0x30cb)
+    for (uint32_t i = 0; i < 4; ++i)
+        v2[i] = sc_read_eeprom8(0x20, (0xc8 + i));
+
+    return v;
+}
+
+FUNC_DEF void sc_write_lv0ldr_region_crc32(uint32_t val)
+{
+    const uint8_t* v = (const uint8_t*)&val;
+
+    // block id (0x3000)
+    // offset (0x30c8 - 0x30cb)
+    for (uint32_t i = 0; i < 4; ++i)
+        sc_write_eeprom8(0x20, (0xc8 + i), v[i]);
+}
+
 FUNC_DEF void sc_triple_beep()
 {
     struct sc_packet_s pkt;
@@ -833,11 +870,6 @@ FUNC_DEF void RelocateStagexAndJumpToStage1(const volatile void* stagex_data)
     dead_beep();
 }
 
-FUNC_DEF void badwdsd_ok()
-{
-    sc_puts("BadWDSD ok!\n");
-}
-
 FUNC_DEF void Stagexldr()
 {
     puts("\nStagexldr by Kafuu(aomsin2526)" " (Build Date: " __DATE__ " " __TIME__ ")\n");
@@ -891,45 +923,7 @@ FUNC_DEF void Stagexldr()
 
     //
 
-#if 0
-    // print lv0ldr region
-    {
-        // inform modchip that we are good...
-        badwdsd_ok();
-
-        static const uint64_t dumpSize = (256 * 1024);
-
-        uint8_t buf[dumpSize];
-        uint8_t buf2[dumpSize];
-
-        emmc_read(0, buf, dumpSize);
-        emmc_read(0, buf2, dumpSize);
-
-        uint32_t c1 = crc32c(0, buf, dumpSize);
-        uint32_t c2 = crc32c(0, buf2, dumpSize);
-
-        puts("c1 = ");
-        print_hex(c1);
-        puts("\n");
-
-        puts("c2 = ");
-        print_hex(c2);
-        puts("\n");
-
-        if (c1 != c2)
-        {
-            puts("crc fail!\n");
-            dead_beep();
-        }
-
-        puts("start\n");
-        hexdump(buf, dumpSize);
-        puts("\n");
-        puts("end\n");
-
-        dead_beep();
-    }
-#endif
+    lv0ldr_region();
 
     //
 
@@ -944,7 +938,6 @@ FUNC_DEF void Stagexldr()
         {
             // inform modchip that we are good...
             badwdsd_ok();
-            WaitInMs(10000);
         }
 
         sc_write_request_os_bank_indicator(0xff);

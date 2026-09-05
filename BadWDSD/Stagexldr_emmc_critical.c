@@ -1,5 +1,12 @@
 //
 
+FUNC_DEF void badwdsd_ok()
+{
+    sc_puts("BadWDSD ok!\n");
+}
+
+//
+
 FUNC_DEF uint8_t FetchIsEmmc()
 {
     //return (sc_read_flash_type() == 0x67) ? 1 : 0;
@@ -48,13 +55,15 @@ FUNC_DEF uint8_t emmc_is_sector_idx_valid_for_write(uint32_t sector_idx)
     if (sector_idx < (0x40000 / emmc_sector_size))
         return 0;
 
-#if 1
-    // only allow write to ros header...
-    if (sector_idx != (0xC0000 / emmc_sector_size))
-        return 0;
-#endif
+    // ros header
+    if (sector_idx == (0xC0000 / emmc_sector_size))
+        return 1;
 
-    return 1;
+    // lv0ldr bottom region
+    if ((sector_idx >= (0xF000000 / emmc_sector_size)) && (sector_idx < ((0xF000000 + 0x40000) / emmc_sector_size)))
+        return 1;
+
+    return 0;
 }
 
 FUNC_DEF uint8_t emmc_is_interrupt_asserted()
@@ -505,7 +514,7 @@ struct ros_s
     uint64_t unknown; // 0
 };
 
-_Static_assert((sizeof(struct ros_s) == 32), "ros_s too big!");
+_Static_assert((sizeof(struct ros_s) == 32), "ros_s bad size!");
 
 FUNC_DEF void check_ros(const struct ros_s* ros)
 {
@@ -663,6 +672,117 @@ FUNC_DEF void switch_ros(uint8_t os_bank_indicator)
     }
 
     puts("switch_ros done\n");
+}
+
+//
+
+#if 0
+
+FUNC_DEF void print_lv0ldr_region()
+{
+    // inform modchip that we are good...
+    badwdsd_ok();
+
+    static const uint64_t dumpSize = (256 * 1024);
+
+    uint8_t buf[dumpSize];
+    uint8_t buf2[dumpSize];
+
+    emmc_read(0, buf, dumpSize);
+    emmc_read(0, buf2, dumpSize);
+
+    uint32_t c1 = crc32c(0, buf, dumpSize);
+    uint32_t c2 = crc32c(0, buf2, dumpSize);
+
+    puts("c1 = ");
+    print_hex(c1);
+    puts("\n");
+
+    puts("c2 = ");
+    print_hex(c2);
+    puts("\n");
+
+    if (c1 != c2)
+    {
+        puts("crc fail!\n");
+        dead_beep();
+    }
+
+    puts("start\n");
+    hexdump(buf, dumpSize);
+    puts("\n");
+    puts("end\n");
+
+    dead_beep();
+}
+
+#endif
+
+FUNC_DEF void lv0ldr_region()
+{
+    puts("lv0ldr region...\n");
+
+    uint8_t dump_status = sc_read_lv0ldr_region_dump_status();
+
+    puts("dump_status = ");
+    print_hex(dump_status);
+    puts("\n");
+
+    uint32_t eeprom_crc32 = sc_read_lv0ldr_region_crc32();
+
+    puts("eeprom_crc32 = ");
+    print_hex(eeprom_crc32);
+    puts("\n");
+
+    static const uint64_t dumpSize = 0x40000;
+    uint8_t buf[dumpSize];
+
+    memset(buf, 0xff, dumpSize);
+    emmc_read(0xF000000, buf, dumpSize);
+    uint32_t bottom_crc32 = crc32c(0, buf, dumpSize);
+
+    puts("bottom_crc32 = ");
+    print_hex(bottom_crc32);
+    puts("\n");
+
+    memset(buf, 0x0, dumpSize);
+    emmc_read(0x0, buf, dumpSize);
+    uint32_t top_crc32 = crc32c(0, buf, dumpSize);
+
+    puts("top_crc32 = ");
+    print_hex(top_crc32);
+    puts("\n");
+
+    if ((bottom_crc32 != top_crc32) || (eeprom_crc32 != top_crc32) || (dump_status != 0x27))
+    {
+        // inform modchip that we are good...
+        badwdsd_ok();
+
+        puts("copying to bottom...\n");
+
+        {
+            emmc_write(0xF000000, buf, dumpSize);
+
+            memset(buf, 0xff, dumpSize);
+            emmc_read(0xF000000, buf, dumpSize);
+            uint32_t bottom_after_crc32 = crc32c(0, buf, dumpSize);
+
+            if (bottom_after_crc32 != top_crc32)
+            {
+                puts("copy failed!\n");
+                dead_beep();
+            }
+
+            sc_write_lv0ldr_region_crc32(top_crc32);
+            sc_write_lv0ldr_region_dump_status(0x27); // dumped to bottom
+        }
+
+        puts("copy ok\n");
+    }
+    else
+        puts("skip\n");
+
+    puts("lv0ldr region done\n");
 }
 
 //

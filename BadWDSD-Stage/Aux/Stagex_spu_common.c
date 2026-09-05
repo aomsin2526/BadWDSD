@@ -11,13 +11,6 @@
 #define sync() ASM("sync")
 #define stop(...) ASM("stop %0" ::"i"(__VA_ARGS__) :)
 
-uint8_t IsPow2(uint64_t x)
-{
-    return ((x & (x - 1)) == 0) ? 1 : 0;
-}
-
-#if 1
-
 void memset(void *buf, uint8_t v, uint32_t count)
 {
     if ((((uint32_t)buf % 8) == 0) && ((count % 8) == 0))
@@ -186,8 +179,6 @@ uint8_t strcmp(const char *str1, const char *str2)
 
     return 0;
 }
-
-#endif
 
 struct __attribute__((aligned(8))) DMACmd_s
 {

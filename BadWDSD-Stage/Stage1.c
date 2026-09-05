@@ -133,6 +133,74 @@ FUNC_DEF void Stage1()
 
     print_pc();
 
+    // crc32 check
+
+    {
+        uint32_t expected_stagex_size = sc_read_stagex_size();
+        uint32_t expected_stagex_crc32 = sc_read_stagex_crc32();
+
+        uint32_t expected_stagex_aux_size = sc_read_stagex_aux_size();
+        uint32_t expected_stagex_aux_crc32 = sc_read_stagex_aux_crc32();
+
+        puts("expected_stagex_size = ");
+        print_decimal(expected_stagex_size);
+        puts("\n");
+
+        puts("expected_stagex_crc32 = ");
+        print_hex(expected_stagex_crc32);
+        puts("\n");
+
+        puts("expected_stagex_aux_size = ");
+        print_decimal(expected_stagex_aux_size);
+        puts("\n");
+
+        puts("expected_stagex_aux_crc32 = ");
+        print_hex(expected_stagex_aux_crc32);
+        puts("\n");
+
+        if ((expected_stagex_size == 0) || (expected_stagex_size > stagex_max_size))
+        {
+            puts("bad expected_stagex_size!!!\n");
+            dead_beep();
+        }
+
+        if ((expected_stagex_aux_size == 0) || (expected_stagex_aux_size > stagex_aux_max_size))
+        {
+            puts("bad expected_stagex_aux_size!!!\n");
+            dead_beep();
+        }
+
+        {
+            uint8_t stagex_buf[stagex_max_size];
+            FlashRead(is_emmc ? 0xA1000 : 0xF21000, stagex_buf, expected_stagex_size);
+
+            uint32_t stagex_crc32 = crc32c(0, stagex_buf, expected_stagex_size);
+
+            if (stagex_crc32 != expected_stagex_crc32)
+            {
+                puts("stagex crc32 check failed!!!\n");
+                dead_beep();
+            }
+        }
+
+        {
+            uint8_t stagex_aux_buf[stagex_aux_max_size];
+            FlashRead(is_emmc ? 0xB0000 : 0xF30000, stagex_aux_buf, expected_stagex_aux_size);
+
+            uint32_t stagex_aux_crc32 = crc32c(0, stagex_aux_buf, expected_stagex_aux_size);
+
+            if (stagex_aux_crc32 != expected_stagex_aux_crc32)
+            {
+                puts("stagex aux crc32 check failed!!!\n");
+                dead_beep();
+            }
+        }
+
+        puts("crc32 check ok!\n");
+    }
+
+    //
+
 #if LOGGING_ENABLED
     {
         uint32_t spu_avail = read_spu_avail();
@@ -275,72 +343,6 @@ FUNC_DEF void Stage1()
 
     // inform modchip that we are good...
     sc_puts("BadWDSD ok!\n");
-
-    // crc32 check
-
-    {
-        uint32_t expected_stagex_size = sc_read_stagex_size();
-        uint32_t expected_stagex_crc32 = sc_read_stagex_crc32();
-
-        uint32_t expected_stagex_aux_size = sc_read_stagex_aux_size();
-        uint32_t expected_stagex_aux_crc32 = sc_read_stagex_aux_crc32();
-
-        puts("expected_stagex_size = ");
-        print_decimal(expected_stagex_size);
-        puts("\n");
-
-        puts("expected_stagex_crc32 = ");
-        print_hex(expected_stagex_crc32);
-        puts("\n");
-
-        puts("expected_stagex_aux_size = ");
-        print_decimal(expected_stagex_aux_size);
-        puts("\n");
-
-        puts("expected_stagex_aux_crc32 = ");
-        print_hex(expected_stagex_aux_crc32);
-        puts("\n");
-
-        if ((expected_stagex_size == 0) || (expected_stagex_size > stagex_max_size))
-        {
-            puts("bad expected_stagex_size!!!\n");
-            dead_beep();
-        }
-
-        if ((expected_stagex_aux_size == 0) || (expected_stagex_aux_size > stagex_aux_max_size))
-        {
-            puts("bad expected_stagex_aux_size!!!\n");
-            dead_beep();
-        }
-
-        {
-            uint8_t stagex_buf[stagex_max_size];
-
-            FlashRead(is_emmc ? 0xA1000 : 0xF21000, stagex_buf, expected_stagex_size);
-
-            uint32_t stagex_crc32 = crc32c(0, stagex_buf, expected_stagex_size);
-            if (stagex_crc32 != expected_stagex_crc32)
-            {
-                puts("stagex crc32 check failed!!!\n");
-                dead_beep();
-            }
-        }
-
-        {
-            uint8_t stagex_aux_buf[stagex_aux_max_size];
-
-            FlashRead(is_emmc ? 0xB0000 : 0xF30000, stagex_aux_buf, expected_stagex_aux_size);
-
-            uint32_t stagex_aux_crc32 = crc32c(0, stagex_aux_buf, expected_stagex_aux_size);
-            if (stagex_aux_crc32 != expected_stagex_aux_crc32)
-            {
-                puts("stagex aux crc32 check failed!!!\n");
-                dead_beep();
-            }
-        }
-
-        puts("crc32 check ok!\n");
-    }
 
     //
 

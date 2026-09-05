@@ -202,15 +202,19 @@ void Xdr_SendRawCmd_Fast(const uint32_t* values, uint32_t count)
 
     //
 
+    io_bank0_hw->io[XDR_GPO_CLK_PIN_ID].ctrl = GPIO_FUNC_NULL << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
+
 #if XDR_SENDRAWCMD_FAST_SECOND_PIN_ENABLED
-    io_bank0_hw->io[XDR_GPO_CMD_PIN_ID2].ctrl = GPIO_FUNC_NULL << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
     io_bank0_hw->io[XDR_GPO_CLK_PIN_ID2].ctrl = GPIO_FUNC_NULL << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
 #endif
 
     //
 
     io_bank0_hw->io[XDR_GPO_CMD_PIN_ID].ctrl = GPIO_FUNC_NULL << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
-    io_bank0_hw->io[XDR_GPO_CLK_PIN_ID].ctrl = GPIO_FUNC_NULL << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
+
+#if XDR_SENDRAWCMD_FAST_SECOND_PIN_ENABLED
+    io_bank0_hw->io[XDR_GPO_CMD_PIN_ID2].ctrl = GPIO_FUNC_NULL << IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB;
+#endif
 
     //
 }

@@ -133,6 +133,14 @@ FUNC_DEF void Stage1()
 
     print_pc();
 
+    //
+
+    is_emmc = FetchIsEmmc();
+
+    puts("is_emmc = ");
+    print_decimal(is_emmc);
+    puts("\n");
+
     // crc32 check
 
     {
@@ -228,14 +236,6 @@ FUNC_DEF void Stage1()
     real_print_hex(stagex_debug_flag);
     real_puts("\n");
 #endif
-
-    //
-
-    is_emmc = FetchIsEmmc();
-
-    puts("is_emmc = ");
-    print_decimal(is_emmc);
-    puts("\n");
 
     //
 

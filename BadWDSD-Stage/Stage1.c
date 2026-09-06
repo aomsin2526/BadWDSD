@@ -597,7 +597,7 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
     // push stack
     ASM("addi 1, 1, -128");
 
-    // jump to stage_main
+    // jump to stage1_main
     ASM("b stage1_main");
 
     __builtin_unreachable();

@@ -572,7 +572,7 @@ __attribute__((noreturn, section("entry3"))) void stage3_entry()
     // push stack
     ASM("addi 1, 1, -128");
 
-    // jump to stage3_main
+    // call stage3_main
     ASM("bl stage3_main");
 
     // pop stack

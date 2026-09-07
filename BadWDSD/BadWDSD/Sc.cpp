@@ -86,7 +86,7 @@ void Sc_RxFn()
 
             bool shutdownSuccess = false;
 
-            if (strstr(scContext.rxBuf, "(PowerOff State)"))
+            if (strstr(scContext.rxBuf, "(PowerOff State)") && !strstr(scContext.rxBuf, "(Fatal)"))
                 shutdownSuccess = true;
 
             if (shutdownSuccess)
@@ -105,7 +105,7 @@ void Sc_RxFn()
             if (strstr(scContext.rxBuf, "Wake source is BT!"))
                 needReboot = true;
 
-            if (strstr(scContext.rxBuf, "[SSM] Fataldown Start"))
+            if (strstr(scContext.rxBuf, "(PowerOff State) (Fatal)"))
                 needReboot = true;
 
             if (strstr(scContext.rxBuf, "[ERROR]:"))

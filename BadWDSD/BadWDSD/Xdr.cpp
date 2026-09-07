@@ -124,10 +124,12 @@ void Xdr_SendRawCmd_Fast(const uint32_t* values, uint32_t count)
 
     gpio_put(XDR_GPO_CLK_PIN_ID, false);
     gpio_set_dir(XDR_GPO_CLK_PIN_ID, GPIO_IN);
+    gpio_set_drive_strength(XDR_GPO_CLK_PIN_ID, GPIO_DRIVE_STRENGTH_12MA);
     gpio_set_function(XDR_GPO_CLK_PIN_ID, GPIO_FUNC_SIO);
 
     gpio_put(XDR_GPO_CMD_PIN_ID, false);
     gpio_set_dir(XDR_GPO_CMD_PIN_ID, GPIO_IN);
+    gpio_set_drive_strength(XDR_GPO_CMD_PIN_ID, GPIO_DRIVE_STRENGTH_12MA);
     gpio_set_function(XDR_GPO_CMD_PIN_ID, GPIO_FUNC_SIO);
 
     //
@@ -135,10 +137,12 @@ void Xdr_SendRawCmd_Fast(const uint32_t* values, uint32_t count)
 #if XDR_SENDRAWCMD_FAST_SECOND_PIN_ENABLED
     gpio_put(XDR_GPO_CLK_PIN_ID2, false);
     gpio_set_dir(XDR_GPO_CLK_PIN_ID2, GPIO_IN);
+    gpio_set_drive_strength(XDR_GPO_CLK_PIN_ID2, GPIO_DRIVE_STRENGTH_12MA);
     gpio_set_function(XDR_GPO_CLK_PIN_ID2, GPIO_FUNC_SIO);
 
     gpio_put(XDR_GPO_CMD_PIN_ID2, false);
     gpio_set_dir(XDR_GPO_CMD_PIN_ID2, GPIO_IN);
+    gpio_set_drive_strength(XDR_GPO_CMD_PIN_ID2, GPIO_DRIVE_STRENGTH_12MA);
     gpio_set_function(XDR_GPO_CMD_PIN_ID2, GPIO_FUNC_SIO);
 #endif
 

@@ -17,6 +17,18 @@ uint64_t swap_uint64(uint64_t val)
            ((val >> 56) & 0x00000000000000ffUL);
 }
 
+void SwitchToSbUart()
+{
+    DebugUart_Uninit();
+    Sb_Init();
+}
+
+void SwitchToDebugUart()
+{
+    Sb_Uninit();
+    DebugUart_Init();
+}
+
 void Watchdog()
 {
     uint64_t t1 = get_time_in_ms();
@@ -175,8 +187,7 @@ void Core0_Thread_x32_Stage0_emmc()
 
             //
 
-            DebugUart_Uninit();
-            Sb_Init();
+            SwitchToSbUart();
 
             for (size_t i = 0; i < sizeof(bin2c_Stage0b_emmc_bin); ++i)
                 Sb_Putc(bin2c_Stage0b_emmc_bin[i]);
@@ -189,8 +200,7 @@ void Core0_Thread_x32_Stage0_emmc()
                 busy_wait_us(100);
             }
 
-            Sb_Uninit();
-            DebugUart_Init();
+            SwitchToDebugUart();
 
             //
 
@@ -289,8 +299,7 @@ void Core0_Thread_x32_Stage0_emmc_on_nor()
 
             //
 
-            DebugUart_Uninit();
-            Sb_Init();
+            SwitchToSbUart();
 
             for (size_t i = 0; i < sizeof(bin2c_Stage0b_emmc_bin); ++i)
                 Sb_Putc(bin2c_Stage0b_emmc_bin[i]);
@@ -303,8 +312,7 @@ void Core0_Thread_x32_Stage0_emmc_on_nor()
                 busy_wait_us(100);
             }
 
-            Sb_Uninit();
-            DebugUart_Init();
+            SwitchToDebugUart();
 
             //
 
@@ -527,9 +535,7 @@ int main()
     GPIO_FLOATTOHIGH(TRISTATE_PIN_ID);
 #endif
 
-#if DEBUG_UART_ENABLED
     DebugUart_Init();
-#endif
 
     //
 

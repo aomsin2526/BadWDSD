@@ -364,8 +364,6 @@ extern void Sc_SendCommand(struct Sc_SendCommandContext_s* ctx);
 
 //
 
-#define DEBUG_UART_ENABLED 1
-
 static const uint32_t DEBUG_UART_RX_PIN_ID = 5;
 static const uint32_t DEBUG_UART_TX_PIN_ID = 4;
 

@@ -26,6 +26,22 @@ register uint64_t is_emmc asm("r16");
 
 #include "Stagexldr_emmc_critical_dead.c"
 
+//
+
+FUNC_DEF uint64_t get_pc()
+{
+    register uint64_t r3 asm("r3");
+
+    ASM("mflr %r4");
+    ASM("bl 4");
+    ASM("mflr %r3");
+    ASM("mtlr %r4");
+
+    return r3;
+}
+
+//
+
 #define SYS_TIMEBASE_GET(tb)                          \
     do                                                \
     {                                                 \
@@ -874,9 +890,19 @@ FUNC_DEF void Stagexldr()
 {
     puts("\nStagexldr by Kafuu(aomsin2526)" " (Build Date: " __DATE__ " " __TIME__ ")\n");
 
+    //
+
+    const uint64_t pc = get_pc();
+
+    puts("pc = ");
+    print_hex(pc);
+    puts("\n");
+
+    //
+
     {
-        uint32_t payload_size = *((const uint32_t*)0xff8);
-        uint32_t payload_crc32 = *((const uint32_t*)0xffc);
+        const uint32_t payload_size = *((const uint32_t*)0xff8);
+        const uint32_t payload_crc32 = *((const uint32_t*)0xffc);
 
         puts("payload_size = ");
         print_decimal(payload_size);
@@ -892,7 +918,13 @@ FUNC_DEF void Stagexldr()
             dead_beep();
         }
 
-        uint32_t crc32 = crc32c(0, (const uint8_t*)0x1000, payload_size);
+        if (!((pc >= 0x1000) && (pc < (0x1000 + payload_size))))
+        {
+            puts("bad pc!!!\n");
+            dead_beep();
+        }
+
+        const uint32_t crc32 = crc32c(0, (const uint8_t*)0x1000, payload_size);
 
         if (crc32 != payload_crc32)
         {

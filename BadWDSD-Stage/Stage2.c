@@ -265,10 +265,11 @@ FUNC_DEF void Stage2()
             }
         }
 
+        struct Stagex_Context_s* ctx = GetStagexContext_Unchecked();
+        ctx->magic = 0;
+
         if (isqCFW || (qcfw_lite_flag == 0x1))
         {
-            struct Stagex_Context_s* ctx = GetStagexContext_Unchecked();
-
             //
 
             ctx->cached_is_emmc = is_emmc;
@@ -592,6 +593,7 @@ __attribute__((section("main2"))) void stage2_main(uint64_t in_r3)
 {
     sc_puts_init();
     is_emmc = FetchIsEmmc();
+    check_pc(1, 0);
 
 #if HDDKEYDUMPER_ENABLED
     if (sc_read_hdd_key_dumper_flag() == 0x2)

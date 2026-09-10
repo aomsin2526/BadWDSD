@@ -141,6 +141,10 @@ FUNC_DEF void Stage1()
     print_decimal(is_emmc);
     puts("\n");
 
+    //
+
+    check_pc(0, 0);
+
     // crc32 check
 
     {

@@ -218,16 +218,11 @@ FUNC_DEF uint8_t IsLogEnabled()
 #include "Stagex_critical_dead.c"
 
 // get program counter for debugging
-FUNC_DEF uint64_t get_pc()
+FUNC_DEF __attribute__((noinline)) uint64_t get_pc()
 {
-    register uint64_t r3 asm("r3");
-
-    ASM("mflr %r4");
-    ASM("bl 4");
-    ASM("mflr %r3");
-    ASM("mtlr %r4");
-
-    return r3;
+    uint64_t result;
+    ASM("mflr %0":"=r"(result)::);
+    return result;
 }
 
 // timebase = 79800000
@@ -2873,6 +2868,42 @@ FUNC_DEF void print_pc()
     print_hex(pc);
     puts("\n");
 #endif
+}
+
+FUNC_DEF void check_pc(uint8_t isStage2, uint8_t isLv1)
+{
+    const uint64_t pc = get_pc();
+
+    if (isLv1 != IsLv1())
+    {
+        puts("bad isLv1!\n");
+        dead_beep();
+    }
+
+    if (isLv1)
+    {
+        const uint64_t base = (uint64_t)GetStagexContext()->cached_Stagex;
+
+        if (!((pc >= base) && (pc < (base + stagex_max_size))))
+        {
+            puts("bad pc (lv1)!\n");
+            dead_beep();
+        }
+
+        return;
+    }
+
+    const uint64_t base1 = 0x1010000;
+    const uint8_t isBase1 = ((pc >= base1) && (pc < (base1 + stagex_max_size))) ? 1 : 0; 
+
+    const uint64_t base2 = 0x2401FF21000;
+    const uint8_t isBase2 = (((pc >= base2) && (pc < (base2 + stagex_max_size))) && !isStage2 && !is_emmc) ? 1 : 0;
+
+    if (!(isBase1 || isBase2))
+    {
+        puts("bad pc!\n");
+        dead_beep();
+    }
 }
 
 FUNC_DEF void Stagex_Relocate(const volatile void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)

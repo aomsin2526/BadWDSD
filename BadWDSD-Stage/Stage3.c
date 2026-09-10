@@ -410,6 +410,7 @@ __attribute__((section("main3"))) void stage3_main(
 {
     sc_puts_init();
     is_emmc = FetchIsEmmc();
+    check_pc(0, 1);
 
     // r5 = options
     // peek: r6 = addr, r4 = outValue

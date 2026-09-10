@@ -52,6 +52,7 @@ __attribute__((section("main5"))) void stage5_main(
 {
     sc_puts_init();
     is_emmc = FetchIsEmmc();
+    check_pc(0, 1);
 
     Stage5(in_r10);
 }

@@ -28,16 +28,11 @@ register uint64_t is_emmc asm("r16");
 
 //
 
-FUNC_DEF uint64_t get_pc()
+FUNC_DEF __attribute__((noinline)) uint64_t get_pc()
 {
-    register uint64_t r3 asm("r3");
-
-    ASM("mflr %r4");
-    ASM("bl 4");
-    ASM("mflr %r3");
-    ASM("mtlr %r4");
-
-    return r3;
+    uint64_t result;
+    ASM("mflr %0":"=r"(result)::);
+    return result;
 }
 
 //

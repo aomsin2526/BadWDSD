@@ -33,7 +33,7 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
                 // load mylv2ldr to sharedLdr
                 if (ctx->cached_sharedLdr_CurKind != 3)
                 {
-                    //lv1_puts("load mylv2ldr\n");
+                    lv1_puts("load mylv2ldr\n");
 
                     FlashRead(ctx->cached_mylv2ldrElf_FileFlashOffset, ctx->cached_sharedLdr, ctx->cached_mylv2ldrElf_FileSize);
                     ctx->cached_sharedLdr_CurKind = 3;
@@ -44,7 +44,7 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
             }
             else if (ctx->cached_sharedLdr_CurKind != 1)
             {
-                //lv1_puts("load lv2ldr\n");
+                lv1_puts("load lv2ldr\n");
 
                 // load lv2ldr to sharedLdr
 
@@ -73,7 +73,7 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
                 // load myappldr to sharedLdr
                 if (ctx->cached_sharedLdr_CurKind != 4)
                 {
-                    //lv1_puts("load myappldr\n");
+                    lv1_puts("load myappldr\n");
 
                     FlashRead(ctx->cached_myappldrElf_FileFlashOffset, ctx->cached_sharedLdr, ctx->cached_myappldrElf_FileSize);
                     ctx->cached_sharedLdr_CurKind = 4;
@@ -84,7 +84,7 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
             }
             else if (ctx->cached_sharedLdr_CurKind != 2)
             {
-                //lv1_puts("load appldr\n");
+                lv1_puts("load appldr\n");
 
                 // load appldr to sharedLdr
 
@@ -232,6 +232,7 @@ __attribute__((section("main6"))) uint64_t stage6_main(
 {
     sc_puts_init();
     is_emmc = FetchIsEmmc();
+    check_pc(0, 1);
 
     if (in_r10 == 1)
         Stage6_IsoLoadRequest(in_r3);

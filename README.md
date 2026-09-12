@@ -171,7 +171,7 @@ Short to ground to activate
 
 **HOLD** - Disable the modchip without needing to remove power or unsolder
 
-**LITE** - TODO
+**LITE** - See [wiki](https://github.com/aomsin2526/BadWDSD/wiki/LITE)
 
 **BANKSEL** - Go back to OFW forcefully. It is equal to syscon command **w 1224 00**. Only use when absolutely needed. You can't turn on the console while this pin is shorted. eMMC requires successful modchip boot to apply. 
 
@@ -191,7 +191,7 @@ If you want to uninstall the modchip, you can do so after this
 
 # Downgrading
 
-After booting the console with modchip, It is possible to downgrade the firmware up to 4.80. It can't be done in XMB. You must use safe mode.
+After booting the console with modchip, It is possible to downgrade the firmware up to minimum supported version of your console. It can't be done in XMB. You must use safe mode. It will always show as 3.60. This number is fake.
 
 # OtherOS
 
@@ -210,9 +210,9 @@ You can't access syscon the old ways anymore. It must be done through modchip. S
 
 <img width="1206" height="644" alt="Termite_s1m3OjonO8" src="https://github.com/user-attachments/assets/b8ba3786-d2ab-488f-b6c2-85032f0615de" />
 
-# NoBT
+# NoBD/NoBT
 
-todo
+See [wiki](https://github.com/aomsin2526/BadWDSD/wiki/LITE)
 
 # Dumping HDD Key (XMB)
 

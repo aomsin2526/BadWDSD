@@ -2,6 +2,8 @@
 
 #define LOGGING_ENABLED 1
 
+//#define STAGEX_RESCUE_ENABLED 1
+
 typedef char int8_t;
 typedef unsigned char uint8_t;
 
@@ -711,6 +713,50 @@ FUNC_DEF void sc_write_lv0ldr_region_dump_status(uint8_t val)
     sc_write_eeprom8(0x20, 0x13, val);
 }
 
+#if STAGEX_RESCUE_ENABLED
+
+FUNC_DEF void sc_write_stagex_size(uint32_t val)
+{
+    const uint8_t* v = (const uint8_t*)&val;
+
+    // block id (0x3000)
+    // offset (0x30a0 - 0x30a3)
+    for (uint32_t i = 0; i < 4; ++i)
+        sc_write_eeprom8(0x20, (0xa0 + i), v[i]);
+}
+
+FUNC_DEF void sc_write_stagex_crc32(uint32_t val)
+{
+    const uint8_t* v = (const uint8_t*)&val;
+
+    // block id (0x3000)
+    // offset (0x30a4 - 0x30a7)
+    for (uint32_t i = 0; i < 4; ++i)
+        sc_write_eeprom8(0x20, (0xa4 + i), v[i]);
+}
+
+FUNC_DEF void sc_write_stagex_aux_size(uint32_t val)
+{
+    const uint8_t* v = (const uint8_t*)&val;
+
+    // block id (0x3000)
+    // offset (0x30a8 - 0x30ab)
+    for (uint32_t i = 0; i < 4; ++i)
+        sc_write_eeprom8(0x20, (0xa8 + i), v[i]);
+}
+
+FUNC_DEF void sc_write_stagex_aux_crc32(uint32_t val)
+{
+    const uint8_t* v = (const uint8_t*)&val;
+
+    // block id (0x3000)
+    // offset (0x30ac - 0x30af)
+    for (uint32_t i = 0; i < 4; ++i)
+        sc_write_eeprom8(0x20, (0xac + i), v[i]);
+}
+
+#endif
+
 FUNC_DEF uint32_t sc_read_lv0ldr_region_crc32()
 {
     uint32_t v;
@@ -816,13 +862,18 @@ FUNC_DEF void sc_soft_restart()
     dead();
 }
 
+//
+
+static const uint64_t stagex_max_size = (60 * 1024);
+static const uint64_t stagex_aux_max_size = (64 * 1024);
+
+//
+
 #include "Stagexldr_emmc_critical_dead_beep.c"
 
 #include "Stagexldr_emmc_critical.c"
 
 //
-
-static const uint64_t stagex_max_size = (60 * 1024);
 
 FUNC_DEF void Stagex_Relocate(const volatile void* stagex_data, uint64_t old_stagex_addr, uint64_t new_stagex_addr)
 {
@@ -887,6 +938,14 @@ FUNC_DEF void Stagexldr()
 
     //
 
+    uint64_t stack_junk = 0;
+
+    puts("stack_junk = ");
+    print_hex((uint64_t)&stack_junk);
+    puts("\n");
+
+    //
+
     const uint64_t pc = get_pc();
 
     puts("pc = ");
@@ -896,8 +955,8 @@ FUNC_DEF void Stagexldr()
     //
 
     {
-        const uint32_t payload_size = *((const uint32_t*)0xff8);
-        const uint32_t payload_crc32 = *((const uint32_t*)0xffc);
+        const uint32_t payload_size = *((const uint32_t*)0x10ff8);
+        const uint32_t payload_crc32 = *((const uint32_t*)0x10ffc);
 
         puts("payload_size = ");
         print_decimal(payload_size);
@@ -913,13 +972,17 @@ FUNC_DEF void Stagexldr()
             dead_beep();
         }
 
-        if (!((pc >= 0x1000) && (pc < (0x1000 + payload_size))))
+        if (!((pc >= 0x11000) && (pc < (0x11000 + payload_size))))
         {
             puts("bad pc!!!\n");
             dead_beep();
         }
 
-        const uint32_t crc32 = crc32c(0, (const uint8_t*)0x1000, payload_size);
+        const uint32_t crc32 = crc32c(0, (const uint8_t*)0x11000, payload_size);
+
+        puts("crc32 = ");
+        print_hex(crc32);
+        puts("\n");
 
         if (crc32 != payload_crc32)
         {
@@ -994,6 +1057,12 @@ FUNC_DEF void Stagexldr()
 
     //
 
+#if STAGEX_RESCUE_ENABLED
+    Stagex_rescue();
+#endif
+
+    //
+
     {
         static const uint64_t stagex_addr = 0x1010000;
 
@@ -1017,7 +1086,9 @@ __attribute__((section("main"))) void stagexldr_main()
 __attribute__((noreturn, section("entry"))) void stagexldr_entry()
 {
     // .toc
-    ASM("li %r2, 0x1100");
+    ASM("li %r2, 0x7fff");
+    ASM("addi %r2, %r2, 0x7fff");
+    ASM("addi %r2, %r2, 0x1102"); // 0x11100
 
     // += 0x8000
     ASM("addi %r2, %r2, 0x7fff");

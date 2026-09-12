@@ -1,14 +1,23 @@
-#define PAYLOAD_SIZE 12992
+#define PAYLOAD_SIZE 13104
 
-// run at 0x180 (second ch)
+// run at 0x188 (second ch), but payload actually starts at 0x180
 // max size = 128
 
 #define PAYLOAD_HEADER_SIZE 8
-#define JUMP_ADDRESS 0x1000
+#define JUMP_ADDRESS 0x11000
 
 .global stage0b_emmc_entry
 
 stage0b_emmc_entry:
+
+    // store JUMP_ADDRESS at 0x180
+    .long(JUMP_ADDRESS)
+
+    // store (JUMP_ADDRESS + PAYLOAD_SIZE) at 0x184
+    .long(JUMP_ADDRESS + PAYLOAD_SIZE)
+
+    // code starts here
+
     // restore XDR
 
     lis %r3, 0x400
@@ -21,12 +30,10 @@ stage0b_emmc_entry:
 
     stw %r3, 0(%r4)
     eieio
-    sync
 
     // wait for it to finish
     lwz %r3, 8(%r4)
     eieio
-    sync
 
     // r10 = sb_uart_stat
 
@@ -35,9 +42,15 @@ stage0b_emmc_entry:
     sldi %r10, %r10, 16
     ori %r10, %r10, 0xf308 // sb_uart_stat
 
+    // r15 = 0
+    li %r15, 0
+
     // r9 = JUMP_ADDRESS, will jump to
-    li %r9, JUMP_ADDRESS
+    lwz %r9, 0x180(%r15)
     mtctr %r9
+
+    // r11 = (JUMP_ADDRESS + PAYLOAD_SIZE)
+    lwz %r11, 0x184(%r15)
 
     //
     li %r3, 'b'
@@ -58,12 +71,8 @@ loop1:
     addi %r9, %r9, 1 // r9 += 1
 
     // loop if r9 < (JUMP_ADDRESS + PAYLOAD_SIZE)
-    cmpi 0, 0, %r9, (JUMP_ADDRESS + PAYLOAD_SIZE)
+    cmp 0, 0, %r9, %r11
     bne loop1
-
-    //
-    li %r3, 'c'
-    stw %r3, 20(%r10) // sb_uart_putchar((uint8_t)r3)
 
     // jump to JUMP_ADDRESS
     bctr

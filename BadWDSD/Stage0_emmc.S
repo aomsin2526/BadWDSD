@@ -1,10 +1,14 @@
 #define PAYLOAD_SIZE 128
 
-#define JUMP_ADDRESS 0x180
-
 .global stage0_emmc_entry
 
 #if 1
+
+#if PAYLOAD_SIZE > 128
+#error payload too big!
+#endif
+
+#define JUMP_ADDRESS 0x188 // payload actually starts at 0x180
 
 stage0_emmc_entry:
     // r10 = sb_uart_stat
@@ -30,7 +34,7 @@ loop1:
     lwz %r3, 24(%r10)
 
     // write lowest 8 bit of r3 to address at r9
-    stb %r3, 0(%r9)
+    stb %r3, -8(%r9) // payload actually starts at 0x180
     addi %r9, %r9, 1 // r9 += 1
 
     // loop if r9 < (JUMP_ADDRESS + PAYLOAD_SIZE)

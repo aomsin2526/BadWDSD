@@ -5,6 +5,21 @@ uint16_t swap_uint16(uint16_t val)
     return (val << 8) | (val >> 8);
 }
 
+uint32_t swap_uint32(uint32_t val)
+{
+    const uint8_t* src_p = (const uint8_t*)&val;
+
+    uint32_t result;
+    uint8_t* dest_p = (uint8_t*)&result;
+
+    dest_p[0] = src_p[3];
+    dest_p[1] = src_p[2];
+    dest_p[2] = src_p[1];
+    dest_p[3] = src_p[0];
+
+    return result;
+}
+
 uint64_t swap_uint64(uint64_t val)
 {
     return ((val << 56) & 0xff00000000000000UL) |
@@ -15,6 +30,19 @@ uint64_t swap_uint64(uint64_t val)
            ((val >> 24) & 0x0000000000ff0000UL) |
            ((val >> 40) & 0x000000000000ff00UL) |
            ((val >> 56) & 0x00000000000000ffUL);
+}
+
+uint32_t crc32c(uint32_t crc, const uint8_t* buf, uint64_t len)
+{
+    int32_t k;
+
+    crc = ~crc;
+    while (len--) {
+        crc ^= *buf++;
+        for (k = 0; k < 8; k++)
+            crc = crc & 1 ? (crc >> 1) ^ 0xedb88320 : crc >> 1;
+    }
+    return ~crc;
 }
 
 void SwitchToSbUart()
@@ -146,6 +174,8 @@ void Core0_Thread_x32_Stage0_emmc()
 
     Led_SetStatus(LED_STATUS_ON);
 
+    //
+
     while (1)
     {
         if (Sc_GetTrigger())
@@ -162,7 +192,8 @@ void Core0_Thread_x32_Stage0_emmc()
             // 80 = lv0 auth fail
             // 85 = pass but crash
 
-            busy_wait_us(76100); // perfect at 250mhz?
+            //busy_wait_us(76100); // perfect at 250mhz?
+            busy_wait_us(75900); // perfect at default clock?
 
             //
 
@@ -267,6 +298,8 @@ void Core0_Thread_x32_Stage0_emmc_on_nor()
     //
 
     Led_SetStatus(LED_STATUS_ON);
+
+    //
 
     while (1)
     {
@@ -518,7 +551,7 @@ void Core1_Thread()
 
 int main()
 {
-#if IS_EMMC
+#if IS_EMMC && 0
     vreg_set_voltage(VREG_VOLTAGE_1_30);
     set_sys_clock_khz(250000, true);
 #endif

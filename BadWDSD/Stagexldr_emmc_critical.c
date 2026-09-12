@@ -63,6 +63,16 @@ FUNC_DEF uint8_t emmc_is_sector_idx_valid_for_write(uint32_t sector_idx)
     if ((sector_idx >= (0xF000000 / emmc_sector_size)) && (sector_idx < ((0xF000000 + 0x40000) / emmc_sector_size)))
         return 1;
 
+#if STAGEX_RESCUE_ENABLED
+    // Stagex
+    if ((sector_idx >= (0xA1000 / emmc_sector_size)) && (sector_idx < ((0xA1000 + stagex_max_size) / emmc_sector_size)))
+        return 1;
+
+    // Stagex_aux
+    if ((sector_idx >= (0xB0000 / emmc_sector_size)) && (sector_idx < ((0xB0000 + stagex_aux_max_size) / emmc_sector_size)))
+        return 1;
+#endif
+
     return 0;
 }
 
@@ -784,5 +794,68 @@ FUNC_DEF void lv0ldr_region()
 
     puts("lv0ldr region done\n");
 }
+
+//
+
+#if STAGEX_RESCUE_ENABLED
+
+#include "stagex_rescue/Stagex.bin.c"
+#include "stagex_rescue/Stagex_aux.bin.c"
+
+static const uint32_t bin2c_Stagex_bin_size = sizeof(bin2c_Stagex_bin);
+_Static_assert((sizeof(bin2c_Stagex_bin) <= (60 * 1024)), "Stagex bin bad size!!!");
+
+static const uint32_t bin2c_Stagex_aux_bin_size = sizeof(bin2c_Stagex_aux_bin);
+_Static_assert((sizeof(bin2c_Stagex_aux_bin) <= (64 * 1024)), "Stagex aux bin bad size!!!");
+
+FUNC_DEF void Stagex_rescue()
+{
+    puts("Stagex_rescue...\n");
+    badwdsd_ok();
+
+    //
+
+    puts("stagex_size = ");
+    print_decimal(bin2c_Stagex_bin_size);
+    puts("\n");
+
+    const uint32_t stagex_crc32 = crc32c(0, bin2c_Stagex_bin, bin2c_Stagex_bin_size);
+
+    puts("stagex_crc32 = ");
+    print_hex(stagex_crc32);
+    puts("\n");
+
+    //
+
+    puts("stagex_aux_size = ");
+    print_decimal(bin2c_Stagex_aux_bin_size);
+    puts("\n");
+
+    const uint32_t stagex_aux_crc32 = crc32c(0, bin2c_Stagex_aux_bin, bin2c_Stagex_aux_bin_size);
+
+    puts("stagex_aux_crc32 = ");
+    print_hex(stagex_aux_crc32);
+    puts("\n");
+
+    //
+
+    emmc_write(0xA1000, bin2c_Stagex_bin, bin2c_Stagex_bin_size);
+
+    sc_write_stagex_size(bin2c_Stagex_bin_size);
+    sc_write_stagex_crc32(stagex_crc32);
+
+    //
+
+    emmc_write(0xB0000, bin2c_Stagex_aux_bin, bin2c_Stagex_aux_bin_size);
+
+    sc_write_stagex_aux_size(bin2c_Stagex_aux_bin_size);
+    sc_write_stagex_aux_crc32(stagex_aux_crc32);
+
+    //
+
+    puts("Stagex_rescue done\n");
+}
+
+#endif
 
 //

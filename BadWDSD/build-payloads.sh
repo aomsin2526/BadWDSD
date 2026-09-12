@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Stagex rescue
+
+bin2c -H stagex_rescue/Stagex.bin.c stagex_rescue/Stagex.bin || exit 1
+bin2c -H stagex_rescue/Stagex_aux.bin.c stagex_rescue/Stagex_aux.bin || exit 1
+
+#
+
 export FLAGS="-g -O1 -fno-jump-tables -Wall -mcpu=cell -mabi=elfv1 -ffreestanding -mtoc -nostdlib -Wl,--build-id=none -static"
 echo FLAGS = $FLAGS
 

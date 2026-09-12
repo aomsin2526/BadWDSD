@@ -1,12 +1,12 @@
 SECTIONS
 {
-    . = 0x1000;
+    . = 0x11000;
     entry : { *(entry) }
 
-    . = 0x1100;
+    . = 0x11100;
     .toc : { *(.toc) }
 
-    . = 0x1120;
+    . = 0x11120;
     bcode : { *(bcode) }
     main : { *(main) }
     code : { *(code) }

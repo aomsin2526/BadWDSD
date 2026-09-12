@@ -87,14 +87,14 @@ Currently, **Raspberry Pi Pico (RP2040)** and **RP2040-Zero** are supported.
 <details>
   <summary> <b>Pico</b> </summary>
 <p>
-<img width="1100" height="800" alt="raspberry_pi_pico_pinout - Copy" src="https://github.com/user-attachments/assets/e1393136-d60f-4822-a818-f27cf2b1456b" />
+<img width="1100" height="800" alt="raspberry_pi_pico_pinout - Copy" src="https://github.com/user-attachments/assets/9fadbacf-4bf8-40da-858d-611b7d0a4c79" />
 </p>
 </details>
 
 <details>
   <summary> <b>RP2040-Zero</b> </summary>
 <p>
-<img src="https://github.com/user-attachments/assets/8304c258-386b-4f2c-84ee-5fd5f6f90217" />
+<img width="1004" height="965" alt="900px-RP2040-Zero-details-7" src="https://github.com/user-attachments/assets/f9269cd9-8e95-4389-b7e8-d78135a4f0d4" />
 </p>
 </details>
 
@@ -110,13 +110,15 @@ Currently, **Raspberry Pi Pico (RP2040)** and **RP2040-Zero** are supported.
 </details>
 
 <details>
-  <summary> <b>4x00</b> </summary>
+  <summary> <b>4xxx</b> </summary>
 <p>
 <img src="https://github.com/user-attachments/assets/9910be97-5c85-4b48-9edb-c2d7a4ecabd9" />
 
 <img width="481" height="384" alt="firefox_hjbEN8ZhUV" src="https://github.com/user-attachments/assets/fb19f60f-76ee-4e76-a164-83b988cdf286" />
 
 <img width="501" height="400" alt="firefox_ybeL3zep1j" src="https://github.com/user-attachments/assets/71580063-2a03-4b6e-8433-e5f99e925e89" />
+
+<img width="572" height="408" alt="ApplicationFrameHost_mUpFAblWQC" src="https://github.com/user-attachments/assets/cc8058df-a73c-428e-80d8-47d368884859" />
 </p>
 </details>
 
@@ -124,7 +126,10 @@ To flash .uf2 file (it is included in qCFW zip), simply connect modchip USB port
 
 You should see LED blinking. Flash successful and ready to use. You can disconnect it from your PC.
 
-For signal, you only need to solder 4 wires that marked red **(CMD, CLK, SC_RX, SC_TX)**. Other signal pin is optional.
+For signal **(NOR)**, you only need to solder 4 wires that marked red **(CMD, CLK, SC_RX, SC_TX)**. Other signal pin is optional.
+
+**eMMC** also need above and **SB_RX** (5 wires total).
+
 For power, you must solder **5V/3.3V and GND**.
 
 It is possible to power the modchip using external power as long as it is active during ps3 standby (**GND must be soldered to motherboard!**)
@@ -154,6 +159,8 @@ When done properly, success rate should be 100%.
 **CMD** - XDR CMD signal
 
 **SC_TX/SC_RX** - Syscon UART signal
+
+**SB_RX** - SB UART signal, eMMC need this
 
 **DEBUG** - Optional modchip UART signal, for debugging and accessing syscon **(baud 576000, NOT 57600!)**
 

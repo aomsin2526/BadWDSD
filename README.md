@@ -8,27 +8,23 @@ If you like my work, please consider support me at [Ko-fi](https://ko-fi.com/aom
 
 # Supported models
 
-All **CECH-2500**
+All **25xx series**
 
-All **CECH-3000**
+All **30xx series**
 
-**CECH-4x00** with **NOR** flash
+All **4xxx series with NOR flash**
 
 <img width="284" height="370" alt="firefox_Z4WaABYPQH" src="https://github.com/user-attachments/assets/7066c760-a097-45ba-9697-6022c9cf1e07" />
 
-**CECH-4x00** with **eMMC** flash is **NOT** supported
+All **4xxx series with eMMC flash**
 
 <img width="220" height="285" alt="firefox_LGBpLg82NH" src="https://github.com/user-attachments/assets/6592b99e-f80f-4319-a450-10a894aa5164" />
-
-One way to know if your console is eMMC or not is enter safe mode. If you see **Change system storage** option, It is eMMC.
-
-Other way is try to install Stagex. If it says **Flash is not NOR** then it is eMMC.
 
 # What is qCFW?
 
 You still can't install CFW PUP, so new variant of CFW must be made. This is called **quasi-CFW**.
 
-It is heavily based on **Evilnat PEX CFW**. And will support every feature except: **Dumping eid_root_key and anything that needed it**.
+It is heavily based on **Evilnat PEX CFW**. And will support every feature except: **Dumping eid_root_key**.
 
 HDD Decryption is **possible** without root key. See **Dumping HDD Key** section
 
@@ -76,24 +72,17 @@ then download [qCFW](https://github.com/aomsin2526/BadWDSD/releases) and extract
 9. If it tell you to reinstall firmware and try again, do it **ONCE**. **(PS3 Firmware)**
 10. Your screen will appear frozen. it is installing. This process take 10-20 minutes. **If something goes wrong during this step, you should be still able to recover by entering safe mode and reinstall firmware normally**
 11. Then it will reboot itself. you should be on qCFW and see Evilnat logo now.
-12. **!! You should "Sync date & time with internet" at least once after install to avoid issues such as XMB hangs !!**
-13. Congrats! qCFW installation is complete
+12. Congrats! qCFW installation is complete
 
 From now on, modchip will be required to boot the console until you go back to OFW again
 
 This can be done by reinstalling OFW/HFW firmware normally. Then after this you can disable or uninstall the modchip
-
-If thing goes too bad to the point of not being able to enter safe mode at all, you can use **BANKSEL** pin instead.
-
-If you flashed bad **Stagex.bin** or **CoreOS.bin**, see **Recover from bad Stagex.bin or CoreOS.bin flash** section.
 
 # Installation (Hardware)
 
 Currently, **Raspberry Pi Pico (RP2040)** and **RP2040-Zero** are supported.
 
 **Only install modchip after Stagex is installed to console flash from above section. Otherwise it won't boot, if you already installed the modchip, You can use HOLD pin to temporary disable the modchip without unsoldering it.**
-
-**Since I don't have 2500 and 3000 model to test, it must be done by other people. If you know the solder location please tell me. Thanks.**
 
 <details>
   <summary> <b>Pico</b> </summary>
@@ -177,7 +166,7 @@ Short to ground to activate
 
 **LITE** - TODO
 
-**BANKSEL** - Go back to OFW forcefully. It is equal to syscon command **w 1224 00**. Only use when absolutely needed. You can't turn on the console while this pin is shorted
+**BANKSEL** - Go back to OFW forcefully. It is equal to syscon command **w 1224 00**. Only use when absolutely needed. You can't turn on the console while this pin is shorted. eMMC requires successful modchip boot to apply. 
 
 # Update qCFW
 
@@ -192,23 +181,6 @@ Simply reinstall firmware normally, then use **Install qCFW** option with update
 Always use this method when possible. Simply reinstall firmware as normal. No extra steps required.
 
 If you want to uninstall the modchip, you can do so after this
-
-# Go back to OFW using BANKSEL pin
-
-**Avoid this unless absolutely needed.**
-
-**DO NOT GO STRAIGHT TO THIS PIN WITHOUT TRYING TO BOOT THE CONSOLE WITHOUT MODCHIP FIRST!, IF IT SHUT IFSELF OFF, THEN YOU CAN FOLLOW BELOW**
-
-1. Unplug your console
-2. Short **BANKSEL** pin to ground
-3. Plug in your console, wait until modchip LED flashes very fast. Then it is successful. You can't turn on the console while this pin is shorted
-4. Unplug your console and unshort the pin. **If necessary** remove or use **HOLD** pin to disable the modchip
-5. Plug in your console again and turn it on, you will likely to get black screen. This is expected since dev_flash is still qCFW but you're on OFW now
-6. Enter safe mode and reinstall firmware normally to get full recovery
-
-# Recover from bad Stagex.bin or CoreOS.bin flash
-
-No worries, your console isn't really bricked. **FIRST, disable the modchip then try to boot the console if it boots then all is good.** If it shut itself off, Simply follow **Go back to OFW using BANKSEL pin** section above. But this time disable modchip before boot as well.
 
 # Downgrading
 
@@ -233,7 +205,7 @@ You can't access syscon the old ways anymore. It must be done through modchip. S
 
 # NoBT
 
-[See PSX-Place](https://www.psx-place.com/threads/badwdsd-qcfw-hw-flasher-nobt-thread.49625/)
+todo
 
 # Dumping HDD Key (XMB)
 
@@ -276,26 +248,6 @@ This should work as long as you hear triple beeps
 # Syscon Remarry
 
 See [wiki](https://github.com/aomsin2526/BadWDSD/wiki/Remarry-Syscon)
-
-# eMMC Support?
-
-In very short summary, What modchip is doing is writing these code into ram at boot:
-
-```
-stage_entry:
-    // Jump to 0x2401F031000, aka 0x31000 on NOR flash where Stagex.bin is stored
-
-    bl 4
-    mflr %r3
-    addi %r3, %r3, -4
-    ld %r4, 24(%r3)
-    mtctr %r4
-    bctr
-
-    .quad 0x2401F031000
-```
-
-Do we have something like 0x2401F031000 on eMMC? If answer is yes, then eMMC can be supported (with more porting work).
 
 # New hvcalls
 

@@ -46,6 +46,18 @@ This means if you somehow need to reinstall the firmware such as corrupted HDD, 
 
 To recover, use **BANKSEL** pin on the modchip to go back to OFW.
 
+# eMMC "complete" and "incomplete" dump
+
+When you dump eMMC, you will see that it says complete or incomplete.
+
+"incomplete" means first 0x40000 bytes of dump is missing because it can't read with hen.
+
+If your eMMC died later on, this dump is not enough to recover it.
+
+By successful boot with modchip at least once, this region will be copied to somewhere that can be read by hen. So it will become "complete" automatically.
+
+You can then use this complete dump to transplant eMMC chip.
+
 # Installation (Software)
 
 **FOR FIRST INSTALLATION, BACKUP FLASH FIRST!!!. IF SOMETHING GOES TOO WRONG AND YOU DON'T HAVE BACKUP, YOUR CONSOLE MAY BE PERMANENTLY BRICKED**

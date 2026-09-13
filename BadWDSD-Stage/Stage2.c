@@ -569,6 +569,20 @@ FUNC_DEF void Stage2()
 
             ctx->magic = 0xca8fe91729035026;
 
+            // load mylv2ldr now or can't enter safe mode
+
+            if (ctx->has_mylv2ldr)
+            {
+                // load mylv2ldr to sharedLdr
+                if (ctx->cached_sharedLdr_CurKind != 3)
+                {
+                    puts("load mylv2ldr\n");
+
+                    FlashRead(ctx->cached_mylv2ldrElf_FileFlashOffset, ctx->cached_sharedLdr, ctx->cached_mylv2ldrElf_FileSize);
+                    ctx->cached_sharedLdr_CurKind = 3;
+                }
+            }
+
             //
         }
     }

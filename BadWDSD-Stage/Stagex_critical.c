@@ -285,7 +285,9 @@ FUNC_DEF void NorRead(uint32_t offset, void* outBuf, uint32_t readSize)
     if ((offset + readSize) >= (16 * 1024 * 1024))
         dead_beep();
 
-    volatile_memcpy(outBuf, (const volatile void*)(0x2401F000000 + offset), readSize);
+    // volatile is too slow to the point of can't enter safe mode
+    // so stick with normal ones...
+    memcpy(outBuf, (const void*)(0x2401F000000 + offset), readSize);
 }
 
 FUNC_DEF void FlashRead(uint32_t offset, void* outBuf, uint32_t readSize)

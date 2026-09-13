@@ -268,7 +268,7 @@ FUNC_DEF void Stage2()
         struct Stagex_Context_s* ctx = GetStagexContext_Unchecked();
         ctx->magic = 0;
 
-        if (isqCFW || (qcfw_lite_flag == 0x1))
+        if ((isqCFW || (qcfw_lite_flag == 0x1)) && !isqCFW_jig)
         {
             //
 

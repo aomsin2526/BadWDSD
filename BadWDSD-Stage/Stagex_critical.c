@@ -282,7 +282,7 @@ FUNC_DEF void NorRead(uint32_t offset, void* outBuf, uint32_t readSize)
     if (readSize == 0)
         return;
 
-    if ((offset + readSize) >= (16 * 1024 * 1024))
+    if ((offset + readSize) > (16 * 1024 * 1024))
         dead_beep();
 
     // volatile is too slow to the point of can't enter safe mode

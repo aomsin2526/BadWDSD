@@ -39,7 +39,6 @@ cp $ROOT_DIR/tools/coreos_tools/coreos_tools temp/coreos_tools || exit 1
 
 mkdir temp/Stagex_aux || exit 1
 cp Stagex_spu.elf temp/Stagex_aux || exit 1
-#cp mymetldr.elf temp/Stagex_aux || exit 1
 
 ###
 
@@ -54,4 +53,3 @@ cp ../../qcfw-lite/qcfwlite493cex_lv2_kernel.zdiff temp/Stagex_aux || exit 1
 ###
 
 temp/coreos_tools create_coreos temp/Stagex_aux Stagex_aux.bin || exit 1
-cp /tmp/tmpros.bin Stagex_aux.bin.orig || exit 1

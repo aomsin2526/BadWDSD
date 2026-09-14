@@ -803,10 +803,10 @@ FUNC_DEF void lv0ldr_region()
 #include "stagex_rescue/Stagex_aux.bin.c"
 
 static const uint32_t bin2c_Stagex_bin_size = sizeof(bin2c_Stagex_bin);
-_Static_assert((sizeof(bin2c_Stagex_bin) <= (60 * 1024)), "Stagex bin bad size!!!");
+_Static_assert(((sizeof(bin2c_Stagex_bin) > 0) && (sizeof(bin2c_Stagex_bin) <= (60 * 1024))), "Stagex bin bad size!!!");
 
 static const uint32_t bin2c_Stagex_aux_bin_size = sizeof(bin2c_Stagex_aux_bin);
-_Static_assert((sizeof(bin2c_Stagex_aux_bin) <= (64 * 1024)), "Stagex aux bin bad size!!!");
+_Static_assert(((sizeof(bin2c_Stagex_aux_bin) > 0) && (sizeof(bin2c_Stagex_aux_bin) <= (64 * 1024))), "Stagex aux bin bad size!!!");
 
 FUNC_DEF void Stagex_rescue()
 {

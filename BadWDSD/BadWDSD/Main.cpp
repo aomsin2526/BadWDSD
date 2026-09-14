@@ -312,14 +312,10 @@ void Core0_Thread_x32_Stage0_emmc_on_nor()
 
             //
 
-            uint64_t t1 = get_time_in_us();
-
             Xdr_SendRawCmd(cached_EnableSLE);
 
             for (uint32_t i = 0; i < 64; ++i)
                 Xdr_SendRawCmd(cached_WDSDs[i]);
-
-            uint64_t t2 = get_time_in_us();
 
             //
 

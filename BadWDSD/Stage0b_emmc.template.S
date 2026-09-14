@@ -1,5 +1,9 @@
-// run at 0x188 (second ch), but payload actually starts at 0x180
+// runs at 0x188 (second ch), but payload actually starts at 0x180
 // max size = 128
+
+#if PAYLOAD_SIZE == 0
+#error bad payload size!
+#endif
 
 #define PAYLOAD_HEADER_SIZE 8
 #define JUMP_ADDRESS 0x11000
@@ -14,7 +18,7 @@ stage0b_emmc_entry:
     // store (JUMP_ADDRESS + PAYLOAD_SIZE) at 0x184
     .long(JUMP_ADDRESS + PAYLOAD_SIZE)
 
-    // code starts here
+    // code starts here (0x188)
 
     // restore XDR
 

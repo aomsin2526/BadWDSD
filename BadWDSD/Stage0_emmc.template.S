@@ -2,6 +2,10 @@
 
 #if 1
 
+#if PAYLOAD_SIZE == 0
+#error bad payload size!
+#endif
+
 #if PAYLOAD_SIZE > 128
 #error payload too big!
 #endif

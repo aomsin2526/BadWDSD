@@ -113,35 +113,12 @@ FUNC_DEF void memcpy8(void *dest, const void *src, uint64_t count)
         destt[i] = srcc[i];
 }
 
-FUNC_DEF void memcpy32(void *dest, const void *src, uint64_t count)
-{
-    uint32_t *destt = (uint32_t *)dest;
-    const uint32_t *srcc = (const uint32_t *)src;
-
-    for (uint64_t i = 0; i < (count / 4); ++i)
-        destt[i] = srcc[i];
-}
-
 FUNC_DEF uint8_t memcmp(const void *p1, const void *p2, uint64_t count)
 {
     const uint8_t *pp1 = (const uint8_t *)p1;
     const uint8_t *pp2 = (const uint8_t *)p2;
 
     for (uint64_t i = 0; i < count; ++i)
-    {
-        if (pp1[i] != pp2[i])
-            return 1;
-    }
-
-    return 0;
-}
-
-FUNC_DEF uint8_t memcmp32(const void *p1, const void *p2, uint64_t count)
-{
-    const uint32_t *pp1 = (const uint32_t *)p1;
-    const uint32_t *pp2 = (const uint32_t *)p2;
-
-    for (uint64_t i = 0; i < (count / 4); ++i)
     {
         if (pp1[i] != pp2[i])
             return 1;

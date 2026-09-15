@@ -46,6 +46,11 @@ This means if you somehow need to reinstall the firmware such as corrupted HDD, 
 
 To recover, use **BANKSEL** pin on the modchip to go back to OFW.
 
+# eMMC quirks
+
+- You can't install firmware directly from XMB or you will get **80029c9c** error. **You must use safe mode**
+- Because of strict timings, **100% success rate is not possible even with perfect wiring**. This may affect PS2 mode.
+
 # eMMC "complete" and "incomplete" dump
 
 When you dump eMMC, you will see that it says complete or incomplete.

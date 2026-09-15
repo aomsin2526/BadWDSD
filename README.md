@@ -50,6 +50,7 @@ To recover, use **BANKSEL** pin on the modchip to go back to OFW.
 
 - You can't install firmware directly from XMB or you will get **80029c9c** error. **You must use safe mode**
 - Because of strict timings, **100% success rate is not possible even with perfect wiring**. This may affect PS2 mode.
+- When install or replacing HDD, **Go back to HFW first!** or it may cause problems.
 
 # eMMC "complete" and "incomplete" dump
 

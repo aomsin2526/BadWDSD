@@ -232,10 +232,7 @@ void Core0_Thread_x32_Stage0_emmc()
             busy_wait_ms(1);
 
             for (size_t i = 0; i < sizeof(bin2c_Stagexldr_emmc_bin); ++i)
-            {
                 Sb_Putc(bin2c_Stagexldr_emmc_bin[i]);
-                busy_wait_us(100);
-            }
 
             SwitchToDebugUart();
 
@@ -342,10 +339,7 @@ void Core0_Thread_x32_Stage0_emmc_on_nor()
             busy_wait_ms(1);
 
             for (size_t i = 0; i < sizeof(bin2c_Stagexldr_emmc_bin); ++i)
-            {
                 Sb_Putc(bin2c_Stagexldr_emmc_bin[i]);
-                busy_wait_us(100);
-            }
 
             SwitchToDebugUart();
 

@@ -17,6 +17,7 @@ void Uart_Init(uart_inst_t *uartId, uint32_t baud, bool rxEnabled, uint32_t rxPi
 
 void Uart_Uninit(uart_inst_t* uartId, bool rxEnabled, uint32_t rxPinId, bool txEnabled, uint32_t txPinId)
 {
+    uart_tx_wait_blocking(uartId);
     uart_deinit(uartId);
 
     if (txEnabled)

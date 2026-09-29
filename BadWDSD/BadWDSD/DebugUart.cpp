@@ -39,7 +39,7 @@ void DebugUart_Flush()
     debugUartContext.txBuf[debugUartContext.txBufCurLen] = 0;
 }
 
-void DebugUart_ProcessChar(char ch)
+void DebugUart_RxProcessChar(char ch)
 {
     DEBUG_UART_MUTEX_HOLDER;
 
@@ -71,7 +71,7 @@ void DebugUart_RxFn()
         while (uart_is_readable(debugUartContext.uartId))
         {
             char ch = uart_getc(debugUartContext.uartId);
-            DebugUart_ProcessChar(ch);
+            DebugUart_RxProcessChar(ch);
         }
     }
 
@@ -82,7 +82,7 @@ void DebugUart_RxFn()
         if (ch == PICO_ERROR_TIMEOUT)
             break;
 
-        DebugUart_ProcessChar((char)ch);
+        DebugUart_RxProcessChar((char)ch);
     }
 }
 

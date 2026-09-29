@@ -27,6 +27,9 @@ void Sb_Thread()
     if (!Sb_IsInited())
         return;
 
+    if (!Sc_IsGlitchMode())
+        return;
+
     Sb_RxFn();
 }
 

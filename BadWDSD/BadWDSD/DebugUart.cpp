@@ -157,5 +157,19 @@ void DebugUart_Puts(const char* buf)
     if (debugUartContext.isUartInited)
         Uart_Puts(debugUartContext.uartId, buf);
 
-    fwrite(buf, 1, strlen(buf), stdout);
+    while (*buf != 0)
+    {
+        char c = *buf;
+
+        if ((c == '\r') || (c == '\n'))
+        {
+            putchar('\r');
+            putchar('\n');
+            break;
+        }
+        else
+            putchar(c);
+
+        ++buf;
+    }
 }

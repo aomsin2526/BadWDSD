@@ -224,9 +224,12 @@ It is different from CFW. Simply follow these steps.
 
 You can't access syscon the old ways anymore. It must be done through modchip. Simply connect **DEBUG** pin of modchip into your UART adapter. **(See pico pinout)**
 
+**Or connect pico to your PC using USB port. You should see USB serial device. Flow control (RTS/CTS) must be enabled!**
+
 **Do not use syscon script, instead use normal serial terminal program with baud 576000.**
 
-<img width="1206" height="644" alt="Termite_s1m3OjonO8" src="https://github.com/user-attachments/assets/b8ba3786-d2ab-488f-b6c2-85032f0615de" />
+<img width="1131" height="655" alt="Termite_dn53NBSt4a" src="https://github.com/user-attachments/assets/345f5c15-a1a2-4db1-939a-a2296280e530" />
+
 
 # NoBD/NoBT
 

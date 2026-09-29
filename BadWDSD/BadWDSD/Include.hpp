@@ -26,6 +26,7 @@
 #include "pico/multicore.h"
 #include "pico/rand.h"
 #include "pico/mutex.h"
+#include "pico/stdio_usb.h"
 
 #if PICO_TYPE == PICO_TYPE_E_PICO_W
 #include "pico/cyw43_arch.h"
@@ -303,6 +304,8 @@ struct ScContext_s
 
     bool needReboot;
 
+    bool isGlitchMode;
+
     struct Sc_SendCommandContext_s* sendCommandCtx;
 
     uint64_t lastScTxTimeInMs;
@@ -346,6 +349,8 @@ extern void Sc_ClearBringupSuccess();
 extern bool Sc_GetNeedReboot();
 extern void Sc_ClearNeedReboot();
 
+extern bool Sc_IsGlitchMode();
+
 extern void Sc_Puts(const char* cmd);
 
 struct Sc_SendCommandContext_s
@@ -373,6 +378,7 @@ static const uint32_t DEBUG_UART_BAUD = 576000;
 
 struct DebugUartContext_s
 {
+    bool isUartInited;
     uart_inst_t* uartId;
 
     char txBuf[DEBUG_UART_TXBUF_SIZE];
@@ -387,7 +393,7 @@ extern void DebugUart_Thread();
 
 extern bool DebugUart_IsInited();
 
-extern void DebugUart_Init();
+extern void DebugUart_Init(bool initUart);
 extern void DebugUart_Uninit();
 
 extern void DebugUart_Putc(char c);
@@ -406,6 +412,8 @@ struct SbContext_s
 {
     uart_inst_t* uartId;
 };
+
+extern void Sb_Thread();
 
 extern bool Sb_IsInited();
 

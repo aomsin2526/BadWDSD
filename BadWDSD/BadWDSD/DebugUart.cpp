@@ -39,6 +39,26 @@ void DebugUart_Flush()
     debugUartContext.txBuf[debugUartContext.txBufCurLen] = 0;
 }
 
+void DebugUart_ProcessChar(char ch)
+{
+    DEBUG_UART_MUTEX_HOLDER;
+
+    if (!Sc_IsReadyForUser())
+        return;
+
+    if (ch == 0)
+        return;
+
+    debugUartContext.txBuf[debugUartContext.txBufCurLen] = ch;
+    ++debugUartContext.txBufCurLen;
+    debugUartContext.txBuf[debugUartContext.txBufCurLen] = 0;
+
+    if ((ch == '\r') || (ch == '\n') || (debugUartContext.txBufCurLen >= (DEBUG_UART_TXBUF_SIZE - 1)))
+        DebugUart_Flush();
+
+    debugUartContext.lastRxTimeInMs = get_time_in_ms();
+}
+
 void DebugUart_RxFn()
 {
     DEBUG_UART_MUTEX_HOLDER;
@@ -46,24 +66,23 @@ void DebugUart_RxFn()
     if (!DebugUart_IsInited())
         return;
 
-    while (uart_is_readable(debugUartContext.uartId))
+    if (debugUartContext.isUartInited)
     {
-        char ch = uart_getc(debugUartContext.uartId);
+        while (uart_is_readable(debugUartContext.uartId))
+        {
+            char ch = uart_getc(debugUartContext.uartId);
+            DebugUart_ProcessChar(ch);
+        }
+    }
 
-        if (!Sc_IsReadyForUser())
-            continue;
+    while (1)
+    {
+        int32_t ch = getchar_timeout_us(0);
 
-        if (ch == 0)
-            continue;
+        if (ch == PICO_ERROR_TIMEOUT)
+            break;
 
-        debugUartContext.txBuf[debugUartContext.txBufCurLen] = ch;
-        ++debugUartContext.txBufCurLen;
-        debugUartContext.txBuf[debugUartContext.txBufCurLen] = 0;
-
-        if ((ch == '\r') || (ch == '\n') || (debugUartContext.txBufCurLen >= (DEBUG_UART_TXBUF_SIZE - 1)))
-            DebugUart_Flush();
-
-        debugUartContext.lastRxTimeInMs = get_time_in_ms();
+        DebugUart_ProcessChar((char)ch);
     }
 }
 
@@ -80,7 +99,7 @@ void DebugUart_Thread()
     DebugUart_RxFn();
 }
 
-void DebugUart_Init()
+void DebugUart_Init(bool initUart)
 {
     DEBUG_UART_MUTEX_HOLDER;
 
@@ -94,7 +113,11 @@ void DebugUart_Init()
 
     debugUartContext.lastRxTimeInMs = 0;
 
-    Uart_Init(debugUartContext.uartId, DEBUG_UART_BAUD, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID);
+    if (initUart)
+        Uart_Init(debugUartContext.uartId, DEBUG_UART_BAUD, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID);
+
+    debugUartContext.isUartInited = initUart;
+
     debugUartIsInited = true;
 }
 
@@ -106,7 +129,9 @@ void DebugUart_Uninit()
         dead();
 
     debugUartIsInited = false;
-    Uart_Uninit(debugUartContext.uartId, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID);
+
+    if (debugUartContext.isUartInited)
+        Uart_Uninit(debugUartContext.uartId, true, DEBUG_UART_RX_PIN_ID, true, DEBUG_UART_TX_PIN_ID);
 }
 
 void DebugUart_Putc(char c)
@@ -116,7 +141,10 @@ void DebugUart_Putc(char c)
     if (!DebugUart_IsInited())
         return;
 
-    Uart_Putc(debugUartContext.uartId, c);
+    if (debugUartContext.isUartInited)
+        Uart_Putc(debugUartContext.uartId, c);
+
+    putchar(c);
 }
 
 void DebugUart_Puts(const char* buf)
@@ -126,5 +154,8 @@ void DebugUart_Puts(const char* buf)
     if (!DebugUart_IsInited())
         return;
 
-    Uart_Puts(debugUartContext.uartId, buf);
+    if (debugUartContext.isUartInited)
+        Uart_Puts(debugUartContext.uartId, buf);
+
+    printf(buf);
 }

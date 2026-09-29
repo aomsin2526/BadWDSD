@@ -33,5 +33,9 @@ if (IS_PICO_W)
 target_link_libraries(BadWDSD pico_cyw43_arch_none)
 endif()
 
+#
+pico_enable_stdio_uart(BadWDSD 0)
+pico_enable_stdio_usb(BadWDSD 1)
+
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(BadWDSD)

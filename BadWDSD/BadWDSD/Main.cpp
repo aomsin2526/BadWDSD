@@ -47,14 +47,20 @@ uint32_t crc32c(uint32_t crc, const uint8_t* buf, uint64_t len)
 
 void SwitchToSbUart()
 {
+    if (Sc_IsGlitchMode())
+        return;
+
     DebugUart_Uninit();
     Sb_Init();
 }
 
 void SwitchToDebugUart()
 {
+    if (Sc_IsGlitchMode())
+        return;
+
     Sb_Uninit();
-    DebugUart_Init();
+    DebugUart_Init(true);
 }
 
 void Watchdog()
@@ -542,6 +548,7 @@ void Core1_Thread()
         Led_Thread();
         Sc_Thread();
         DebugUart_Thread();
+        Sb_Thread();
     }
 }
 
@@ -564,7 +571,10 @@ int main()
     GPIO_FLOATTOHIGH(TRISTATE_PIN_ID);
 #endif
 
-    DebugUart_Init();
+    stdio_usb_init();
+    //busy_wait_ms(3000);
+
+    DebugUart_Init(true);
 
     //
 

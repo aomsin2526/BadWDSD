@@ -113,6 +113,17 @@ void Sc_RxFn()
 
             if (needReboot)
                 scContext.needReboot = true;
+
+            if (strstr(scContext.rxBuf, "GLITCH MODE") && !Sc_IsGlitchMode())
+            {
+                PrintLog("Entering glitch mode...\n");
+
+                DebugUart_Uninit();
+                Sb_Init();
+                DebugUart_Init(false);
+
+                scContext.isGlitchMode = true;
+            }
         }
 
         bool reset = false;
@@ -251,6 +262,8 @@ void Sc_Init()
     scContext.bringupSuccess = false;
 
     scContext.needReboot = false;
+
+    scContext.isGlitchMode = false;
 
     scContext.sendCommandCtx = NULL;
 
@@ -676,6 +689,11 @@ bool Sc_GetNeedReboot()
 void Sc_ClearNeedReboot()
 {
     scContext.needReboot = false;
+}
+
+bool Sc_IsGlitchMode()
+{
+    return scContext.isGlitchMode;
 }
 
 void Sc_CheckIsInited()

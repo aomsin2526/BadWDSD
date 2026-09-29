@@ -95,11 +95,17 @@
 #define NUM_CHANNELS 2
 #define BYTES_PER_FRAME     (2*NUM_CHANNELS)
 #define MAX_SBC_FRAME_SIZE 120
+#define SBC_MAX_AUDIO_FRAMES_PER_BLOCK 128
+#define RESAMPLE_ADDITIONAL_FRAMES     16
+#define RESAMPLE_OUTPUT_FRAMES         (SBC_MAX_AUDIO_FRAMES_PER_BLOCK + RESAMPLE_ADDITIONAL_FRAMES)
 
 #ifdef HAVE_BTSTACK_STDIN
-static const char * device_addr_string = "00:1B:DC:08:E2:72"; // pts v5.0
-static bd_addr_t device_addr;
+#ifndef REMOTE_ADDR_STRING
+#define REMOTE_ADDR_STRING "00:1A:7D:DA:71:01"
 #endif
+static const char * device_addr_string = REMOTE_ADDR_STRING;
+#endif
+static bd_addr_t device_addr;
 
 #ifdef HAVE_BTSTACK_AUDIO_EFFECTIVE_SAMPLERATE
 static btstack_sample_rate_compensation_t sample_rate_compensation;
@@ -139,7 +145,7 @@ static btstack_ring_buffer_t sbc_frame_ring_buffer;
 static unsigned int sbc_frame_size;
 
 // overflow buffer for not fully used sbc frames, with additional frames for resampling
-static uint8_t decoded_audio_storage[(128+16) * BYTES_PER_FRAME];
+static uint8_t decoded_audio_storage[RESAMPLE_OUTPUT_FRAMES * BYTES_PER_FRAME];
 static btstack_ring_buffer_t decoded_audio_ring_buffer;
 
 static int media_initialized = 0;
@@ -148,6 +154,7 @@ static int audio_stream_started;
 static int l2cap_stream_started;
 #endif
 static btstack_resample_t resample_instance;
+static uint32_t resampling_min_factor;
 
 // temp storage of lower-layer request for audio samples
 static int16_t * request_buffer;
@@ -227,7 +234,7 @@ static a2dp_sink_demo_avrcp_connection_t a2dp_sink_demo_avrcp_connection;
  *
  * @text The Listing MainConfiguration shows how to set up AD2P Sink and AVRCP services.
  * Besides calling init() method for each service, you'll also need to register several packet handlers:
- * - hci_packet_handler - handles legacy pairing, here by using fixed '0000' pin code.
+ * - hci_packet_handler - handles pairing and device discovery
  * - a2dp_sink_packet_handler - handles events on stream connection status (established, released), the media codec configuration, and, the status of the stream itself (opened, paused, stopped).
  * - handle_l2cap_media_data_packet - used to receive streaming data. If STORE_TO_WAV_FILE directive (check btstack_config.h) is used, the SBC decoder will be used to decode the SBC data into PCM frames. The resulting PCM frames are then processed in the SBC Decoder callback.
  * - avrcp_packet_handler - receives AVRCP connect/disconnect event.
@@ -345,8 +352,8 @@ static int setup_demo(void){
     // - Allow to show up in Bluetooth inquiry
     gap_discoverable_control(1);
 
-    // - Set Class of Device - Service Class: Audio, Major Device Class: Audio, Minor: Headphone
-    gap_set_class_of_device(0x200404);
+    // - Set Class of Device - Service Class: Audio + Rendering, Major Device Class: Audio, Minor: Headphone
+    gap_set_class_of_device(0x240400);
 
     // - Allow for role switch in general and sniff mode
     gap_set_default_link_policy_settings( LM_LINK_POLICY_ENABLE_ROLE_SWITCH | LM_LINK_POLICY_ENABLE_SNIFF_MODE );
@@ -376,7 +383,8 @@ static int setup_demo(void){
 /* LISTING_END */
 
 
-static void playback_handler(int16_t * buffer, uint16_t num_audio_frames){
+static void playback_handler(int16_t * buffer, uint16_t num_audio_frames, const btstack_audio_context_t * context){
+    UNUSED(context);
 
 #ifdef STORE_TO_WAV_FILE
     int       wav_samples = num_audio_frames * NUM_CHANNELS;
@@ -426,7 +434,7 @@ static void handle_pcm_data(int16_t * data, int num_audio_frames, int num_channe
     }
 
     // resample into request buffer - add some additional space for resampling
-    int16_t  output_buffer[(128+16) * NUM_CHANNELS]; // 16 * 8 * 2
+    int16_t  output_buffer[RESAMPLE_OUTPUT_FRAMES * NUM_CHANNELS];
     uint32_t resampled_frames = btstack_resample_block(&resample_instance, data, num_audio_frames, output_buffer);
 
     // store data in btstack_audio buffer first
@@ -457,6 +465,7 @@ static int media_processing_init(media_codec_configuration_sbc_t * configuration
     btstack_ring_buffer_init(&sbc_frame_ring_buffer, sbc_frame_storage, sizeof(sbc_frame_storage));
     btstack_ring_buffer_init(&decoded_audio_ring_buffer, decoded_audio_storage, sizeof(decoded_audio_storage));
     btstack_resample_init(&resample_instance, configuration->num_channels);
+    resampling_min_factor = btstack_resample_get_min_factor_for_output_capacity(SBC_MAX_AUDIO_FRAMES_PER_BLOCK, RESAMPLE_OUTPUT_FRAMES);
 
     // setup audio playback
     const btstack_audio_sink_t * audio = btstack_audio_sink_get_instance();
@@ -574,8 +583,10 @@ static void handle_l2cap_media_data_packet(uint8_t seid, uint8_t *packet, uint16
     }
     // update sample rate compensation
     if( audio_stream_started && (audio != NULL)) {
-        uint32_t resampling_factor = btstack_sample_rate_compensation_update( &sample_rate_compensation, btstack_run_loop_get_time_ms(), sbc_header.num_frames*128, audio->get_samplerate() );
-        btstack_resample_set_factor(&resample_instance, resampling_factor);
+        uint32_t resampling_factor = btstack_sample_rate_compensation_update( &sample_rate_compensation, btstack_run_loop_get_time_ms(), sbc_header.num_frames * SBC_MAX_AUDIO_FRAMES_PER_BLOCK, audio->get_samplerate() );
+        // limit resampling factor by minimum factor to avoid overrun of output buffer in handle_pcm_data()
+        uint32_t resampling_factor_clamped = btstack_max(resampling_factor, resampling_min_factor);
+        btstack_resample_set_factor(&resample_instance, resampling_factor_clamped);
 //        printf("sbc buffer level :            %"PRIu32"\n", btstack_ring_buffer_bytes_available(&sbc_frame_ring_buffer));
     }
 #else
@@ -593,6 +604,8 @@ static void handle_l2cap_media_data_packet(uint8_t seid, uint8_t *packet, uint16
     	resampling_factor = nominal_factor + compensation;    // compress samples
     }
 
+    // assert output buffer is large enough for handle_pcm_data()
+    btstack_assert(resampling_factor >= resampling_min_factor);
     btstack_resample_set_factor(&resample_instance, resampling_factor);
 #endif
     // start stream if enough frames buffered
@@ -665,11 +678,23 @@ static void hci_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *p
     UNUSED(channel);
     UNUSED(size);
     if (packet_type != HCI_EVENT_PACKET) return;
-    if (hci_event_packet_get_type(packet) == HCI_EVENT_PIN_CODE_REQUEST) {
-        bd_addr_t address;
-        printf("Pin code request - using '0000'\n");
-        hci_event_pin_code_request_get_bd_addr(packet, address);
-        gap_pin_code_response(address, "0000");
+
+    bd_addr_t address;
+    switch (hci_event_packet_get_type(packet)){
+        case HCI_EVENT_PIN_CODE_REQUEST:
+            // inform about legacy pairing with pin code - should only happen before Core v2.1
+            printf("Pin code request for Legacy Pairing received -> abort pairing'\n");
+            hci_event_pin_code_request_get_bd_addr(packet, address);
+            gap_pin_code_negative(address);
+            break;
+        case HCI_EVENT_USER_CONFIRMATION_REQUEST:
+            printf("SSP User Confirmation Request with numeric value '%06"PRIu32"'\n", hci_event_user_confirmation_request_get_numeric_value(packet));
+            printf("Accepting Pairing - TODO: require actual user action\n");
+            hci_event_user_confirmation_request_get_bd_addr(packet, address);
+            gap_ssp_confirmation_response(address);
+            break;
+        default:
+            break;
     }
 }
 
@@ -872,6 +897,7 @@ static void avrcp_controller_packet_handler(uint8_t packet_type, uint16_t channe
 
         case AVRCP_SUBEVENT_NOTIFICATION_TRACK_CHANGED:
             printf("AVRCP Controller: Track changed\n");
+            avrcp_controller_get_now_playing_info(avrcp_connection->avrcp_cid);
             break;
 
         case AVRCP_SUBEVENT_NOTIFICATION_AVAILABLE_PLAYERS_CHANGED:
@@ -928,7 +954,22 @@ static void avrcp_controller_packet_handler(uint8_t packet_type, uint16_t channe
             break;
         
         case AVRCP_SUBEVENT_OPERATION_COMPLETE:
-            printf("AVRCP Controller: %s complete\n", avrcp_operation2str(avrcp_subevent_operation_complete_get_operation_id(packet)));
+            switch ((avrcp_command_opcode_t) avrcp_subevent_operation_complete_get_command_opcode(packet)){
+                case AVRCP_CMD_OPCODE_VENDOR_DEPENDENT:
+                    printf("AVRCP Controller: PDU_ID 0x%02X - status %s\n",
+                           avrcp_subevent_operation_complete_get_pdu_id(packet),
+                           avrcp_subevent_operation_complete_get_status(packet) == ERROR_CODE_SUCCESS ? "done" : "failed");
+                    break;
+                case AVRCP_CMD_OPCODE_SUBUNIT_INFO:
+                case AVRCP_CMD_OPCODE_UNIT_INFO:
+                case AVRCP_CMD_OPCODE_PASS_THROUGH:
+                    printf("AVRCP Controller: Operation ID 0x%02X - status %s\n",
+                           avrcp_subevent_operation_complete_get_operation_id(packet),
+                           avrcp_subevent_operation_complete_get_status(packet) == ERROR_CODE_SUCCESS ? "done" : "failed");
+                    break;
+                default:
+                    break;
+            }
             break;
         
         case AVRCP_SUBEVENT_OPERATION_START:
@@ -971,6 +1012,21 @@ static void avrcp_volume_changed(uint8_t volume){
     }
 }
 
+static uint8_t a2dp_sink_demo_set_volume_percentage(uint16_t avrcp_cid, int new_volume_percentage){
+    if (new_volume_percentage < 0){
+        volume_percentage = 0;
+    } else if (new_volume_percentage > 100){
+        volume_percentage = 100;
+    } else {
+        volume_percentage = new_volume_percentage;
+    }
+    uint8_t volume = volume_percentage * 127 / 100;
+    printf("AVRCP Target    : Volume set to %d%% (%d)\n", volume_percentage, volume);
+    uint8_t status = avrcp_target_volume_changed(avrcp_cid, volume);
+    avrcp_volume_changed(volume);
+    return status;
+}
+
 static void avrcp_target_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size){
     UNUSED(channel);
     UNUSED(size);
@@ -996,9 +1052,15 @@ static void avrcp_target_packet_handler(uint8_t packet_type, uint16_t channel, u
             switch (operation_id){
                 case AVRCP_OPERATION_ID_VOLUME_UP:
                     printf("AVRCP Target    : VOLUME UP (%s)\n", button_state);
+                    if (avrcp_subevent_operation_get_button_pressed(packet) > 0){
+                        (void) a2dp_sink_demo_set_volume_percentage(a2dp_sink_demo_avrcp_connection.avrcp_cid, volume_percentage + 10);
+                    }
                     break;
                 case AVRCP_OPERATION_ID_VOLUME_DOWN:
                     printf("AVRCP Target    : VOLUME DOWN (%s)\n", button_state);
+                    if (avrcp_subevent_operation_get_button_pressed(packet) > 0){
+                        (void) a2dp_sink_demo_set_volume_percentage(a2dp_sink_demo_avrcp_connection.avrcp_cid, volume_percentage - 10);
+                    }
                     break;
                 default:
                     return;
@@ -1187,7 +1249,6 @@ static void show_usage(void){
 
 static void stdin_process(char cmd){
     uint8_t status = ERROR_CODE_SUCCESS;
-    uint8_t volume;
     avrcp_battery_status_t old_battery_status;
 
     a2dp_sink_demo_a2dp_connection_t *  a2dp_connection  = &a2dp_sink_demo_a2dp_connection;
@@ -1217,22 +1278,16 @@ static void stdin_process(char cmd){
             break;
         case 'w':
             printf("Send delay report\n");
-            avdtp_sink_delay_report(a2dp_connection->a2dp_cid, a2dp_connection->a2dp_local_seid, 100);
+            a2dp_sink_delay_report(a2dp_connection->a2dp_cid, a2dp_connection->a2dp_local_seid, 100);
             break;
         // Volume Control
         case 't':
-            volume_percentage = volume_percentage <= 90 ? volume_percentage + 10 : 100;
-            volume = volume_percentage * 127 / 100;
-            printf(" - volume up   for 10 percent, %d%% (%d) \n", volume_percentage, volume);
-            status = avrcp_target_volume_changed(avrcp_connection->avrcp_cid, volume);
-            avrcp_volume_changed(volume);
+            printf(" - volume up   for 10 percent\n");
+            status = a2dp_sink_demo_set_volume_percentage(avrcp_connection->avrcp_cid, volume_percentage + 10);
             break;
         case 'T':
-            volume_percentage = volume_percentage >= 10 ? volume_percentage - 10 : 0;
-            volume = volume_percentage * 127 / 100;
-            printf(" - volume down for 10 percent, %d%% (%d) \n", volume_percentage, volume);
-            status = avrcp_target_volume_changed(avrcp_connection->avrcp_cid, volume);
-            avrcp_volume_changed(volume);
+            printf(" - volume down for 10 percent\n");
+            status = a2dp_sink_demo_set_volume_percentage(avrcp_connection->avrcp_cid, volume_percentage - 10);
             break;
         case 'V':
             old_battery_status = battery_status;

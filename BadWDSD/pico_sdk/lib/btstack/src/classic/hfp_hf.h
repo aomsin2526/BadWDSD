@@ -51,6 +51,22 @@
 extern "C" {
 #endif
 
+typedef enum {
+    HFP_HF_VRA_EVENT_NONE,
+    HFP_HF_VRA_EVENT_CAN_SEND_NOW,
+    HFP_HF_VRA_EVENT_RECEIVED_OK,
+    HFP_HF_VRA_EVENT_RECEIVED_ERROR,
+    HFP_HF_VRA_EVENT_RECEIVED_TIMEOUT,
+    HFP_HF_VRA_EVENT_SCO_CONNECTED,
+    HFP_HF_VRA_EVENT_SCO_DISCONNECTED,
+    HFP_HF_VRA_EVENT_AG_REPORT_ACTIVATED,
+    HFP_HF_VRA_EVENT_AG_REPORT_DEACTIVATED,
+    HFP_HF_VRA_EVENT_AG_REPORT_STATE,
+    HFP_HF_VRA_EVENT_HF_REQUESTED_ACTIVATE,
+    HFP_HF_VRA_EVENT_HF_REQUESTED_ACTIVATE_ENHANCED,
+    HFP_HF_VRA_EVENT_HF_REQUESTED_DEACTIVATE,
+} hfp_hf_vra_event_type_t;
+
 /* API_START */
 
 /**
@@ -59,8 +75,8 @@ extern "C" {
  * @param rfcomm_channel_nr
  * @param name or NULL for default value. Provide "" (empty string) to skip attribute
  * @param supported_features 32-bit bitmap, see HFP_HFSF_* values in hfp.h
- * @param codecs_nr  number of codecs in codecs argument
- * @param codecs
+ * @param codecs_nr Number of entries, at most HFP_MAX_NUM_CODECS.
+ * @param codecs Non-NULL when codecs_nr is nonzero.
  */
 void hfp_hf_create_sdp_record_with_codecs(uint8_t * service, uint32_t service_record_handle, int rfcomm_channel_nr,
                                            const char * name, uint16_t supported_features, uint8_t codecs_nr, const uint8_t * codecs);
@@ -90,8 +106,8 @@ void hfp_hf_init_supported_features(uint32_t supported_features);
 
 /**
  * @brief Set HF indicators. 
- * @param indicators_nr
- * @param indicators
+ * @param indicators_nr Number of entries, in the range 0 to HFP_MAX_NUM_INDICATORS.
+ * @param indicators Non-NULL when indicators_nr is nonzero.
  */
 void hfp_hf_init_hf_indicators(int indicators_nr, const uint16_t * indicators);
 
@@ -531,14 +547,34 @@ uint8_t hfp_hf_rrh_reject_held_call(hci_con_handle_t acl_handle);
 uint8_t hfp_hf_query_subscriber_number(hci_con_handle_t acl_handle);
 
 /**
+ * @brief Check if a specific HF indicator is supported by the AG.
+ *
+ * @param acl_handle
+ * @param assigned_number
+ * @return true if supported, false if not supported or if acl_handle or assigned_number is unknown
+ */
+bool hfp_hf_is_hf_indicator_supported_by_ag(hci_con_handle_t acl_handle, uint8_t assigned_number);
+
+/**
+ * @brief Check if a specific HF indicator is enabled by the AG.
+ *
+ * @param acl_handle
+ * @param assigned_number
+ * @return true if enabled, false if not enabled or if acl_handle or assigned_number is unknown
+ */
+bool hfp_hf_is_hf_indicator_enabled_by_ag(hci_con_handle_t acl_handle, uint8_t assigned_number);
+
+/**
  * @brief Set HF indicator.
  *
  * @param acl_handle
  * @param assigned_number
  * @param value
- * @return status ERROR_CODE_SUCCESS if successful, otherwise ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER if connection does not exist
+ * @return status ERROR_CODE_SUCCESS if successful, otherwise:
+ *              - ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER if connection does not exist, or
+ *              - ERROR_CODE_COMMAND_DISALLOWED if indicator is either not found or not enabled
  */
-uint8_t hfp_hf_set_hf_indicator(hci_con_handle_t acl_handle, int assigned_number, int value);
+uint8_t hfp_hf_set_hf_indicator(int assigned_number, int value);
 
 /**
  * @brief Tests if in-band ringtone is active on AG (requires SLC)
@@ -605,6 +641,10 @@ void hfp_hf_deinit(void);
  * @param wide_band_speech supported
  */
 void hfp_hf_create_sdp_record(uint8_t * service, uint32_t service_record_handle, int rfcomm_channel_nr, const char * name, uint16_t supported_features, int wide_band_speech);
+
+#ifdef ENABLE_TESTING_SUPPORT
+bool test_hfp_hf_vra_state_machine(hfp_connection_t * hfp_connection, hfp_hf_vra_event_type_t event);
+#endif
 
 /* API_END */
 

@@ -3,22 +3,45 @@ cmake_minimum_required (VERSION 3.5)
 SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk)
 SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+list(APPEND BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+
 #set(CMAKE_BUILD_TYPE RelWithDebInfo)
-
-find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
-
-project(BTstack-Zephyr)
 
 set(BTSTACK_ROOT ${CMAKE_SOURCE_DIR}/../../)
 if( DEFINED ENV{BTSTACK_ROOT} )
     set(BTSTACK_ROOT $ENV{BTSTACK_ROOT})
 endif()
 
+include(${BTSTACK_ROOT}/chipset/bcm/btstack_cyw55310_patchram.cmake)
+
+if(BOARD MATCHES "^if310($|/)")
+    set(BTSTACK_CYW55310_PATCHRAM_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${BTSTACK_CYW55310_PATCHRAM_FILE}")
+    if(NOT EXISTS "${BTSTACK_CYW55310_PATCHRAM_PATH}")
+        message(STATUS "Downloading ${BTSTACK_CYW55310_PATCHRAM_FILE}")
+        file(DOWNLOAD
+            "${BTSTACK_CYW55310_PATCHRAM_URL}"
+            "${BTSTACK_CYW55310_PATCHRAM_PATH}"
+            EXPECTED_HASH SHA256=${BTSTACK_CYW55310_PATCHRAM_SHA256}
+            STATUS BTSTACK_CYW55310_PATCHRAM_DOWNLOAD_STATUS
+        )
+        list(GET BTSTACK_CYW55310_PATCHRAM_DOWNLOAD_STATUS 0 BTSTACK_CYW55310_PATCHRAM_DOWNLOAD_RESULT)
+        if(NOT BTSTACK_CYW55310_PATCHRAM_DOWNLOAD_RESULT EQUAL 0)
+            list(GET BTSTACK_CYW55310_PATCHRAM_DOWNLOAD_STATUS 1 BTSTACK_CYW55310_PATCHRAM_DOWNLOAD_ERROR)
+            file(REMOVE "${BTSTACK_CYW55310_PATCHRAM_PATH}")
+            message(FATAL_ERROR "Failed to download ${BTSTACK_CYW55310_PATCHRAM_FILE}: ${BTSTACK_CYW55310_PATCHRAM_DOWNLOAD_ERROR}")
+        endif()
+    endif()
+endif()
+
+find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+
+project(BTstack-Zephyr)
+
 # pkgconfig
 find_package(PkgConfig REQUIRED)
 
 # to generate .h from .gatt files
-find_package (Python REQUIRED COMPONENTS Interpreter)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # local dir for btstack_config.h after build dir to avoid using .h from Makefile
@@ -33,11 +56,13 @@ list(APPEND INCLUDES_PATH 3rd-party/hxcmod-player/mod)
 list(APPEND INCLUDES_PATH 3rd-party/lwip/core/src/include)
 list(APPEND INCLUDES_PATH 3rd-party/lwip/dhcp-server)
 list(APPEND INCLUDES_PATH 3rd-party/rijndael)
-list(APPEND INCLUDES_PATH 3rd-party/yxml)
+list(APPEND INCLUDES_PATH 3rd-party/qr-code-generator)
 list(APPEND INCLUDES_PATH 3rd-party/tinydir)
+list(APPEND INCLUDES_PATH 3rd-party/yxml)
 list(APPEND INCLUDES_PATH src)
 list(APPEND INCLUDES_PATH chipset/zephyr)
 list(APPEND INCLUDES_PATH platform/embedded)
+list(APPEND INCLUDES_PATH platform/zephyr)
 list(APPEND INCLUDES_PATH platform/lwip)
 list(APPEND INCLUDES_PATH platform/lwip/port)
 list(TRANSFORM INCLUDES_PATH PREPEND ${BTSTACK_ROOT}/)
@@ -57,7 +82,9 @@ file(GLOB SOURCES_UECC           "${BTSTACK_ROOT}/3rd-party/micro-ecc/uECC.c")
 file(GLOB SOURCES_YXML           "${BTSTACK_ROOT}/3rd-party/yxml/yxml.c")
 file(GLOB SOURCES_HXCMOD         "${BTSTACK_ROOT}/3rd-party/hxcmod-player/*.c"  "${BTSTACK_ROOT}/3rd-party/hxcmod-player/mods/*.c")
 file(GLOB SOURCES_RIJNDAEL       "${BTSTACK_ROOT}/3rd-party/rijndael/rijndael.c")
+file(GLOB SOURCES_QRCODEGEN      "${BTSTACK_ROOT}/3rd-party/qr-code-generator/qrcodegen.c")
 file(GLOB SOURCES_EMBEDDED       "${BTSTACK_ROOT}/platform/embedded/*.c")
+file(GLOB SOURCES_ZEPHYR         "${BTSTACK_ROOT}/platform/zephyr/*.c")
 file(GLOB SOURCES_CHIPSET_ZEPHYR "${BTSTACK_ROOT}/chipset/zephyr/*.c")
 file(GLOB SOURCES_LC3_GOOGLE     "${BTSTACK_ROOT}/3rd-party/lc3-google/src/*.c")
 
@@ -115,21 +142,33 @@ set(SOURCES
     ${SOURCES_YXML}
     ${SOURCES_BLUEDROID}
     ${SOURCES_EMBEDDED}
-    ${SOURCES_RIJNDAEL}
     ${SOURCES_LC3_GOOGLE}
+    ${SOURCES_RIJNDAEL}
+    ${SOURCES_QRCODEGEN}
     ${SOURCES_SRC}
-    ${SOURCES_BLE}
-    ${SOURCES_GATT}
-    ${SOURCES_LE_AUDIO}
     ${SOURCES_UECC}
     ${SOURCES_HXCMOD}
     ${SOURCES_CHIPSET_ZEPHYR}
+    ${SOURCES_ZEPHYR}
 )
+
+if(CONFIG_BTSTACK_ENABLE_BLE)
+    list(APPEND SOURCES
+        ${SOURCES_BLE}
+        ${SOURCES_GATT}
+        ${SOURCES_LE_AUDIO}
+    )
+endif()
+
+if(CONFIG_BTSTACK_ENABLE_CLASSIC)
+    list(APPEND SOURCES ${SOURCES_CLASSIC})
+endif()
+
 list(SORT SOURCES)
 
 # create static lib
 add_library(btstack STATIC ${SOURCES})
-
+add_dependencies(btstack zephyr_interface)
 # extra compiler warnings
 target_compile_options(btstack PRIVATE
      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:
@@ -180,6 +219,7 @@ foreach(EXAMPLE ${EXAMPLES})
         set (SOURCES_EXAMPLE ${EXAMPLE}.c)
     endif()
     list(APPEND SOURCES_EXAMPLE "${CMAKE_SOURCE_DIR}/src/main.c")
+
     message("${BTSTACK_ROOT}")
     message("${SOURCES_EXAMPLE}")
     # add lwip sources for lwip examples
@@ -193,7 +233,7 @@ foreach(EXAMPLE ${EXAMPLES})
         add_custom_command(
             OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${EXAMPLE}.h
             DEPENDS ${BTSTACK_ROOT}/example/${EXAMPLE}.gatt
-            COMMAND ${Python_EXECUTABLE}
+            COMMAND ${Python3_EXECUTABLE}
             ARGS ${BTSTACK_ROOT}/tool/compile_gatt.py ${BTSTACK_ROOT}/example/${EXAMPLE}.gatt ${CMAKE_CURRENT_BINARY_DIR}/${EXAMPLE}.h
         )
         list(APPEND SOURCES_EXAMPLE ${CMAKE_CURRENT_BINARY_DIR}/${EXAMPLE}.h)

@@ -5,26 +5,21 @@
  *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "mbedtls/build_info.h"
 
 #include "mbedtls/platform.h"
 
-#if !defined(MBEDTLS_SSL_CLI_C) || !defined(MBEDTLS_SSL_PROTO_DTLS) ||    \
-    !defined(MBEDTLS_NET_C)  || !defined(MBEDTLS_TIMING_C) ||             \
-    !defined(MBEDTLS_ENTROPY_C) || !defined(MBEDTLS_CTR_DRBG_C) ||        \
-    !defined(MBEDTLS_X509_CRT_PARSE_C) || !defined(MBEDTLS_RSA_C) ||      \
-    !defined(MBEDTLS_CERTS_C) || !defined(MBEDTLS_PEM_PARSE_C)
+#if !defined(MBEDTLS_ENTROPY_C) || !defined(MBEDTLS_CTR_DRBG_C) ||      \
+    !defined(MBEDTLS_NET_C) || !defined(MBEDTLS_SSL_CLI_C) ||           \
+    !defined(MBEDTLS_TIMING_C) || !defined(MBEDTLS_SSL_PROTO_DTLS) ||   \
+    !defined(MBEDTLS_PEM_PARSE_C) || !defined(MBEDTLS_X509_CRT_PARSE_C)
 int main(void)
 {
-    mbedtls_printf("MBEDTLS_SSL_CLI_C and/or MBEDTLS_SSL_PROTO_DTLS and/or "
-                   "MBEDTLS_NET_C and/or MBEDTLS_TIMING_C and/or "
-                   "MBEDTLS_ENTROPY_C and/or MBEDTLS_CTR_DRBG_C and/or "
-                   "MBEDTLS_X509_CRT_PARSE_C and/or MBEDTLS_RSA_C and/or "
-                   "MBEDTLS_CERTS_C and/or MBEDTLS_PEM_PARSE_C not defined.\n");
+    mbedtls_printf("MBEDTLS_ENTROPY_C and/or MBEDTLS_CTR_DRBG_C and/or "
+                   "MBEDTLS_NET_C and/or MBEDTLS_SSL_CLI_C and/or "
+                   "MBEDTLS_TIMING_C and/or MBEDTLS_SSL_PROTO_DTLS and/or "
+                   "MBEDTLS_PEM_PARSE_C and/or MBEDTLS_X509_CRT_PARSE_C "
+                   "not defined.\n");
     mbedtls_exit(0);
 }
 #else
@@ -37,8 +32,8 @@ int main(void)
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/error.h"
-#include "mbedtls/certs.h"
 #include "mbedtls/timing.h"
+#include "test/certs.h"
 
 /* Uncomment out the following line to default to IPv4 and disable IPv6 */
 //#define FORCE_IPV4
@@ -49,7 +44,7 @@ int main(void)
 #ifdef FORCE_IPV4
 #define SERVER_ADDR "127.0.0.1"     /* Forces IPv4 */
 #else
-#define SERVER_ADDR "::1"
+#define SERVER_ADDR SERVER_NAME
 #endif
 
 #define MESSAGE     "Echo this"
@@ -224,13 +219,17 @@ int main(int argc, char *argv[])
      * handshake would not succeed if the peer's cert is bad.  Even if we used
      * MBEDTLS_SSL_VERIFY_OPTIONAL, we would bail out here if ret != 0 */
     if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0) {
+#if !defined(MBEDTLS_X509_REMOVE_INFO)
         char vrfy_buf[512];
+#endif
 
         mbedtls_printf(" failed\n");
 
+#if !defined(MBEDTLS_X509_REMOVE_INFO)
         mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "  ! ", flags);
 
         mbedtls_printf("%s\n", vrfy_buf);
+#endif
     } else {
         mbedtls_printf(" ok\n");
     }
@@ -330,11 +329,6 @@ exit:
     mbedtls_psa_crypto_free();
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(_WIN32)
-    mbedtls_printf("  + Press Enter to exit this program.\n");
-    fflush(stdout); getchar();
-#endif
-
     /* Shell can not handle large exit numbers -> 1 for errors */
     if (ret < 0) {
         ret = 1;
@@ -342,7 +336,5 @@ exit:
 
     mbedtls_exit(ret);
 }
-#endif /* MBEDTLS_SSL_CLI_C && MBEDTLS_SSL_PROTO_DTLS && MBEDTLS_NET_C &&
-          MBEDTLS_TIMING_C && MBEDTLS_ENTROPY_C && MBEDTLS_CTR_DRBG_C &&
-          MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_RSA_C && MBEDTLS_CERTS_C &&
-          MBEDTLS_PEM_PARSE_C */
+
+#endif /* configuration allows running this program */

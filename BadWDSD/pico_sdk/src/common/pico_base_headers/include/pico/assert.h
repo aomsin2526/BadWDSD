@@ -34,10 +34,20 @@ extern "C" {
 #define invalid_params_if(x, test) ({if (PARAM_ASSERTIONS_ENABLED(x)) assert(!(test));})
 #define valid_params_if(x, test) ({if (PARAM_ASSERTIONS_ENABLED(x)) assert(test);})
 #define hard_assert_if(x, test) ({if (PARAM_ASSERTIONS_ENABLED(x)) hard_assert(!(test));})
-#define invalid_params_if_and_return(x, test, rc) ({/*if (PARAM_ASSERTIONS_ENABLED(x)) assert(!(test)); */ if (test) return rc; })
+#define invalid_params_if_and_return(x, test, rc) ({if (PARAM_ASSERTIONS_ENABLED(x)) assert(!(test)); if (test) return rc; })
 
 #ifdef NDEBUG
-extern void hard_assertion_failure(void);
+extern void __attribute__((noreturn)) hard_assertion_failure(void);
+
+/*! \brief  Perform a runtime assertion always (i.e. not just when NDEBUG is undefined)
+*  \ingroup pico_base
+*
+* This function is intended to provide useful information in debug builds like a normal assertion, but also
+* prevent execution proceeding in other builds
+*
+* In debug builds this is equivalent to \ref assert, however in release builds it calls \ref hard_assertion_failure
+* which, by default, just calls \ref panic with the string "Hard assert"
+*/
 static inline void hard_assert(bool condition, ...) {
     if (!condition)
         hard_assertion_failure();

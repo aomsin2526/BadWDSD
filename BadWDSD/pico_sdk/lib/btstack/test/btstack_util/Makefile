@@ -1,35 +1,31 @@
-# Makefile to build and run tests of CMake project
-# TODO: replace list of hard-coded tests with CMake call to run all tests
+include ../common.make
 
-# Variables
-BUILD_DIR = build
-TARGET = all  # Default build target
+DEFINES := -DUNIT_TEST_ASSERT
+INCLUDES = -I${BTSTACK_ROOT}/src
+INCLUDES += -I${BTSTACK_ROOT}/test/include/coverage-ble
 
-# Default rule
-all: configure build
+CFLAGS   += ${INCLUDES} ${DEFINES}
+CXXFLAGS += ${INCLUDES} ${DEFINES}
 
-# Step 1: Configure CMake
-configure:
-	@echo "Configuring project in $(BUILD_DIR)..."
-	@mkdir -p $(BUILD_DIR)
-	@cd ${BUILD_DIR} && cmake ..
+VPATH += ${BTSTACK_ROOT}/src
+VPATH += ${BTSTACK_ROOT}/src/classic
+VPATH += ${BTSTACK_ROOT}/platform/posix
 
-# Step 2: Build the project
-build: configure
-	@echo "Building project in $(BUILD_DIR)..."
-	@cmake --build $(BUILD_DIR) --target $(TARGET)
+COMMON = \
+	btstack_util.c		    \
+	hci_dump.c
 
-# Step 3: Run the tests
-test: build
-	@echo "Running tests..."
-	$(BUILD_DIR)/btstack_util_test
+COMMON_OBJ_COVERAGE = $(addprefix build-coverage/,$(COMMON:.c=.o))
+COMMON_OBJ_ASAN     = $(addprefix build-asan/,    $(COMMON:.c=.o))
 
-# Step 4: Clean the build
-clean:
-	@echo "Cleaning build directory..."
-	@rm -rf $(BUILD_DIR)
+all: coverage test
 
-coverage:
-	@echo "No coverage tests in btstack_util"
+build-coverage/btstack_util_test: $(COMMON_OBJ_COVERAGE)
+build-asan/btstack_util_test: $(COMMON_OBJ_ASAN)
 
-.PHONY: all configure build clean test coverage
+test: build-asan/btstack_util_test
+	$<
+
+coverage: build-coverage/btstack_util_test.info
+
+clean: clean-common

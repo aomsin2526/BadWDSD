@@ -63,7 +63,7 @@ void cyw43_dump_stats(void) {
     #else
     static bool reported;
     if (!reported) {
-        printf("NOTE stats printing is disabled!\n");
+        CYW43_PRINTF("NOTE stats printing is disabled!\n");
         reported = true;
     }
     #endif

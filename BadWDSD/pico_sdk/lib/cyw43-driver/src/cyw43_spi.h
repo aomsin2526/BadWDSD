@@ -122,13 +122,12 @@
 uint32_t read_reg_u32_swap(cyw43_int_t *self, uint32_t fn, uint32_t reg);
 int write_reg_u32_swap(cyw43_int_t *self, uint32_t fn, uint32_t reg, uint32_t val);
 
-// spi setup functions
+// These must be provided by a port, if the SPI bus interface is used.
 int cyw43_spi_init(cyw43_int_t *self);
 void cyw43_spi_deinit(cyw43_int_t *self);
 void cyw43_spi_gpio_setup(void);
 void cyw43_spi_reset(void);
-
-// For f1 overflow
+void cyw43_spi_set_polarity(cyw43_int_t *self, int pol);
 int cyw43_spi_transfer(cyw43_int_t *self, const uint8_t *tx, size_t tx_length, uint8_t *rx, size_t rx_length);
 
 #endif

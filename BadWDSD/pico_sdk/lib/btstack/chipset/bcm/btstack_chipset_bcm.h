@@ -47,10 +47,24 @@
 extern "C" {
 #endif
 
+#include <btstack_lc3.h>
 #include <stdint.h>
 #include "btstack_chipset.h"
 
 const btstack_chipset_t * btstack_chipset_bcm_instance(void);
+
+// Support for loading .hci init files from Flash
+// actual data provided by separate patchram.c
+extern const uint8_t brcm_patchram_buf[];
+extern const int     brcm_patch_ram_length;
+extern const char    brcm_patch_version[];
+
+/**
+ * @brief Set PatchRAM buffer used for the init script on non-POSIX systems
+ * @param data init script buffer, or NULL to fall back to the generated symbols
+ * @param size size of init script buffer in bytes
+ */
+void btstack_chipset_bcm_set_patchram(const uint8_t * data, uint32_t size);
 
 
 // Support for loading .hcd init files on POSIX systems
@@ -78,6 +92,34 @@ void btstack_chipset_bcm_set_device_name(const char * path);
  * @param enabled
  */
 void btstack_chipset_bcm_enable_init_script(int enabled);
+
+/**
+ * @Brief Identify Broadcom/Cypress/Infineon chipset by lmp_subversion
+ * If identified, device name is returned and can be used for HCI_OPCODE_HCI_READ_LOCAL_VERSION_INFORMATION
+ *
+ * @note Required for newer Controllers that require AIROC Download Mode for PatchRAM Upload
+ *
+ * @param lmp_subversion
+ * @returns device name if identified, otherwise NULL
+ */
+const char * btstack_chipset_bcm_identify_controller(uint16_t lmp_subversion);
+
+/**
+ * @brief Setup Codec Config for LC3 Offloading
+ * Asserts if size is smaller than 11
+ * @param buffer
+ * @param size of buffer
+ * @param sampling_frequency_hz
+ * @param frame_duration
+ * @param octets_per_frame
+ * @return size of config
+ */
+uint8_t btstack_chipset_bcm_create_lc3_offloading_config(
+    uint8_t * buffer,
+    uint8_t size,
+    uint16_t sampling_frequency_hz,
+    btstack_lc3_frame_duration_t frame_duration,
+    uint16_t octets_per_frame);
 
 #if defined __cplusplus
 }

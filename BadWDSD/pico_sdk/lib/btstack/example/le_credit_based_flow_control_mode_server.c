@@ -321,9 +321,11 @@ static void sm_packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *p
  * and boots the Bluetooth stack.
  */
 
-int btstack_main(void);
-int btstack_main(void)
-{
+int btstack_main(int argc, const char * argv[]);
+int btstack_main(int argc, const char * argv[]){
+    UNUSED(argc);
+    UNUSED(argv);
+
     l2cap_init();
 
     // setup SM: Display only
@@ -345,7 +347,7 @@ int btstack_main(void)
     l2cap_add_event_handler(&l2cap_event_callback_registration);
 
     // le data channel setup
-    l2cap_cbm_register_service(&packet_handler, TSPX_le_psm, LEVEL_0);
+    l2cap_cbm_register_service(&packet_handler, TSPX_le_psm, LEVEL_2);
 
     // setup advertisements
     uint16_t adv_int_min = 0x0030;

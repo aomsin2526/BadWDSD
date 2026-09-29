@@ -1,9 +1,9 @@
 #!/usr/bin/env perl
 
-# Generate main file, individual apps and solution files for MS Visual Studio
-# 2010
+# Generate main file, individual apps and solution files for
+# MS Visual Studio 2017
 #
-# Must be run from mbedTLS root or scripts directory.
+# Must be run from Mbed TLS root or scripts directory.
 # Takes no argument.
 #
 # Copyright The Mbed TLS Contributors
@@ -13,22 +13,25 @@ use warnings;
 use strict;
 use Digest::MD5 'md5_hex';
 
-my $vsx_dir = "visualc/VS2010";
+my $vsx_dir = "visualc/VS2017";
 my $vsx_ext = "vcxproj";
-my $vsx_app_tpl_file = "scripts/data_files/vs2010-app-template.$vsx_ext";
-my $vsx_main_tpl_file = "scripts/data_files/vs2010-main-template.$vsx_ext";
+my $vsx_app_tpl_file = "scripts/data_files/vs2017-app-template.$vsx_ext";
+my $vsx_main_tpl_file = "scripts/data_files/vs2017-main-template.$vsx_ext";
 my $vsx_main_file = "$vsx_dir/mbedTLS.$vsx_ext";
-my $vsx_sln_tpl_file = "scripts/data_files/vs2010-sln-template.sln";
+my $vsx_sln_tpl_file = "scripts/data_files/vs2017-sln-template.sln";
 my $vsx_sln_file = "$vsx_dir/mbedTLS.sln";
 
 my $programs_dir = 'programs';
+my $framework_programs_dir = 'framework/tests/programs';
 my $mbedtls_header_dir = 'include/mbedtls';
 my $psa_header_dir = 'include/psa';
 my $source_dir = 'library';
-my $test_source_dir = 'tests/src';
-my $test_header_dir = 'tests/include/test';
-my $test_drivers_header_dir = 'tests/include/test/drivers';
-my $test_drivers_source_dir = 'tests/src/drivers';
+my $tls_test_source_dir = 'tests/src';
+my $tls_test_header_dir = 'tests/include/test';
+my $test_source_dir = 'framework/tests/src';
+my $test_header_dir = 'framework/tests/include/test';
+my $test_drivers_header_dir = 'framework/tests/include/test/drivers';
+my $test_drivers_source_dir = 'framework/tests/src/drivers';
 
 my @thirdparty_header_dirs = qw(
     3rdparty/everest/include/everest
@@ -46,9 +49,11 @@ my @include_directories = qw(
     include
     3rdparty/everest/include/
     3rdparty/everest/include/everest
-    3rdparty/everest/include/everest/vs2010
+    3rdparty/everest/include/everest/vs2013
     3rdparty/everest/include/everest/kremlib
     tests/include
+    framework/tests/include
+    framework/tests/programs
 );
 my $include_directories = join(';', map {"../../$_"} @include_directories);
 
@@ -67,31 +72,30 @@ my @excluded_files = qw(
 my %excluded_files = ();
 foreach (@excluded_files) { $excluded_files{$_} = 1 }
 
-# Need windows line endings!
 my $vsx_hdr_tpl = <<EOT;
-    <ClInclude Include="..\\..\\{NAME}" />\r
+    <ClInclude Include="..\\..\\{NAME}" />
 EOT
 my $vsx_src_tpl = <<EOT;
-    <ClCompile Include="..\\..\\{NAME}" />\r
+    <ClCompile Include="..\\..\\{NAME}" />
 EOT
 
 my $vsx_sln_app_entry_tpl = <<EOT;
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "{APPNAME}", "{APPNAME}.vcxproj", "{GUID}"\r
-	ProjectSection(ProjectDependencies) = postProject\r
-		{46CF2D25-6A36-4189-B59C-E4815388E554} = {46CF2D25-6A36-4189-B59C-E4815388E554}\r
-	EndProjectSection\r
-EndProject\r
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "{APPNAME}", "{APPNAME}.vcxproj", "{GUID}"
+	ProjectSection(ProjectDependencies) = postProject
+		{46CF2D25-6A36-4189-B59C-E4815388E554} = {46CF2D25-6A36-4189-B59C-E4815388E554}
+	EndProjectSection
+EndProject
 EOT
 
 my $vsx_sln_conf_entry_tpl = <<EOT;
-		{GUID}.Debug|Win32.ActiveCfg = Debug|Win32\r
-		{GUID}.Debug|Win32.Build.0 = Debug|Win32\r
-		{GUID}.Debug|x64.ActiveCfg = Debug|x64\r
-		{GUID}.Debug|x64.Build.0 = Debug|x64\r
-		{GUID}.Release|Win32.ActiveCfg = Release|Win32\r
-		{GUID}.Release|Win32.Build.0 = Release|Win32\r
-		{GUID}.Release|x64.ActiveCfg = Release|x64\r
-		{GUID}.Release|x64.Build.0 = Release|x64\r
+		{GUID}.Debug|Win32.ActiveCfg = Debug|Win32
+		{GUID}.Debug|Win32.Build.0 = Debug|Win32
+		{GUID}.Debug|x64.ActiveCfg = Debug|x64
+		{GUID}.Debug|x64.Build.0 = Debug|x64
+		{GUID}.Release|Win32.ActiveCfg = Release|Win32
+		{GUID}.Release|Win32.Build.0 = Release|Win32
+		{GUID}.Release|x64.ActiveCfg = Release|x64
+		{GUID}.Release|x64.Build.0 = Release|x64
 EOT
 
 exit( main() );
@@ -105,17 +109,20 @@ sub check_dirs {
         && -d $psa_header_dir
         && -d $source_dir
         && -d $test_source_dir
+        && -d $tls_test_source_dir
         && -d $test_drivers_source_dir
         && -d $test_header_dir
+        && -d $tls_test_header_dir
         && -d $test_drivers_header_dir
-        && -d $programs_dir;
+        && -d $programs_dir
+        && -d $framework_programs_dir;
 }
 
 sub slurp_file {
     my ($filename) = @_;
 
     local $/ = undef;
-    open my $fh, '<', $filename or die "Could not read $filename\n";
+    open my $fh, '<:crlf', $filename or die "Could not read $filename\n";
     my $content = <$fh>;
     close $fh;
 
@@ -125,7 +132,7 @@ sub slurp_file {
 sub content_to_file {
     my ($content, $filename) = @_;
 
-    open my $fh, '>', $filename or die "Could not write to $filename\n";
+    open my $fh, '>:crlf', $filename or die "Could not write to $filename\n";
     print $fh $content;
     close $fh;
 }
@@ -147,31 +154,38 @@ sub gen_app {
     (my $appname = $path) =~ s/.*\\//;
     my $is_test_app = ($path =~ m/^test\\/);
 
-    my $srcs = "<ClCompile Include=\"..\\..\\programs\\$path.c\" \/>";
+    my $srcs;
+    if( $appname eq "metatest" or $appname eq "query_compile_time_config" or
+        $appname eq "query_included_headers" or $appname eq "zeroize" ) {
+        $srcs = "<ClCompile Include=\"..\\..\\framework\\tests\\programs\\$appname.c\" \/>";
+    } else {
+        $srcs = "<ClCompile Include=\"..\\..\\programs\\$path.c\" \/>";
+    }
+
     if( $appname eq "ssl_client2" or $appname eq "ssl_server2" or
         $appname eq "query_compile_time_config" ) {
-        $srcs .= "\r\n    <ClCompile Include=\"..\\..\\programs\\test\\query_config.c\" \/>";
+        $srcs .= "\n    <ClCompile Include=\"..\\..\\programs\\test\\query_config.c\" \/>";
     }
     if( $appname eq "ssl_client2" or $appname eq "ssl_server2" ) {
-        $srcs .= "\r\n    <ClCompile Include=\"..\\..\\programs\\ssl\\ssl_test_lib.c\" \/>";
+        $srcs .= "\n    <ClCompile Include=\"..\\..\\programs\\ssl\\ssl_test_lib.c\" \/>";
     }
 
     my $content = $template;
     $content =~ s/<SOURCES>/$srcs/g;
     $content =~ s/<APPNAME>/$appname/g;
     $content =~ s/<GUID>/$guid/g;
-    $content =~ s/INCLUDE_DIRECTORIES\r\n/($is_test_app ?
-                                           $library_include_directories :
-                                           $include_directories)/ge;
+    $content =~ s/INCLUDE_DIRECTORIES\n/($is_test_app ?
+                                         $library_include_directories :
+                                         $include_directories)/ge;
 
     content_to_file( $content, "$dir/$appname.$ext" );
 }
 
 sub get_app_list {
-    my $app_list = `cd $programs_dir && VERBOSE_LOGS=1 make list`;
-    die "make list failed: $!\n" if $?;
-
-    return split /\s+/, $app_list;
+    my $makefile_contents = slurp_file('programs/Makefile');
+    $makefile_contents =~ /\n\s*APPS\s*=[\\\s]*(.*?)(?<!\\)[\#\n]/s
+      or die "Cannot find APPS = ... in programs/Makefile\n";
+    return split /(?:\s|\\)+/, $1;
 }
 
 sub gen_app_files {
@@ -205,9 +219,9 @@ sub gen_main_file {
     my $source_entries = gen_entry_list( $src_tpl, @$sources );
 
     my $out = slurp_file( $main_tpl );
-    $out =~ s/SOURCE_ENTRIES\r\n/$source_entries/m;
-    $out =~ s/HEADER_ENTRIES\r\n/$header_entries/m;
-    $out =~ s/INCLUDE_DIRECTORIES\r\n/$library_include_directories/g;
+    $out =~ s/SOURCE_ENTRIES\n/$source_entries/m;
+    $out =~ s/HEADER_ENTRIES\n/$header_entries/m;
+    $out =~ s/INCLUDE_DIRECTORIES\n/$library_include_directories/g;
 
     content_to_file( $out, $main_out );
 }
@@ -233,8 +247,8 @@ sub gen_vsx_solution {
     }
 
     my $out = slurp_file( $vsx_sln_tpl_file );
-    $out =~ s/APP_ENTRIES\r\n/$app_entries/m;
-    $out =~ s/CONF_ENTRIES\r\n/$conf_entries/m;
+    $out =~ s/APP_ENTRIES\n/$app_entries/m;
+    $out =~ s/CONF_ENTRIES\n/$conf_entries/m;
 
     content_to_file( $out, $vsx_sln_file );
 }
@@ -248,7 +262,7 @@ sub del_vsx_files {
 sub main {
     if( ! check_dirs() ) {
         chdir '..' or die;
-        check_dirs or die "Must but run from mbedTLS root or scripts dir\n";
+        check_dirs or die "Must be run from Mbed TLS root or scripts dir\n";
     }
 
     # Remove old files to ensure that, for example, project files from deleted
@@ -260,14 +274,17 @@ sub main {
                        $mbedtls_header_dir,
                        $psa_header_dir,
                        $test_header_dir,
+                       $tls_test_header_dir,
                        $test_drivers_header_dir,
                        $source_dir,
+                       $framework_programs_dir,
                        @thirdparty_header_dirs,
                       );
     my @headers = (map { <$_/*.h> } @header_dirs);
     my @source_dirs = (
                        $source_dir,
                        $test_source_dir,
+                       $tls_test_source_dir,
                        $test_drivers_source_dir,
                        @thirdparty_source_dirs,
                       );

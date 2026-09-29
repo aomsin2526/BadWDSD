@@ -127,19 +127,18 @@ static void sm_peripheral_setup(void){
      */
 
     // LE Legacy Pairing, Just Works
+    // sm_set_secure_connections_only_mode(false);
     // sm_set_io_capabilities(IO_CAPABILITY_NO_INPUT_NO_OUTPUT);
     // sm_set_authentication_requirements(0);
 
     // LE Legacy Pairing, Passkey entry initiator enter, responder (us) displays
+    // sm_set_secure_connections_only_mode(false);
     // sm_set_io_capabilities(IO_CAPABILITY_DISPLAY_ONLY);
     // sm_set_authentication_requirements(SM_AUTHREQ_MITM_PROTECTION);
     // sm_use_fixed_passkey_in_display_role(123456);
 
 #ifdef ENABLE_LE_SECURE_CONNECTIONS
-
-    // enable LE Secure Connections Only mode - disables Legacy pairing
-    // sm_set_secure_connections_only_mode(true);
-
+    
     // LE Secure Connections, Just Works
     // sm_set_io_capabilities(IO_CAPABILITY_NO_INPUT_NO_OUTPUT);
     // sm_set_authentication_requirements(SM_AUTHREQ_SECURE_CONNECTION);
@@ -231,7 +230,7 @@ static void sm_packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *p
         case SM_EVENT_PAIRING_COMPLETE:
             switch (sm_event_pairing_complete_get_status(packet)){
                 case ERROR_CODE_SUCCESS:
-                    printf("Pairing complete, success\n");
+                    printf("Pairing complete, success. CTKD active %u\n", sm_event_pairing_complete_get_ctkd_active(packet));
                     break;
                 case ERROR_CODE_CONNECTION_TIMEOUT:
                     printf("Pairing failed, timeout\n");
@@ -342,9 +341,11 @@ static void hci_packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *
 
 /* LISTING_END */
 
-int btstack_main(void);
-int btstack_main(void)
-{
+int btstack_main(int argc, const char * argv[]);
+int btstack_main(int argc, const char * argv[]){
+    UNUSED(argc);
+    UNUSED(argv);
+
     sm_peripheral_setup();
 
     // turn on!

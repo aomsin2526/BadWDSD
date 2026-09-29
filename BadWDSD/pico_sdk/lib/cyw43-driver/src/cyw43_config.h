@@ -53,11 +53,39 @@
 #define CYW43_CLEAR_SDIO_INT (0)
 #endif
 
+#ifndef CYW43_INCLUDE_LEGACY_F1_OVERFLOW_WORKAROUND_VARIABLES
+#define CYW43_INCLUDE_LEGACY_F1_OVERFLOW_WORKAROUND_VARIABLES (0)
+#endif
+
+// The following pins can be defined, depending on the configuration:
+// - CYW43_PIN_RFSW_VDD         - RF-switch power (active high)
+// - CYW43_PIN_RFSW_SELECT      - RF-switch select
+// - CYW43_PIN_WL_REG_ON        - WL power on (active high)
+// - CYW43_PIN_WL_HOST_WAKE     - for SDIO or SPI transport
+// - CYW43_PIN_WL_IRQ           - the gSPI IRQ line
+// - CYW43_PIN_WL_SDIO_1        - for SDIO transport
+// - CYW43_PIN_BT_REG_ON        - BT power on (active high)
+// - CYW43_PIN_BT_HOST_WAKE     - for BT HCI UART transport
+// - CYW43_PIN_BT_DEV_WAKE      - for BT HCI UART transport
+// - CYW43_PIN_BT_CTS           - for BT HCI UART transport, used to wait for CTS to go low
+
+// Legacy pin configuration CYW43_PIN_WL_RFSW_VDD is renamed to CYW43_PIN_RFSW_VDD.
+#ifdef CYW43_PIN_WL_RFSW_VDD
+#define CYW43_PIN_RFSW_VDD CYW43_PIN_WL_RFSW_VDD
+#endif
+
 // Firmware configuration.
 
 // Whether Bluetooth support is enabled.
+// This option uses the WiFi SPI/SDIO interface as the Bluetooth transport.
 #ifndef CYW43_ENABLE_BLUETOOTH
 #define CYW43_ENABLE_BLUETOOTH (0)
+#endif
+
+// Whether Bluetooth support is enabled.
+// This option uses a UART as the Bluetooth transport.
+#ifndef CYW43_ENABLE_BLUETOOTH_OVER_UART
+#define CYW43_ENABLE_BLUETOOTH_OVER_UART (0)
 #endif
 
 // This include should define:
@@ -96,6 +124,11 @@
 
 #ifndef CYW43_SLEEP_MAX
 #define CYW43_SLEEP_MAX (50)
+#endif
+
+// Called while waiting for an incoming character on the BT HCI UART.
+#ifndef CYW43_HAL_UART_READCHAR_BLOCKING_WAIT
+#define CYW43_HAL_UART_READCHAR_BLOCKING_WAIT cyw43_delay_us(10)
 #endif
 
 // Miscellaneous configuration.
@@ -175,4 +208,16 @@
 
 #ifndef CYW43_DEFAULT_IP_DNS
 #define CYW43_DEFAULT_IP_DNS LWIP_MAKEU32(8, 8, 8, 8)
+#endif
+
+// Hook for any additional TCP/IP initialization than needs to be done.
+// Called after the netif specified by `itf` has been set up.
+#ifndef CYW43_CB_TCPIP_INIT_EXTRA
+#define CYW43_CB_TCPIP_INIT_EXTRA(self, itf) do { } while (0)
+#endif
+
+// Hook for any additional TCP/IP deinitialization than needs to be done.
+// Called before the netif specified by `itf` is removed.
+#ifndef CYW43_CB_TCPIP_DEINIT_EXTRA
+#define CYW43_CB_TCPIP_DEINIT_EXTRA(self, itf) do { } while (0)
 #endif

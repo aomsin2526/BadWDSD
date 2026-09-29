@@ -56,11 +56,14 @@ void btstack_run_loop_add_timer(btstack_timer_source_t * timer){
 }
 
 int btstack_run_loop_remove_timer(btstack_timer_source_t * timer){
+    UNUSED(timer);
     btstack_timer = NULL;
     return 1;
 }
 
 void btstack_run_loop_set_timer(btstack_timer_source_t * timer, uint32_t timeout_in_ms){
+    UNUSED(timer);
+    UNUSED(timeout_in_ms);
 }
 
 void btstack_run_loop_set_timer_handler(btstack_timer_source_t * timer, void (*process)(btstack_timer_source_t * _timer)){
@@ -190,7 +193,7 @@ TEST_GROUP(DEVICE_INFORMATION_SERVICE_CLIENT){
     }
 
     void setup_service(bool add_characteristic){
-        uint8_t buffer[] = {0x01, 0x02};
+        static uint8_t buffer[] = {0x01, 0x02};
         service = mock_gatt_client_add_primary_service_uuid16(ORG_BLUETOOTH_SERVICE_DEVICE_INFORMATION);
         
         if (!add_characteristic) return;

@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.5)
 
-project(test-tlv-test)
+project(test-btstack-util)
 
 set (BTSTACK_ROOT ${CMAKE_SOURCE_DIR}/../../)
 
@@ -8,7 +8,7 @@ set (BTSTACK_ROOT ${CMAKE_SOURCE_DIR}/../../)
 find_package(PkgConfig REQUIRED)
 
 # CppuTest
-pkg_check_modules(CPPUTEST REQUIRED CppuTest)
+pkg_check_modules(CPPUTEST REQUIRED cpputest)
 include_directories(${CPPUTEST_INCLUDE_DIRS})
 link_directories(${CPPUTEST_LIBRARY_DIRS})
 link_libraries(${CPPUTEST_LIBRARIES})
@@ -18,7 +18,10 @@ include_directories(../../3rd-party/rijndael)
 include_directories(../../platform/embedded)
 include_directories(../../platform/posix)
 include_directories(../../src)
-include_directories(.)
+include_directories(..)
+
+# allow to test assert
+add_compile_definitions(UNIT_TEST_ASSERT)
 
 # Enable ASAN
 add_compile_options( -g -fsanitize=address)

@@ -409,6 +409,7 @@ int sdp_handle_service_search_attribute_request(uint8_t * packet, uint16_t remot
     }
     // assert attributeIDList is contained in param_len
     if (!attributeIDListLen) return 0;
+    param_len -= attributeIDListLen;
     // assert continuation state len is contained in param_len
     if (param_len < 1) return 0;
     uint8_t * continuationState = &packet[5+serviceSearchPatternLen+2+attributeIDListLen];
@@ -425,9 +426,18 @@ int sdp_handle_service_search_attribute_request(uint8_t * packet, uint16_t remot
     // continuation state contains: byte offset into this service record
     uint16_t continuation_service_index = 0;
     uint16_t continuation_offset = 0;
-    if (continuationState[0] == 4){
-        continuation_service_index = big_endian_read_16(continuationState, 1);
-        continuation_offset = big_endian_read_16(continuationState, 3);
+    switch (continuationState[0]) {
+        case 0:
+            // initial request
+            break;
+        case 4:
+            // get continuation state
+            continuation_service_index = big_endian_read_16(continuationState, 1);
+            continuation_offset = big_endian_read_16(continuationState, 3);
+            break;
+        default:
+            // invalidate continuation state
+            return sdp_create_error_response(transaction_id, 0x0005); /// invalid continnuation state
     }
 
     // log_info("--> sdp_handle_service_search_attribute_request, cont %u/%u, max %u", continuation_service_index, continuation_offset, maximumAttributeByteCount);
@@ -494,7 +504,12 @@ int sdp_handle_service_search_attribute_request(uint8_t * packet, uint16_t remot
     }
     
     uint16_t attributeListsByteCount = pos - 7;
-    
+
+    // avoid emptry response (most likely invalid continuation state)
+    if (attributeListsByteCount < 2) {
+        return sdp_create_error_response(transaction_id, 0x0005); /// invalid continnuation state
+    }
+
     // Continuation State
     if (continuation){
         sdp_response_buffer[pos++] = 4;
@@ -551,6 +566,7 @@ static void sdp_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *p
 	switch (packet_type) {
 			
 		case L2CAP_DATA_PACKET:
+            if (size < 5u) return;
             pdu_id = (sdp_pdu_id_t) packet[0];
             transaction_id = big_endian_read_16(packet, 1);
             param_len = big_endian_read_16(packet, 3);

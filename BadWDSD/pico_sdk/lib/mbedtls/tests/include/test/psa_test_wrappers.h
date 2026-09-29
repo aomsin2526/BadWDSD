@@ -11,17 +11,12 @@
 extern "C" {
 #endif
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include <mbedtls/build_info.h>
 
 #if defined(MBEDTLS_PSA_CRYPTO_C) && defined(MBEDTLS_TEST_HOOKS) && \
     !defined(RECORD_PSA_STATUS_COVERAGE_LOG)
 
 #include <psa/crypto.h>
-
 #include <test/memory.h>
 #include <test/psa_crypto_helpers.h>
 #include <test/psa_test_wrappers.h>
@@ -50,6 +45,11 @@ psa_status_t mbedtls_test_wrap_mbedtls_psa_register_se_key(
     mbedtls_test_wrap_mbedtls_psa_register_se_key(arg0_attributes)
 #endif /* defined(MBEDTLS_PSA_CRYPTO_SE_C) */
 
+psa_status_t mbedtls_test_wrap_psa_aead_abort(
+    psa_aead_operation_t *arg0_operation);
+#define psa_aead_abort(arg0_operation) \
+    mbedtls_test_wrap_psa_aead_abort(arg0_operation)
+
 psa_status_t mbedtls_test_wrap_psa_aead_decrypt(
     mbedtls_svc_key_id_t arg0_key,
     psa_algorithm_t arg1_alg,
@@ -65,6 +65,13 @@ psa_status_t mbedtls_test_wrap_psa_aead_decrypt(
 #define psa_aead_decrypt(arg0_key, arg1_alg, arg2_nonce, arg3_nonce_length, arg4_additional_data, arg5_additional_data_length, arg6_ciphertext, arg7_ciphertext_length, arg8_plaintext, arg9_plaintext_size, arg10_plaintext_length) \
     mbedtls_test_wrap_psa_aead_decrypt(arg0_key, arg1_alg, arg2_nonce, arg3_nonce_length, arg4_additional_data, arg5_additional_data_length, arg6_ciphertext, arg7_ciphertext_length, arg8_plaintext, arg9_plaintext_size, arg10_plaintext_length)
 
+psa_status_t mbedtls_test_wrap_psa_aead_decrypt_setup(
+    psa_aead_operation_t *arg0_operation,
+    mbedtls_svc_key_id_t arg1_key,
+    psa_algorithm_t arg2_alg);
+#define psa_aead_decrypt_setup(arg0_operation, arg1_key, arg2_alg) \
+    mbedtls_test_wrap_psa_aead_decrypt_setup(arg0_operation, arg1_key, arg2_alg)
+
 psa_status_t mbedtls_test_wrap_psa_aead_encrypt(
     mbedtls_svc_key_id_t arg0_key,
     psa_algorithm_t arg1_alg,
@@ -79,6 +86,73 @@ psa_status_t mbedtls_test_wrap_psa_aead_encrypt(
     size_t *arg10_ciphertext_length);
 #define psa_aead_encrypt(arg0_key, arg1_alg, arg2_nonce, arg3_nonce_length, arg4_additional_data, arg5_additional_data_length, arg6_plaintext, arg7_plaintext_length, arg8_ciphertext, arg9_ciphertext_size, arg10_ciphertext_length) \
     mbedtls_test_wrap_psa_aead_encrypt(arg0_key, arg1_alg, arg2_nonce, arg3_nonce_length, arg4_additional_data, arg5_additional_data_length, arg6_plaintext, arg7_plaintext_length, arg8_ciphertext, arg9_ciphertext_size, arg10_ciphertext_length)
+
+psa_status_t mbedtls_test_wrap_psa_aead_encrypt_setup(
+    psa_aead_operation_t *arg0_operation,
+    mbedtls_svc_key_id_t arg1_key,
+    psa_algorithm_t arg2_alg);
+#define psa_aead_encrypt_setup(arg0_operation, arg1_key, arg2_alg) \
+    mbedtls_test_wrap_psa_aead_encrypt_setup(arg0_operation, arg1_key, arg2_alg)
+
+psa_status_t mbedtls_test_wrap_psa_aead_finish(
+    psa_aead_operation_t *arg0_operation,
+    uint8_t *arg1_ciphertext,
+    size_t arg2_ciphertext_size,
+    size_t *arg3_ciphertext_length,
+    uint8_t *arg4_tag,
+    size_t arg5_tag_size,
+    size_t *arg6_tag_length);
+#define psa_aead_finish(arg0_operation, arg1_ciphertext, arg2_ciphertext_size, arg3_ciphertext_length, arg4_tag, arg5_tag_size, arg6_tag_length) \
+    mbedtls_test_wrap_psa_aead_finish(arg0_operation, arg1_ciphertext, arg2_ciphertext_size, arg3_ciphertext_length, arg4_tag, arg5_tag_size, arg6_tag_length)
+
+psa_status_t mbedtls_test_wrap_psa_aead_generate_nonce(
+    psa_aead_operation_t *arg0_operation,
+    uint8_t *arg1_nonce,
+    size_t arg2_nonce_size,
+    size_t *arg3_nonce_length);
+#define psa_aead_generate_nonce(arg0_operation, arg1_nonce, arg2_nonce_size, arg3_nonce_length) \
+    mbedtls_test_wrap_psa_aead_generate_nonce(arg0_operation, arg1_nonce, arg2_nonce_size, arg3_nonce_length)
+
+psa_status_t mbedtls_test_wrap_psa_aead_set_lengths(
+    psa_aead_operation_t *arg0_operation,
+    size_t arg1_ad_length,
+    size_t arg2_plaintext_length);
+#define psa_aead_set_lengths(arg0_operation, arg1_ad_length, arg2_plaintext_length) \
+    mbedtls_test_wrap_psa_aead_set_lengths(arg0_operation, arg1_ad_length, arg2_plaintext_length)
+
+psa_status_t mbedtls_test_wrap_psa_aead_set_nonce(
+    psa_aead_operation_t *arg0_operation,
+    const uint8_t *arg1_nonce,
+    size_t arg2_nonce_length);
+#define psa_aead_set_nonce(arg0_operation, arg1_nonce, arg2_nonce_length) \
+    mbedtls_test_wrap_psa_aead_set_nonce(arg0_operation, arg1_nonce, arg2_nonce_length)
+
+psa_status_t mbedtls_test_wrap_psa_aead_update(
+    psa_aead_operation_t *arg0_operation,
+    const uint8_t *arg1_input,
+    size_t arg2_input_length,
+    uint8_t *arg3_output,
+    size_t arg4_output_size,
+    size_t *arg5_output_length);
+#define psa_aead_update(arg0_operation, arg1_input, arg2_input_length, arg3_output, arg4_output_size, arg5_output_length) \
+    mbedtls_test_wrap_psa_aead_update(arg0_operation, arg1_input, arg2_input_length, arg3_output, arg4_output_size, arg5_output_length)
+
+psa_status_t mbedtls_test_wrap_psa_aead_update_ad(
+    psa_aead_operation_t *arg0_operation,
+    const uint8_t *arg1_input,
+    size_t arg2_input_length);
+#define psa_aead_update_ad(arg0_operation, arg1_input, arg2_input_length) \
+    mbedtls_test_wrap_psa_aead_update_ad(arg0_operation, arg1_input, arg2_input_length)
+
+psa_status_t mbedtls_test_wrap_psa_aead_verify(
+    psa_aead_operation_t *arg0_operation,
+    uint8_t *arg1_plaintext,
+    size_t arg2_plaintext_size,
+    size_t *arg3_plaintext_length,
+    const uint8_t *arg4_tag,
+    size_t arg5_tag_length);
+#define psa_aead_verify(arg0_operation, arg1_plaintext, arg2_plaintext_size, arg3_plaintext_length, arg4_tag, arg5_tag_length) \
+    mbedtls_test_wrap_psa_aead_verify(arg0_operation, arg1_plaintext, arg2_plaintext_size, arg3_plaintext_length, arg4_tag, arg5_tag_length)
 
 psa_status_t mbedtls_test_wrap_psa_asymmetric_decrypt(
     mbedtls_svc_key_id_t arg0_key,
@@ -187,6 +261,68 @@ psa_status_t mbedtls_test_wrap_psa_copy_key(
 #define psa_copy_key(arg0_source_key, arg1_attributes, arg2_target_key) \
     mbedtls_test_wrap_psa_copy_key(arg0_source_key, arg1_attributes, arg2_target_key)
 
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_crypto_driver_pake_get_cipher_suite(
+    const psa_crypto_driver_pake_inputs_t *arg0_inputs,
+    psa_pake_cipher_suite_t *arg1_cipher_suite);
+#define psa_crypto_driver_pake_get_cipher_suite(arg0_inputs, arg1_cipher_suite) \
+    mbedtls_test_wrap_psa_crypto_driver_pake_get_cipher_suite(arg0_inputs, arg1_cipher_suite)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_crypto_driver_pake_get_password(
+    const psa_crypto_driver_pake_inputs_t *arg0_inputs,
+    uint8_t *arg1_buffer,
+    size_t arg2_buffer_size,
+    size_t *arg3_buffer_length);
+#define psa_crypto_driver_pake_get_password(arg0_inputs, arg1_buffer, arg2_buffer_size, arg3_buffer_length) \
+    mbedtls_test_wrap_psa_crypto_driver_pake_get_password(arg0_inputs, arg1_buffer, arg2_buffer_size, arg3_buffer_length)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_crypto_driver_pake_get_password_len(
+    const psa_crypto_driver_pake_inputs_t *arg0_inputs,
+    size_t *arg1_password_len);
+#define psa_crypto_driver_pake_get_password_len(arg0_inputs, arg1_password_len) \
+    mbedtls_test_wrap_psa_crypto_driver_pake_get_password_len(arg0_inputs, arg1_password_len)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_crypto_driver_pake_get_peer(
+    const psa_crypto_driver_pake_inputs_t *arg0_inputs,
+    uint8_t *arg1_peer_id,
+    size_t arg2_peer_id_size,
+    size_t *arg3_peer_id_length);
+#define psa_crypto_driver_pake_get_peer(arg0_inputs, arg1_peer_id, arg2_peer_id_size, arg3_peer_id_length) \
+    mbedtls_test_wrap_psa_crypto_driver_pake_get_peer(arg0_inputs, arg1_peer_id, arg2_peer_id_size, arg3_peer_id_length)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_crypto_driver_pake_get_peer_len(
+    const psa_crypto_driver_pake_inputs_t *arg0_inputs,
+    size_t *arg1_peer_len);
+#define psa_crypto_driver_pake_get_peer_len(arg0_inputs, arg1_peer_len) \
+    mbedtls_test_wrap_psa_crypto_driver_pake_get_peer_len(arg0_inputs, arg1_peer_len)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_crypto_driver_pake_get_user(
+    const psa_crypto_driver_pake_inputs_t *arg0_inputs,
+    uint8_t *arg1_user_id,
+    size_t arg2_user_id_size,
+    size_t *arg3_user_id_len);
+#define psa_crypto_driver_pake_get_user(arg0_inputs, arg1_user_id, arg2_user_id_size, arg3_user_id_len) \
+    mbedtls_test_wrap_psa_crypto_driver_pake_get_user(arg0_inputs, arg1_user_id, arg2_user_id_size, arg3_user_id_len)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_crypto_driver_pake_get_user_len(
+    const psa_crypto_driver_pake_inputs_t *arg0_inputs,
+    size_t *arg1_user_len);
+#define psa_crypto_driver_pake_get_user_len(arg0_inputs, arg1_user_len) \
+    mbedtls_test_wrap_psa_crypto_driver_pake_get_user_len(arg0_inputs, arg1_user_len)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
 psa_status_t mbedtls_test_wrap_psa_crypto_init(void);
 #define psa_crypto_init() \
     mbedtls_test_wrap_psa_crypto_init()
@@ -217,6 +353,23 @@ psa_status_t mbedtls_test_wrap_psa_generate_key(
     mbedtls_svc_key_id_t *arg1_key);
 #define psa_generate_key(arg0_attributes, arg1_key) \
     mbedtls_test_wrap_psa_generate_key(arg0_attributes, arg1_key)
+
+psa_status_t mbedtls_test_wrap_psa_generate_key_custom(
+    const psa_key_attributes_t *arg0_attributes,
+    const psa_custom_key_parameters_t *arg1_custom,
+    const uint8_t *arg2_custom_data,
+    size_t arg3_custom_data_length,
+    mbedtls_svc_key_id_t *arg4_key);
+#define psa_generate_key_custom(arg0_attributes, arg1_custom, arg2_custom_data, arg3_custom_data_length, arg4_key) \
+    mbedtls_test_wrap_psa_generate_key_custom(arg0_attributes, arg1_custom, arg2_custom_data, arg3_custom_data_length, arg4_key)
+
+psa_status_t mbedtls_test_wrap_psa_generate_key_ext(
+    const psa_key_attributes_t *arg0_attributes,
+    const psa_key_production_parameters_t *arg1_params,
+    size_t arg2_params_data_length,
+    mbedtls_svc_key_id_t *arg3_key);
+#define psa_generate_key_ext(arg0_attributes, arg1_params, arg2_params_data_length, arg3_key) \
+    mbedtls_test_wrap_psa_generate_key_ext(arg0_attributes, arg1_params, arg2_params_data_length, arg3_key)
 
 psa_status_t mbedtls_test_wrap_psa_generate_random(
     uint8_t *arg0_output,
@@ -315,6 +468,13 @@ psa_status_t mbedtls_test_wrap_psa_key_derivation_input_bytes(
 #define psa_key_derivation_input_bytes(arg0_operation, arg1_step, arg2_data, arg3_data_length) \
     mbedtls_test_wrap_psa_key_derivation_input_bytes(arg0_operation, arg1_step, arg2_data, arg3_data_length)
 
+psa_status_t mbedtls_test_wrap_psa_key_derivation_input_integer(
+    psa_key_derivation_operation_t *arg0_operation,
+    psa_key_derivation_step_t arg1_step,
+    uint64_t arg2_value);
+#define psa_key_derivation_input_integer(arg0_operation, arg1_step, arg2_value) \
+    mbedtls_test_wrap_psa_key_derivation_input_integer(arg0_operation, arg1_step, arg2_value)
+
 psa_status_t mbedtls_test_wrap_psa_key_derivation_input_key(
     psa_key_derivation_operation_t *arg0_operation,
     psa_key_derivation_step_t arg1_step,
@@ -344,6 +504,25 @@ psa_status_t mbedtls_test_wrap_psa_key_derivation_output_key(
     mbedtls_svc_key_id_t *arg2_key);
 #define psa_key_derivation_output_key(arg0_attributes, arg1_operation, arg2_key) \
     mbedtls_test_wrap_psa_key_derivation_output_key(arg0_attributes, arg1_operation, arg2_key)
+
+psa_status_t mbedtls_test_wrap_psa_key_derivation_output_key_custom(
+    const psa_key_attributes_t *arg0_attributes,
+    psa_key_derivation_operation_t *arg1_operation,
+    const psa_custom_key_parameters_t *arg2_custom,
+    const uint8_t *arg3_custom_data,
+    size_t arg4_custom_data_length,
+    mbedtls_svc_key_id_t *arg5_key);
+#define psa_key_derivation_output_key_custom(arg0_attributes, arg1_operation, arg2_custom, arg3_custom_data, arg4_custom_data_length, arg5_key) \
+    mbedtls_test_wrap_psa_key_derivation_output_key_custom(arg0_attributes, arg1_operation, arg2_custom, arg3_custom_data, arg4_custom_data_length, arg5_key)
+
+psa_status_t mbedtls_test_wrap_psa_key_derivation_output_key_ext(
+    const psa_key_attributes_t *arg0_attributes,
+    psa_key_derivation_operation_t *arg1_operation,
+    const psa_key_production_parameters_t *arg2_params,
+    size_t arg3_params_data_length,
+    mbedtls_svc_key_id_t *arg4_key);
+#define psa_key_derivation_output_key_ext(arg0_attributes, arg1_operation, arg2_params, arg3_params_data_length, arg4_key) \
+    mbedtls_test_wrap_psa_key_derivation_output_key_ext(arg0_attributes, arg1_operation, arg2_params, arg3_params_data_length, arg4_key)
 
 psa_status_t mbedtls_test_wrap_psa_key_derivation_set_capacity(
     psa_key_derivation_operation_t *arg0_operation,
@@ -419,10 +598,103 @@ psa_status_t mbedtls_test_wrap_psa_mac_verify_setup(
 #define psa_mac_verify_setup(arg0_operation, arg1_key, arg2_alg) \
     mbedtls_test_wrap_psa_mac_verify_setup(arg0_operation, arg1_key, arg2_alg)
 
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_pake_abort(
+    psa_pake_operation_t *arg0_operation);
+#define psa_pake_abort(arg0_operation) \
+    mbedtls_test_wrap_psa_pake_abort(arg0_operation)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_pake_get_implicit_key(
+    psa_pake_operation_t *arg0_operation,
+    psa_key_derivation_operation_t *arg1_output);
+#define psa_pake_get_implicit_key(arg0_operation, arg1_output) \
+    mbedtls_test_wrap_psa_pake_get_implicit_key(arg0_operation, arg1_output)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_pake_input(
+    psa_pake_operation_t *arg0_operation,
+    psa_pake_step_t arg1_step,
+    const uint8_t *arg2_input,
+    size_t arg3_input_length);
+#define psa_pake_input(arg0_operation, arg1_step, arg2_input, arg3_input_length) \
+    mbedtls_test_wrap_psa_pake_input(arg0_operation, arg1_step, arg2_input, arg3_input_length)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_pake_output(
+    psa_pake_operation_t *arg0_operation,
+    psa_pake_step_t arg1_step,
+    uint8_t *arg2_output,
+    size_t arg3_output_size,
+    size_t *arg4_output_length);
+#define psa_pake_output(arg0_operation, arg1_step, arg2_output, arg3_output_size, arg4_output_length) \
+    mbedtls_test_wrap_psa_pake_output(arg0_operation, arg1_step, arg2_output, arg3_output_size, arg4_output_length)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_pake_set_password_key(
+    psa_pake_operation_t *arg0_operation,
+    mbedtls_svc_key_id_t arg1_password);
+#define psa_pake_set_password_key(arg0_operation, arg1_password) \
+    mbedtls_test_wrap_psa_pake_set_password_key(arg0_operation, arg1_password)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_pake_set_peer(
+    psa_pake_operation_t *arg0_operation,
+    const uint8_t *arg1_peer_id,
+    size_t arg2_peer_id_len);
+#define psa_pake_set_peer(arg0_operation, arg1_peer_id, arg2_peer_id_len) \
+    mbedtls_test_wrap_psa_pake_set_peer(arg0_operation, arg1_peer_id, arg2_peer_id_len)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_pake_set_role(
+    psa_pake_operation_t *arg0_operation,
+    psa_pake_role_t arg1_role);
+#define psa_pake_set_role(arg0_operation, arg1_role) \
+    mbedtls_test_wrap_psa_pake_set_role(arg0_operation, arg1_role)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_pake_set_user(
+    psa_pake_operation_t *arg0_operation,
+    const uint8_t *arg1_user_id,
+    size_t arg2_user_id_len);
+#define psa_pake_set_user(arg0_operation, arg1_user_id, arg2_user_id_len) \
+    mbedtls_test_wrap_psa_pake_set_user(arg0_operation, arg1_user_id, arg2_user_id_len)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
+#if defined(PSA_WANT_ALG_SOME_PAKE)
+psa_status_t mbedtls_test_wrap_psa_pake_setup(
+    psa_pake_operation_t *arg0_operation,
+    const psa_pake_cipher_suite_t *arg1_cipher_suite);
+#define psa_pake_setup(arg0_operation, arg1_cipher_suite) \
+    mbedtls_test_wrap_psa_pake_setup(arg0_operation, arg1_cipher_suite)
+#endif /* defined(PSA_WANT_ALG_SOME_PAKE) */
+
 psa_status_t mbedtls_test_wrap_psa_purge_key(
     mbedtls_svc_key_id_t arg0_key);
 #define psa_purge_key(arg0_key) \
     mbedtls_test_wrap_psa_purge_key(arg0_key)
+
+psa_status_t mbedtls_test_wrap_psa_random_deplete(void);
+#define psa_random_deplete() \
+    mbedtls_test_wrap_psa_random_deplete()
+
+psa_status_t mbedtls_test_wrap_psa_random_reseed(
+    const uint8_t *arg0_perso,
+    size_t arg1_perso_size);
+#define psa_random_reseed(arg0_perso, arg1_perso_size) \
+    mbedtls_test_wrap_psa_random_reseed(arg0_perso, arg1_perso_size)
+
+psa_status_t mbedtls_test_wrap_psa_random_set_prediction_resistance(
+    unsigned arg0_enabled);
+#define psa_random_set_prediction_resistance(arg0_enabled) \
+    mbedtls_test_wrap_psa_random_set_prediction_resistance(arg0_enabled)
 
 psa_status_t mbedtls_test_wrap_psa_raw_key_agreement(
     psa_algorithm_t arg0_alg,
@@ -446,6 +718,28 @@ psa_status_t mbedtls_test_wrap_psa_sign_hash(
 #define psa_sign_hash(arg0_key, arg1_alg, arg2_hash, arg3_hash_length, arg4_signature, arg5_signature_size, arg6_signature_length) \
     mbedtls_test_wrap_psa_sign_hash(arg0_key, arg1_alg, arg2_hash, arg3_hash_length, arg4_signature, arg5_signature_size, arg6_signature_length)
 
+psa_status_t mbedtls_test_wrap_psa_sign_hash_abort(
+    psa_sign_hash_interruptible_operation_t *arg0_operation);
+#define psa_sign_hash_abort(arg0_operation) \
+    mbedtls_test_wrap_psa_sign_hash_abort(arg0_operation)
+
+psa_status_t mbedtls_test_wrap_psa_sign_hash_complete(
+    psa_sign_hash_interruptible_operation_t *arg0_operation,
+    uint8_t *arg1_signature,
+    size_t arg2_signature_size,
+    size_t *arg3_signature_length);
+#define psa_sign_hash_complete(arg0_operation, arg1_signature, arg2_signature_size, arg3_signature_length) \
+    mbedtls_test_wrap_psa_sign_hash_complete(arg0_operation, arg1_signature, arg2_signature_size, arg3_signature_length)
+
+psa_status_t mbedtls_test_wrap_psa_sign_hash_start(
+    psa_sign_hash_interruptible_operation_t *arg0_operation,
+    mbedtls_svc_key_id_t arg1_key,
+    psa_algorithm_t arg2_alg,
+    const uint8_t *arg3_hash,
+    size_t arg4_hash_length);
+#define psa_sign_hash_start(arg0_operation, arg1_key, arg2_alg, arg3_hash, arg4_hash_length) \
+    mbedtls_test_wrap_psa_sign_hash_start(arg0_operation, arg1_key, arg2_alg, arg3_hash, arg4_hash_length)
+
 psa_status_t mbedtls_test_wrap_psa_sign_message(
     mbedtls_svc_key_id_t arg0_key,
     psa_algorithm_t arg1_alg,
@@ -466,6 +760,27 @@ psa_status_t mbedtls_test_wrap_psa_verify_hash(
     size_t arg5_signature_length);
 #define psa_verify_hash(arg0_key, arg1_alg, arg2_hash, arg3_hash_length, arg4_signature, arg5_signature_length) \
     mbedtls_test_wrap_psa_verify_hash(arg0_key, arg1_alg, arg2_hash, arg3_hash_length, arg4_signature, arg5_signature_length)
+
+psa_status_t mbedtls_test_wrap_psa_verify_hash_abort(
+    psa_verify_hash_interruptible_operation_t *arg0_operation);
+#define psa_verify_hash_abort(arg0_operation) \
+    mbedtls_test_wrap_psa_verify_hash_abort(arg0_operation)
+
+psa_status_t mbedtls_test_wrap_psa_verify_hash_complete(
+    psa_verify_hash_interruptible_operation_t *arg0_operation);
+#define psa_verify_hash_complete(arg0_operation) \
+    mbedtls_test_wrap_psa_verify_hash_complete(arg0_operation)
+
+psa_status_t mbedtls_test_wrap_psa_verify_hash_start(
+    psa_verify_hash_interruptible_operation_t *arg0_operation,
+    mbedtls_svc_key_id_t arg1_key,
+    psa_algorithm_t arg2_alg,
+    const uint8_t *arg3_hash,
+    size_t arg4_hash_length,
+    const uint8_t *arg5_signature,
+    size_t arg6_signature_length);
+#define psa_verify_hash_start(arg0_operation, arg1_key, arg2_alg, arg3_hash, arg4_hash_length, arg5_signature, arg6_signature_length) \
+    mbedtls_test_wrap_psa_verify_hash_start(arg0_operation, arg1_key, arg2_alg, arg3_hash, arg4_hash_length, arg5_signature, arg6_signature_length)
 
 psa_status_t mbedtls_test_wrap_psa_verify_message(
     mbedtls_svc_key_id_t arg0_key,

@@ -398,10 +398,6 @@ static uint16_t avrcp_get_num_free_bytes_for_payload(uint16_t l2cap_mtu, avrcp_c
 
 
 avctp_packet_type_t avctp_get_packet_type(avrcp_connection_t * connection, uint16_t * max_payload_size){
-    if (connection->l2cap_mtu >= AVRCP_MAX_AV_C_MESSAGE_FRAME_SIZE){
-        return AVCTP_SINGLE_PACKET;
-    }
-
     if (connection->data_offset == 0){
         uint16_t max_payload_size_for_single_packet = avrcp_get_num_free_bytes_for_payload(connection->l2cap_mtu,
                                                                  connection->command_opcode,
@@ -497,6 +493,7 @@ avrcp_connection_t * avrcp_get_connection_for_browsing_cid_for_role(avrcp_role_t
     while (btstack_linked_list_iterator_has_next(&it)){
         avrcp_connection_t * connection = (avrcp_connection_t *)btstack_linked_list_iterator_next(&it);
         if (connection->role != role) continue;
+        if (connection->browsing_connection == NULL) continue;
         if (connection->avrcp_browsing_cid != browsing_cid) continue;
         return connection;
     }
@@ -573,6 +570,7 @@ static avrcp_connection_t * avrcp_create_connection(avrcp_role_t role, bd_addr_t
 static void avrcp_finalize_connection(avrcp_connection_t * connection){
     btstack_run_loop_remove_timer(&connection->retry_timer);
     btstack_run_loop_remove_timer(&connection->controller_press_and_hold_cmd_timer);
+    btstack_run_loop_remove_timer(&connection->controller_response_cmd_timer);
     btstack_linked_list_remove(&avrcp_connections, (btstack_linked_item_t*) connection);
     btstack_memory_avrcp_connection_free(connection);
 }
@@ -1122,6 +1120,7 @@ static void avrcp_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t 
             break;
 
         case L2CAP_DATA_PACKET:
+            if (size < 1u) break;
             switch (avrcp_get_frame_type(packet[0])){
                 case AVRCP_RESPONSE_FRAME:
                     (*avrcp_controller_packet_handler)(packet_type, channel, packet, size);
@@ -1184,6 +1183,7 @@ void avrcp_trigger_sdp_query(avrcp_connection_t *connection_controller, avrcp_co
 uint8_t avrcp_connect(bd_addr_t remote_addr, uint16_t * avrcp_cid){
     btstack_assert(avrcp_controller_packet_handler != NULL);
     btstack_assert(avrcp_target_packet_handler != NULL);
+    btstack_assert(remote_addr != NULL);
 
     avrcp_connection_t * connection_controller = avrcp_get_connection_for_bd_addr_for_role(AVRCP_CONTROLLER, remote_addr);
     bool setup_active = false;

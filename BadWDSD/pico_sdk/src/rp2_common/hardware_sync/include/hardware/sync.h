@@ -51,6 +51,12 @@ extern "C" {
  * 14,15       | (\ref PICO_SPINLOCK_ID_OS1 and \ref PICO_SPINLOCK_ID_OS2). Currently reserved for exclusive use by an operating system (or other system level software) co-existing with the SDK.
  * 16-23       | (\ref PICO_SPINLOCK_ID_STRIPED_FIRST - \ref PICO_SPINLOCK_ID_STRIPED_LAST). Spin locks from this range are assigned in a round-robin fashion via \ref next_striped_spin_lock_num(). These spin locks are shared, but assigning numbers from a range reduces the probability that two higher level locking primitives using _striped_ spin locks will actually be using the same spin lock.
  * 24-31       | (\ref PICO_SPINLOCK_ID_CLAIM_FREE_FIRST - \ref PICO_SPINLOCK_ID_CLAIM_FREE_LAST). These are reserved for exclusive use and are allocated on a first come first served basis at runtime via \ref spin_lock_claim_unused()
+ *
+ * \if rp2350_specific
+ * On RP2350, when PICO_USE_SW_SPIN_LOCKS=0, the default lock numbering is altered to avoid locks
+ * affected by erratum RP2350-E2. The OS pair becomes 18-19, the striped range 20-25, and the
+ * claimable range 26-31. The PICO_SPINLOCK_ID_* macros reflect the actual numbering.
+ * \endif
  */
 
 // PICO_CONFIG: PARAM_ASSERTIONS_ENABLED_HARDWARE_SYNC, Enable/disable assertions in the hardware_sync module, type=bool, default=0, group=hardware_sync
@@ -94,6 +100,9 @@ __force_inline static void __sev(void) {
     pico_default_asm_volatile ("sev");
 #endif
 }
+#else
+// Forward declare so we don't have to #include <arm_acle.h>.
+void __sev(void);
 #endif
 
 /*! \brief Insert a WFE instruction in to the code path.
@@ -110,6 +119,9 @@ __force_inline static void __wfe(void) {
     pico_default_asm_volatile ("wfe");
 #endif
 }
+#else
+// Forward declare so we don't have to #include <arm_acle.h>.
+void __wfe(void);
 #endif
 
 /*! \brief Insert a WFI instruction in to the code path.
@@ -121,6 +133,9 @@ __force_inline static void __wfe(void) {
 __force_inline static void __wfi(void) {
     pico_default_asm_volatile("wfi");
 }
+#else
+// Forward declare so we don't have to #include <arm_acle.h>.
+void __wfi(void);
 #endif
 
 /*! \brief Insert a DMB instruction in to the code path.
@@ -201,7 +216,7 @@ __force_inline static void __mem_fence_release(void) {
 /*! \brief Explicitly disable interrupts on the calling core
  *  \ingroup hardware_sync
  */
-__force_inline static uint32_t disable_interrupts(void) {
+__force_inline static void disable_interrupts(void) {
 #ifdef __riscv
     __compiler_memory_barrier();
     riscv_clear_csr(mstatus, 8);
@@ -214,7 +229,7 @@ __force_inline static uint32_t disable_interrupts(void) {
 /*! \brief Explicitly enable interrupts on the calling core
  *  \ingroup hardware_sync
  */
-__force_inline static uint32_t enable_interrupts(void) {
+__force_inline static void enable_interrupts(void) {
 #ifdef __riscv
     __compiler_memory_barrier();
     riscv_set_csr(mstatus, 8);
@@ -363,8 +378,8 @@ bool spin_lock_is_claimed(uint lock_num);
 #define remove_volatile_cast(t, x) (t)(x)
 #define remove_volatile_cast_no_barrier(t, x) (t)(x)
 #else
-#define remove_volatile_cast(t, x) ({__compiler_memory_barrier(); Clang_Pragma("clang diagnostic push"); Clang_Pragma("clang diagnostic ignored \"-Wcast-qual\""); (t)(x); Clang_Pragma("clang diagnostic pop"); })
-#define remove_volatile_cast_no_barrier(t, x) ({ Clang_Pragma("clang diagnostic push"); Clang_Pragma("clang diagnostic ignored \"-Wcast-qual\""); (t)(x); Clang_Pragma("clang diagnostic pop"); })
+#define remove_volatile_cast(t, x) (__compiler_memory_barrier(), Clang_Pragma("clang diagnostic push") Clang_Pragma("clang diagnostic ignored \"-Wcast-qual\"") (t)(x) Clang_Pragma("clang diagnostic pop"))
+#define remove_volatile_cast_no_barrier(t, x) Clang_Pragma("clang diagnostic push") Clang_Pragma("clang diagnostic ignored \"-Wcast-qual\"") (t)(x) Clang_Pragma("clang diagnostic pop")
 #endif
 
 #ifdef __cplusplus

@@ -86,7 +86,7 @@ static btstack_packet_callback_registration_t sm_event_callback_registration;
 static void hci_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size);
 static void sm_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size);
 
-static void sm_pairing_central_setup(void){
+static void sm_pairing_central_setup(void) {
     l2cap_init();
 
     // setup SM: Display only
@@ -119,19 +119,18 @@ static void sm_pairing_central_setup(void){
      * sm_set_authentication_requirements( X | SM_AUTHREQ_BONDING)
      */
 
-    // LE Legacy Pairing, Just Works
+    // LE Legacy Pairing, Just Works - disable Secure Connections Only Mode
+    // sm_set_secure_connections_only_mode(false);
     // sm_set_io_capabilities(IO_CAPABILITY_DISPLAY_YES_NO);
     // sm_set_authentication_requirements(0);
 
     // LE Legacy Pairing, Passkey entry initiator enter, responder (us) displays
+    // sm_set_secure_connections_only_mode(false);
     // sm_set_io_capabilities(IO_CAPABILITY_DISPLAY_ONLY);
     // sm_set_authentication_requirements(SM_AUTHREQ_MITM_PROTECTION);
     // sm_use_fixed_passkey_in_display_role(FIXED_PASSKEY);
 
 #ifdef ENABLE_LE_SECURE_CONNECTIONS
-
-    // enable LE Secure Connections Only mode - disables Legacy pairing
-    // sm_set_secure_connections_only_mode(true);
 
     // LE Secure Connections, Just Works
     // sm_set_io_capabilities(IO_CAPABILITY_DISPLAY_YES_NO);
@@ -279,7 +278,7 @@ static void sm_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
         case SM_EVENT_PAIRING_COMPLETE:
             switch (sm_event_pairing_complete_get_status(packet)){
                 case ERROR_CODE_SUCCESS:
-                    printf("Pairing complete, success\n");
+                    printf("Pairing complete, success. CTKD active %u\n", sm_event_pairing_complete_get_ctkd_active(packet));
                     break;
                 case ERROR_CODE_CONNECTION_TIMEOUT:
                     printf("Pairing failed, timeout\n");
@@ -329,9 +328,11 @@ static void sm_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
 }
 /* LISTING_END */
 
-int btstack_main(void);
-int btstack_main(void)
-{
+int btstack_main(int argc, const char * argv[]);
+int btstack_main(int argc, const char * argv[]){
+    UNUSED(argc);
+    UNUSED(argv);
+
     sm_pairing_central_setup();
 
     // turn on!

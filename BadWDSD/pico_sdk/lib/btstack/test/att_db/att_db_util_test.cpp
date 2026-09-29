@@ -92,8 +92,10 @@ void CHECK_EQUAL_ARRAY(const uint8_t * expected, uint8_t * actual, int size){
 extern "C" {
 
     void att_set_db(uint8_t const * db){
+        UNUSED(db);
     }
     void hci_add_event_handler(btstack_packet_callback_registration_t * callback_handler){
+        UNUSED(callback_handler);
     }
     bool hci_can_send_command_packet_now(void){
         return true;
@@ -169,6 +171,24 @@ TEST(AttDbUtil, GattHash){
     // calc cmac
     att_db_util_hash_calc(&cmac_context, cmac_calculated, &gatt_hash_calculated, NULL);
     CHECK_EQUAL_ARRAY(gatt_database_hash_expected, cmac_calculated, 16);
+}
+
+TEST(AttDbUtil, OversizedUuid16AttributeIsRejected){
+    uint8_t value = 0;
+    uint16_t original_size = att_db_util_get_size();
+
+    att_db_util_add_descriptor_uuid16(0x1234, ATT_PROPERTY_READ, ATT_SECURITY_NONE, ATT_SECURITY_NONE, &value, UINT16_MAX);
+
+    CHECK_EQUAL(original_size, att_db_util_get_size());
+}
+
+TEST(AttDbUtil, OversizedUuid128AttributeIsRejected){
+    uint8_t value = 0;
+    uint16_t original_size = att_db_util_get_size();
+
+    att_db_util_add_descriptor_uuid128(counter_characteristic_uuid, ATT_PROPERTY_READ, ATT_SECURITY_NONE, ATT_SECURITY_NONE, &value, UINT16_MAX);
+
+    CHECK_EQUAL(original_size, att_db_util_get_size());
 }
 
 int main (int argc, const char * argv[]){

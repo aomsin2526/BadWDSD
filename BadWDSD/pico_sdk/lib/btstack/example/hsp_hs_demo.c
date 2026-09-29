@@ -57,6 +57,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "btstack.h"
 #include "sco_demo_util.h"
@@ -72,8 +73,10 @@ static const char    hsp_hs_service_name[] = "Headset Test";
 static hci_con_handle_t sco_handle = HCI_CON_HANDLE_INVALID;
 
 static char hs_cmd_buffer[100];
-// mac 2013: 
-static const char * device_addr_string = "84:38:35:65:d1:15";
+#ifndef REMOTE_ADDR_STRING
+#define REMOTE_ADDR_STRING "00:1A:7D:DA:71:01"
+#endif
+static const char * device_addr_string = REMOTE_ADDR_STRING;
 static bd_addr_t device_addr;
 
 /* @section Audio Transfer Setup 
@@ -177,6 +180,7 @@ static void stdin_process(char c){
 
 static void packet_handler(uint8_t packet_type, uint16_t channel, uint8_t * event, uint16_t event_size){
     UNUSED(channel);
+    bd_addr_t event_addr;
     uint8_t status;
 
     switch (packet_type){
@@ -191,8 +195,14 @@ static void packet_handler(uint8_t packet_type, uint16_t channel, uint8_t * even
                     if (btstack_event_state_get_state(event) != HCI_STATE_WORKING) break;
                     show_usage();
                     break;
+                case HCI_EVENT_USER_CONFIRMATION_REQUEST:
+                    printf("SSP User Confirmation Request with numeric value '%06"PRIu32"'\n", hci_event_user_confirmation_request_get_numeric_value(event));
+                    printf("Accepting Pairing - TODO: require actual user action\n");
+                    hci_event_user_confirmation_request_get_bd_addr(event, event_addr);
+                    gap_ssp_confirmation_response(event_addr);
+                    break;
                 case HCI_EVENT_SCO_CAN_SEND_NOW:
-                    sco_demo_send(sco_handle);
+                    sco_demo_send(hci_event_sco_can_send_now_get_handle(event));
                     break;
                 case HCI_EVENT_HSP_META:
                     switch (hci_event_hsp_meta_get_subevent_code(event)) {
@@ -214,8 +224,8 @@ static void packet_handler(uint8_t packet_type, uint16_t channel, uint8_t * even
                             } else {
                                 sco_handle = hsp_subevent_audio_connection_complete_get_sco_handle(event);
                                 printf("Audio connection established with SCO handle 0x%04x.\n", sco_handle);
-                                hci_request_sco_can_send_now_event();
-                            } 
+                                hci_request_sco_can_send_now_event_for_con_handle(sco_handle);
+                            }
                             break;
                         case HSP_SUBEVENT_AUDIO_DISCONNECTION_COMPLETE:
                             printf("Audio connection released.\n\n");

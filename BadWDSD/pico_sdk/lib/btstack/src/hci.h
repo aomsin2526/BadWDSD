@@ -158,6 +158,16 @@ extern "C" {
     #endif
 #endif
 
+// additional post-buffer space for packets to Bluetooth module
+// - H5 appends its optional two-byte data-integrity check after the HCI packet
+#ifndef HCI_OUTGOING_POST_BUFFER_SIZE
+    #ifdef ENABLE_H5
+        #define HCI_OUTGOING_POST_BUFFER_SIZE 2
+    #else
+        #define HCI_OUTGOING_POST_BUFFER_SIZE 0
+    #endif
+#endif
+
 // BNEP may uncompress the IP Header by 16 bytes, GATT Client requires six additional bytes for long characteristic reads
 // wih service_id + connection_id
 #ifndef HCI_INCOMING_PRE_BUFFER_SIZE
@@ -178,12 +188,21 @@ extern "C" {
 // Code+Len=2, Pkts+Opcode=3; total=5
 #define OFFSET_OF_DATA_IN_COMMAND_COMPLETE 5
 
+// Event Packet
+#define READ_EVENT_LENGTH( buffer )      ( buffer[1] )
+
 // ACL Packet
 #define READ_ACL_CONNECTION_HANDLE( buffer ) ( little_endian_read_16(buffer,0) & 0x0fff)
 #define READ_SCO_CONNECTION_HANDLE( buffer ) ( little_endian_read_16(buffer,0) & 0x0fff)
 #define READ_ISO_CONNECTION_HANDLE( buffer ) ( little_endian_read_16(buffer,0) & 0x0fff)
 #define READ_ACL_FLAGS( buffer )      ( buffer[1] >> 4 )
-#define READ_ACL_LENGTH( buffer )     (little_endian_read_16(buffer, 2))
+#define READ_ACL_LENGTH( buffer )     (  little_endian_read_16(buffer, 2)           )
+
+// SCO Packet
+#define READ_SCO_LENGTH( buffer )      ( buffer[2] )
+
+// ISO Packet
+#define READ_ISO_LENGTH( buffer )     ( (little_endian_read_16(buffer, 2)) & 0x3fff )
 
 // Sneak peak into L2CAP Packet
 #define READ_L2CAP_LENGTH(buffer)     ( little_endian_read_16(buffer, 4))
@@ -237,6 +256,17 @@ typedef enum {
 #define GAP_CONNECTION_TASK_WRITE_SUPERVISION_TIMEOUT     0x0002u
 #define GAP_CONNECTION_TASK_READ_RSSI                     0x0004u
 #define GAP_CONNECTION_TASK_LE_READ_REMOTE_FEATURES       0x0008u
+#define GAP_CONNECTION_TASK_LE_SET_PHY                    0x0010u
+#define GAP_CONNECTION_TASK_LE_FRAME_SPACE_UPDATE         0x0020u
+#define GAP_CONNECTION_TASK_LE_CONNECTION_RATE_REQUEST    0x0040u
+#define GAP_CONNECTION_TASK_LE_SET_DATA_LENGTH            0x0080u
+
+#define GAP_CONNECTION_TASK_LE_ANY                   \
+    (GAP_CONNECTION_TASK_LE_READ_REMOTE_FEATURES   | \
+     GAP_CONNECTION_TASK_LE_SET_PHY                | \
+     GAP_CONNECTION_TASK_LE_FRAME_SPACE_UPDATE     | \
+     GAP_CONNECTION_TASK_LE_CONNECTION_RATE_REQUEST | \
+     GAP_CONNECTION_TASK_LE_SET_DATA_LENGTH)
 
 /**
  * Connection State 
@@ -469,6 +499,7 @@ typedef struct sm_connection {
     int                      sm_le_db_index;
     bool                     sm_pairing_active;
     bool                     sm_reencryption_active;
+    bool                     sm_advertising_set_terminated_received;
 } sm_connection_t;
 
 //
@@ -561,14 +592,18 @@ typedef struct {
     uint32_t bonding_flags;
     uint8_t  bonding_status;
 
+    // link key type for currently active encryption
+    link_key_type_t encryption_key_type;
+
     // encryption key size (in octets)
     uint8_t encryption_key_size;
 
     // requested security level
     gap_security_level_t requested_security_level;
     
-    // link key and its type for Classic connections
-    // LTK and LTK valid flag for LE connections
+    // Classic Connection: latest link key and type for Classic connection in HCI / Little Endian
+    // - set from link key db or link key notification event
+    // LE Connection: LTK and LTK valid flag in regular / Big Endian
     link_key_t      link_key;
     link_key_type_t link_key_type;
 
@@ -615,23 +650,30 @@ typedef struct {
     uint32_t sco_established_ms;
     uint8_t  sco_tx_active;
 #endif
-    // generate sco can send now based on received packets, using timeout below
-    uint8_t  sco_tx_ready;
 
     // SCO payload length
     uint16_t sco_payload_length;
 
+    // SCO Voice Setting
+    uint16_t sco_voice_setting;
+
+    // SCO Request to Send
+    bool sco_request_to_send;
+
+    // generate sco can send now based on received packets
+    uint8_t  sco_tx_ready;
+
     // request role switch
     hci_role_t request_role;
 
-    btstack_timer_source_t timeout_sco;
 #endif /* ENABLE_CLASSIC */
 
     // authentication and other errands
     uint16_t authentication_flags;
 
     // gap connection tasks, see GAP_CONNECTION_TASK_x
-    uint16_t gap_connection_tasks;
+    uint16_t gap_connection_tasks_pending;
+    uint16_t gap_connection_tasks_active;
 
     btstack_timer_source_t timeout;
 
@@ -675,6 +717,30 @@ typedef struct {
     uint16_t le_subrate_continuation_number;
     uint16_t le_subrate_supervision_timeout;
 
+#ifdef ENABLE_LE_DATA_LENGTH_EXTENSION
+    uint16_t le_set_data_length_tx_octets;
+    uint16_t le_set_data_length_tx_time;
+#endif
+
+#ifdef ENABLE_LE_SHORTER_CONNECTION_INTERVALS
+    // LE Frame Space Update
+    uint16_t le_frame_space_min_us;
+    uint16_t le_frame_space_max_us;
+    uint8_t  le_frame_space_phys;
+    uint16_t le_frame_space_spacing_types;
+
+    // LE Connection Rate Request
+    uint16_t le_connection_rate_interval_min_us;
+    uint16_t le_connection_rate_interval_max_us;
+    uint16_t le_connection_rate_subrate_min;
+    uint16_t le_connection_rate_subrate_max;
+    uint16_t le_connection_rate_max_latency;
+    uint16_t le_connection_rate_continuation_number;
+    uint16_t le_connection_rate_supervision_timeout;
+    uint16_t le_connection_rate_min_ce_length;
+    uint16_t le_connection_rate_max_ce_length;
+#endif
+
     // LE Security Manager
     sm_connection_t sm_connection;
 
@@ -707,9 +773,6 @@ typedef struct {
 
 } hci_connection_t;
 
-#ifdef ENABLE_LE_ISOCHRONOUS_STREAMS
-
-
 typedef enum {
     HCI_ISO_TYPE_INVALID = 0,
     HCI_ISO_TYPE_BIS,
@@ -734,6 +797,7 @@ typedef enum{
     HCI_ISO_STREAM_STATE_ACTIVE,
     HCI_ISO_STREAM_STATE_W2_CLOSE,
     HCI_ISO_STREAM_STATE_W4_DISCONNECTED,
+    HCI_ISO_STREAM_STATE_DISCONNECTED,
 } hci_iso_stream_state_t;
 
 typedef struct {
@@ -757,6 +821,7 @@ typedef struct {
     hci_con_handle_t acl_handle;
 
     // connection info
+    hci_role_t role;
     uint8_t  number_of_subevents;
     uint8_t  burst_number_c_to_p;
     uint8_t  burst_number_p_to_c;
@@ -782,8 +847,13 @@ typedef struct {
     // ready to send
     bool emit_ready_to_send;
 
-} hci_iso_stream_t;
+#ifdef ENABLE_LE_AUDIO_CODEC_OFFLOAD
+    // 0: input (Host to Controller)
+    // 1: output (Controller to Host)
+    const le_audio_offload_config_t * offload_config[2];
 #endif
+} hci_iso_stream_t;
+
 
 /**
  * HCI Initialization State Machine
@@ -807,6 +877,7 @@ typedef enum hci_init_state{
     HCI_INIT_W4_CUSTOM_INIT_CSR_WARM_BOOT_LINK_RESET,
 
     HCI_INIT_W4_CUSTOM_INIT_BCM_DELAY,
+    HCI_INIT_W4_CUSTOM_INIT_BCM_RESET,
 
     // Support for Pre-Init before HCI Reset
     HCI_INIT_CUSTOM_PRE_INIT,
@@ -911,11 +982,24 @@ typedef enum hci_init_state{
 #ifdef ENABLE_LE_ISOCHRONOUS_STREAMS
     HCI_INIT_LE_SET_HOST_FEATURE_CONNECTED_ISO_STREAMS,
     HCI_INIT_W4_LE_SET_HOST_FEATURE_CONNECTED_ISO_STREAMS,
+#ifdef ENABLE_LC3_OFFLOAD_AIROC
+    HCI_INIT_LC3_OFFLOAD_IFX_CONFIGURE_DATA_PATH_0,
+    HCI_INIT_W4_LC3_OFFLOAD_IFX_CONFIGURE_DATA_PATH_0,
+    HCI_INIT_LC3_OFFLOAD_IFX_CONFIGURE_DATA_PATH_1,
+    HCI_INIT_W4_LC3_OFFLOAD_IFX_CONFIGURE_DATA_PATH_1,
+#endif
 #endif
 
 #ifdef ENABLE_BLE
     HCI_INIT_LE_SET_HOST_FEATURE_CONNECTION_SUBRATING,
     HCI_INIT_W4_LE_SET_HOST_FEATURE_CONNECTION_SUBRATING,
+#endif
+
+#ifdef ENABLE_LE_SHORTER_CONNECTION_INTERVALS
+    HCI_INIT_LE_SET_HOST_FEATURE_SHORTER_CONNECTION_INTERVALS,
+    HCI_INIT_W4_LE_SET_HOST_FEATURE_SHORTER_CONNECTION_INTERVALS,
+    HCI_INIT_LE_READ_MINIMUM_SUPPORTED_CONNECTION_INTERVAL,
+    HCI_INIT_W4_LE_READ_MINIMUM_SUPPORTED_CONNECTION_INTERVAL,
 #endif
 
     HCI_INIT_DONE,
@@ -1021,6 +1105,9 @@ typedef struct {
     // chipset driver requires pre-init
     bool chipset_pre_init;
 
+    // use AIROC Download mode (same as ENABLE_AIROC_DOWNLOAD_MODE)
+    bool init_airoc_download_mode;
+
     // hardware power controller
     const btstack_control_t * control;
 
@@ -1121,9 +1208,9 @@ typedef struct {
     bool                gap_secure_connections_only_mode;
 #endif
 
-    // single buffer for HCI packet assembly + additional prebuffer for H4 drivers
+    // single buffer for HCI packet assembly plus transport pre- and post-buffer space
     uint8_t   * hci_packet_buffer;
-    uint8_t   hci_packet_buffer_data[HCI_OUTGOING_PRE_BUFFER_SIZE + HCI_OUTGOING_PACKET_BUFFER_SIZE];
+    uint8_t   hci_packet_buffer_data[HCI_OUTGOING_PRE_BUFFER_SIZE + HCI_OUTGOING_PACKET_BUFFER_SIZE + HCI_OUTGOING_POST_BUFFER_SIZE];
     bool      hci_packet_buffer_reserved;
     uint16_t  acl_fragmentation_pos;
     uint16_t  acl_fragmentation_total_size;
@@ -1142,6 +1229,10 @@ typedef struct {
     uint16_t le_iso_packets_length;
     uint8_t  sco_waiting_for_can_send_now;
     bool     sco_can_send_now;
+
+#ifdef ENABLE_HCI_ACL_PACKET_RESERVATION
+    uint8_t  acl_packets_reserved;
+#endif
 
     /* local supported features */
     uint8_t local_supported_features[8];
@@ -1200,7 +1291,6 @@ typedef struct {
     } gap_pairing_input;
     
     uint16_t  sco_voice_setting;
-    uint16_t  sco_voice_setting_active;
 
     uint8_t   loopback_mode;
 
@@ -1233,6 +1323,9 @@ typedef struct {
 
     // GAP Privacy
     btstack_linked_list_t gap_privacy_clients;
+
+    // track active LE LMP commands
+    hci_con_handle_t le_active_command_con_handle;
 
 #ifdef ENABLE_HCI_COMMAND_STATUS_DISCARDED_FOR_FAILED_CONNECTIONS_WORKAROUND
     hci_con_handle_t hci_command_con_handle;
@@ -1285,8 +1378,10 @@ typedef struct {
     le_connection_parameter_range_t le_connection_parameter_range;
 
     // TODO: move LE_ADVERTISEMENT_TASKS_SET_ADDRESS flag which is used for both roles into
-    //  some generic gap_le variable
+    //       some generic gap_le variable. See also: LE_ADVERTISEMENT_TASKS_PRIVACY_NOTIFY and
+    //       LE_ADVERTISEMENT_STATE_PRIVACY_PENDING
     uint16_t  le_advertisements_todo;
+    uint8_t   le_advertisements_state;
 
 #ifdef ENABLE_LE_PERIPHERAL
     uint8_t  * le_advertisements_data;
@@ -1305,8 +1400,6 @@ typedef struct {
     uint8_t   le_advertisements_own_addr_type;
     bd_addr_t le_advertisements_own_address;
 
-    uint8_t  le_advertisements_state;
-
     bool     le_advertisements_enabled_for_current_roles;
     uint8_t le_max_number_peripheral_connections;
 
@@ -1319,6 +1412,8 @@ typedef struct {
 #endif
 
 #ifdef ENABLE_LE_DATA_LENGTH_EXTENSION
+    bool     le_set_data_length_max;
+
     // LE Data Length
     uint16_t le_supported_max_tx_octets;
     uint16_t le_supported_max_tx_time;
@@ -1367,6 +1462,13 @@ typedef struct {
  * @brief Set up HCI. Needs to be called before any other function.
  */
 void hci_init(const hci_transport_t *transport, const void *config);
+
+/**
+ * @brief Enable AIROC download mode during init. Has to be called before power on.
+ * @note Matches ENABLE_AIROC_DOWNLOAD_MODE if enabled
+ * @param enable
+ */
+void hci_set_airoc_download_mode(bool enable);
 
 /**
  * @brief Configure Bluetooth chipset driver. Has to be called before power on, or right after receiving the local version information.
@@ -1432,6 +1534,21 @@ void hci_set_num_iso_packets_to_queue(uint8_t num_packets);
  */
 void hci_set_inquiry_mode(inquiry_mode_t inquriy_mode);
 
+#ifdef ENABLE_LE_DATA_LENGTH_EXTENSION
+/**
+ * @brief Set maximum LE Data Length during startup if enabled. Has to be called before power on.
+ * @param enable default: true
+ */
+void hci_le_set_max_data_length(bool enable);
+
+/**
+ * @brief Set default LE Data Length during startup. Has to be called before power on.
+ * @param tx_octets
+ * @param tx_time in us
+ */
+void hci_le_set_default_data_length(uint8_t tx_octets, uint16_t tx_time);
+#endif
+
 /**
  * @brief Requests the change of BTstack power mode.
  * @param power_mode
@@ -1464,12 +1581,14 @@ void hci_remove_event_handler(btstack_packet_callback_registration_t * callback_
 void hci_register_acl_packet_handler(btstack_packet_handler_t handler);
 
 /**
- * @brief Registers a packet handler for SCO data. Used for HSP and HFP profiles.
+ * @brief Registers a packet handler for SCO data. Used by HSP and HFP profiles.
+ * Receives HCI_EVENT_SCO_CAN_SEND_NOW
  */
 void hci_register_sco_packet_handler(btstack_packet_handler_t handler);
 
 /**
- * @brief Registers a packet handler for ISO data. Used for LE Audio profiles
+ * @brief Registers a packet handler for ISO data. Used by LE Audio profiles
+ * Receives HCI_EVENT_CIS_CAN_SEND_NOW and HCI_EVENT_BIS_CAN_SEND_NOW
  */
 void hci_register_iso_packet_handler(btstack_packet_handler_t handler);
 
@@ -1507,12 +1626,30 @@ uint16_t hci_get_sco_packet_length(void);
 /**
  * @brief Request emission of HCI_EVENT_SCO_CAN_SEND_NOW as soon as possible
  * @note HCI_EVENT_SCO_CAN_SEND_NOW might be emitted during call to this function
- *       so packet handler should be ready to handle it
+ *       so packet handler should be ready to handle it.
+ * @param con_handle
+ */
+void hci_request_sco_can_send_now_event_for_con_handle(hci_con_handle_t con_handle);
+
+/**
+ * @brief Request emission of HCI_EVENT_SCO_CAN_SEND_NOW as soon as possible
+ * @deprecated Please use hci_request_sco_can_send_now_event_for_con_handle instead
+ * @note HCI_EVENT_SCO_CAN_SEND_NOW might be emitted during call to this function
+ *       so packet handler should be ready to handle it. con_handle will
+ *       be set to HCI_CON_HANDLE_INVALID in the event
  */
 void hci_request_sco_can_send_now_event(void);
 
 /**
  * @brief Check HCI packet buffer and if SCO packet can be sent to controller
+ * @param con_handle
+ * @return true if sco packet can be sent
+ */
+bool hci_can_send_sco_packet_now_for_con_handle(hci_con_handle_t con_handle);
+
+/**
+ * @brief Check HCI packet buffer and if SCO packet can be sent to controller
+ * @deprecated Please use hci_can_send_sco_packet_now_for_con_handle instead
  * @return true if sco packet can be sent
  */
 bool hci_can_send_sco_packet_now(void);
@@ -1537,10 +1674,15 @@ uint8_t hci_send_sco_packet_buffer(int size);
 uint8_t hci_request_bis_can_send_now_events(uint8_t big_handle);
 
 /**
- * @brief Request emission of HCI_EVENT_CIS_CAN_SEND_NOW for CIS as soon as possible
- * @param cis_con_handle
+ * @brief Request emission of HCI_EVENT_CIS_CAN_SEND_NOW for all outgoing CIS of referenced CIG
+ *
+ * @note As CIG_IDs are only unique for Central, a CIS Connection Handle is used to identify the CIG.
+ *       The group_complete field in HCI_EVENT_CIS_CAN_SEND_NOW can be used to request again.
+ *
  * @note HCI_EVENT_CIS_CAN_SEND_NOW might be emitted during call to this function
  *       so packet handler should be ready to handle it
+ *
+ * @param cis_con_handle
  */
 uint8_t hci_request_cis_can_send_now_events(hci_con_handle_t cis_con_handle);
 
@@ -1876,10 +2018,25 @@ void hci_deinit(void);
 // defer disconnect on dedicated bonding complete, used internally for CTKD
 uint8_t hci_dedicated_bonding_defer_disconnect(hci_con_handle_t con_handle, bool defer);
 
+// internal, called by security manager and other gap services
+void hci_emit_btstack_event(uint8_t * event, uint16_t size, int dump);
+
+// internal, called by security manager
+void hci_add_event_handler_for_security_manager(btstack_packet_callback_registration_t * callback_handler);
+
 // Only for PTS testing
 
 // Disable automatic L2CAP disconnect if no L2CAP connection is established
 void hci_disable_l2cap_timeout_check(void);
+
+// called from test/ble_client/advertising_data_parser.c
+void hci_le_handle_advertisement_report(uint8_t *packet, uint16_t size);
+
+#ifdef ENABLE_HCI_ACL_PACKET_RESERVATION
+// used by third-party LE Host stack
+void hci_acl_reserve_packets(uint8_t num_packets);
+void hci_acl_release_packets(uint8_t num_packets);
+#endif
 
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 // setup test connections, used for fuzzing

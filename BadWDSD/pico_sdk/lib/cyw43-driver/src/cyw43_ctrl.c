@@ -45,10 +45,12 @@
 #include "cyw43_btbus.h"
 #endif
 
+#if !CYW43_USE_SPI
 #ifdef CYW43_PIN_WL_HOST_WAKE
 #define USE_SDIOIT (0)
 #else
 #define USE_SDIOIT (1)
+#endif
 #endif
 
 // Bits 0-3 are an enumeration, while bits 8-11 are flags.
@@ -81,14 +83,16 @@ static void cyw43_wifi_ap_set_up(cyw43_t *self, bool up);
 // Initialisation and polling
 
 void cyw43_init(cyw43_t *self) {
-    #ifdef CYW43_PIN_WL_HOST_WAKE
+    #if defined(CYW43_PIN_WL_HOST_WAKE)
     cyw43_hal_pin_config(CYW43_PIN_WL_HOST_WAKE, CYW43_HAL_PIN_MODE_INPUT, CYW43_HAL_PIN_PULL_NONE, 0);
+    #elif defined(CYW43_PIN_WL_IRQ)
+    cyw43_hal_pin_config(CYW43_PIN_WL_IRQ, CYW43_HAL_PIN_MODE_INPUT, CYW43_HAL_PIN_PULL_NONE, 0);
     #endif
     cyw43_hal_pin_config(CYW43_PIN_WL_REG_ON, CYW43_HAL_PIN_MODE_OUTPUT, CYW43_HAL_PIN_PULL_NONE, 0);
     cyw43_hal_pin_low(CYW43_PIN_WL_REG_ON);
-    #ifdef CYW43_PIN_WL_RFSW_VDD
-    cyw43_hal_pin_config(CYW43_PIN_WL_RFSW_VDD, CYW43_HAL_PIN_MODE_OUTPUT, CYW43_HAL_PIN_PULL_NONE, 0); // RF-switch power
-    cyw43_hal_pin_low(CYW43_PIN_WL_RFSW_VDD);
+    #ifdef CYW43_PIN_RFSW_VDD
+    cyw43_hal_pin_config(CYW43_PIN_RFSW_VDD, CYW43_HAL_PIN_MODE_OUTPUT, CYW43_HAL_PIN_PULL_NONE, 0); // RF-switch power
+    cyw43_hal_pin_low(CYW43_PIN_RFSW_VDD);
     #endif
 
     cyw43_ll_init(&self->cyw43_ll, self);
@@ -200,6 +204,9 @@ static int cyw43_ensure_up(cyw43_t *self) {
     // If CYW43_PIN_WL_HOST_WAKE has a falling edge, cyw43_poll (if it's not NULL) should be called.
     cyw43_hal_pin_config_irq_falling(CYW43_PIN_WL_HOST_WAKE, true);
     #endif
+    #if defined(CYW43_PIN_WL_IRQ)
+    cyw43_hal_pin_config_irq_falling(CYW43_PIN_WL_IRQ, true);
+    #endif
 
     // Kick things off
     cyw43_schedule_internal_poll_dispatch(cyw43_poll_func);
@@ -268,9 +275,14 @@ static void cyw43_poll_func(void) {
 
 int cyw43_cb_read_host_interrupt_pin(void *cb_data) {
     (void)cb_data;
-    #ifdef CYW43_PIN_WL_HOST_WAKE
+    #if defined(CYW43_PIN_WL_HOST_WAKE)
+    // SDIO or SPI mode with WL_HOST_WAKE pin.
     return cyw43_hal_pin_read(CYW43_PIN_WL_HOST_WAKE);
+    #elif defined(CYW43_PIN_WL_IRQ)
+    // SPI mode with WL_IRQ pin (aliased to WL_SDIO_1).
+    return cyw43_hal_pin_read(CYW43_PIN_WL_IRQ);
     #else
+    // SDIO mode with WL_SDIO_1 pin in interrupt mode.
     return cyw43_hal_pin_read(CYW43_PIN_WL_SDIO_1);
     #endif
 }
@@ -468,9 +480,9 @@ static int cyw43_wifi_on(cyw43_t *self, uint32_t country) {
         return ret;
     }
 
-    #ifdef CYW43_PIN_WL_RFSW_VDD
+    #ifdef CYW43_PIN_RFSW_VDD
     // Turn the RF-switch on
-    cyw43_hal_pin_high(CYW43_PIN_WL_RFSW_VDD);
+    cyw43_hal_pin_high(CYW43_PIN_RFSW_VDD);
     #endif
 
     ret = cyw43_ll_wifi_on(&self->cyw43_ll, country);
@@ -563,7 +575,10 @@ void cyw43_wifi_set_up(cyw43_t *self, int itf, bool up, uint32_t country) {
     } else {
         if (itf == CYW43_ITF_AP) {
             cyw43_wifi_ap_set_up(self, false);
-            self->itf_state &= ~(1 << CYW43_ITF_AP);
+        }
+        if (self->itf_state & (1 << itf)) {
+            cyw43_cb_tcpip_deinit(self, itf);
+            self->itf_state &= ~(1 << itf);
         }
     }
     CYW43_THREAD_EXIT;

@@ -62,6 +62,7 @@ extern "C" {
 #define AVDTP_MAX_NUM_SEPS 10
 #define AVDTP_MAX_CSRC_NUM 15
 #define AVDTP_MAX_CONTENT_PROTECTION_TYPE_VALUE_LEN 10
+#define AVDTP_MAX_DATA_BUFFER_SIZE                  200
 
 // Supported Features
 #define AVDTP_SOURCE_FEATURE_MASK_PLAYER        0x0001u
@@ -115,14 +116,30 @@ typedef enum {
     CODEC_SPECIFIC_ERROR_CODE_INVALID_ALLOCATION_METHOD          = 0xC9,
     CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_ALLOCATION_METHOD    = 0xCA,
     CODEC_SPECIFIC_ERROR_CODE_INVALID_MINIMUM_BITPOOL_VALUE      = 0xCB,
+    CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_MINIMUM_BITPOOL_VALUE= 0xCC,
     CODEC_SPECIFIC_ERROR_CODE_INVALID_MAXIMUM_BITPOOL_VALUE      = 0xCD,
+    CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_MAXIMUM_BITPOOL_VALUE= 0xCE,
+    CODEC_SPECIFIC_ERROR_CODE_INVALID_LAYER                      = 0xCF,
+    CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_LAYER                = 0xD0,
+    CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_CRC                  = 0xD1,
+    CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_MPF                  = 0xD2,
     CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_VBR                  = 0xD3,
+    CODEC_SPECIFIC_ERROR_CODE_INVALID_BITRATE                    = 0xD4,
+    CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_BITRATE              = 0xD5,
     CODEC_SPECIFIC_ERROR_CODE_INVALID_OBJECT_TYPE                = 0xD6,
     CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_OBJECT_TYPE          = 0xD7,
     CODEC_SPECIFIC_ERROR_CODE_INVALID_CHANNELS                   = 0xD8,
     CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_CHANNELS             = 0xD9,
+    CODEC_SPECIFIC_ERROR_CODE_INVALID_VERSION                    = 0xDA,
+    CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_VERSION              = 0xDB,
+    CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_MAXIMUM_SUL          = 0xDC,
     CODEC_SPECIFIC_ERROR_CODE_INVALID_BLOCK_LENGTH               = 0xDD,
+    CODEC_SPECIFIC_ERROR_CODE_INVALID_CP_TYPE                    = 0xE0,
+    CODEC_SPECIFIC_ERROR_CODE_INVALID_CP_FORMAT                  = 0xE1,
+    CODEC_SPECIFIC_ERROR_CODE_INVALID_CODEC_PARAMETER            = 0xE2,
+    CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_CODEC_PARAMETER      = 0xE3,
     CODEC_SPECIFIC_ERROR_CODE_INVALID_DRC                        = 0xE4,
+    CODEC_SPECIFIC_ERROR_CODE_NOT_SUPPORTED_DRC                  = 0xE5
 } codec_specific_error_code_t;
 
 // Signal Identifier fields
@@ -172,7 +189,8 @@ typedef enum {
     AVDTP_CODEC_MPEG_2_4_AAC    = 0x02,
     AVDTP_CODEC_MPEG_D_USAC     = 0x03,
     AVDTP_CODEC_ATRAC_FAMILY    = 0x04,
-    AVDTP_CODEC_NON_A2DP        = 0xFF
+    AVDTP_CODEC_START_RFU       = 0x05,
+    AVDTP_CODEC_NON_A2DP        = 0xFF,
 } avdtp_media_codec_type_t;
 
 typedef enum {
@@ -309,7 +327,8 @@ typedef enum {
 typedef enum {
     AVDTP_ATRAC_VERSION_1 = 1,
     AVDTP_ATRAC_VERSION_2,
-    AVDTP_ATRAC_VERSION_3
+    AVDTP_ATRAC_VERSION_3,
+    AVDTP_ATRAC_VERSION_RFU
 } avdtp_atrac_version_t;
 
 // used for MPEG1/2 Audio, ATRAC (no stereo mode)
@@ -434,6 +453,7 @@ typedef enum {
     AVDTP_ACCEPTOR_W2_ACCEPT_ABORT_STREAM,
     AVDTP_ACCEPTOR_W2_ACCEPT_SUSPEND_STREAM,
     AVDTP_ACCEPTOR_W2_REJECT_WITH_ERROR_CODE,
+    AVDTP_ACCEPTOR_W2_REJECT_ACP_SEID_WITH_ERROR_CODE,
     AVDTP_ACCEPTOR_W2_REJECT_CATEGORY_WITH_ERROR_CODE,
     AVDTP_ACCEPTOR_W2_REJECT_UNKNOWN_CMD
 } avdtp_acceptor_stream_endpoint_state_t;
@@ -467,6 +487,7 @@ typedef enum {
     AVDTP_SIGNALING_CONNECTION_ACCEPTOR_IDLE = 0,
     AVDTP_SIGNALING_CONNECTION_ACCEPTOR_W2_ANSWER_DISCOVER_SEPS,
     AVDTP_SIGNALING_CONNECTION_ACCEPTOR_W2_REJECT_WITH_ERROR_CODE,
+    AVDTP_SIGNALING_CONNECTION_ACCEPTOR_W2_REJECT_ACP_SEID_WITH_ERROR_CODE,
     AVDTP_SIGNALING_CONNECTION_ACCEPTOR_W2_REJECT_CATEGORY_WITH_ERROR_CODE,
     AVDTP_SIGNALING_CONNECTION_ACCEPTOR_W2_GENERAL_REJECT_WITH_ERROR_CODE
 } avdtp_acceptor_connection_state_t;
@@ -485,7 +506,7 @@ typedef enum {
 } avdtp_initiator_connection_state_t;
 
 typedef struct {
-    uint8_t  command[200];
+    uint8_t  command[AVDTP_MAX_DATA_BUFFER_SIZE];
     uint16_t size;
     uint16_t offset;
     uint8_t  acp_seid;
@@ -509,32 +530,44 @@ typedef enum {
     A2DP_IDLE = 0,
     A2DP_W4_CONNECTED,
     A2DP_CONNECTED,
-    A2DP_DISCOVER_SEPS,
-    A2DP_GET_CAPABILITIES,
-    A2DP_W2_GET_ALL_CAPABILITIES, //5
+    A2DP_W4_DISCOVER_SEPS,
+    A2DP_W4_GET_ALL_CAPABILITIES,
     A2DP_DISCOVERY_DONE,
-    A2DP_SET_CONFIGURATION,      
     A2DP_W4_GET_CONFIGURATION,
+    A2DP_W2_SET_CONFIGURATION,
     A2DP_W4_SET_CONFIGURATION,
     A2DP_CONFIGURED,
-    A2DP_W2_SUSPEND_STREAM_WITH_SEID, //10
+    A2DP_W2_SUSPEND_STREAM_WITH_SEID,
     A2DP_W2_RECONFIGURE_WITH_SEID,
     A2DP_W2_OPEN_STREAM_WITH_SEID,   
     A2DP_W4_OPEN_STREAM_WITH_SEID,
     A2DP_W2_START_STREAM_WITH_SEID,  
-    A2DP_W2_ABORT_STREAM_WITH_SEID,   //15
+    A2DP_W2_ABORT_STREAM_WITH_SEID,
     A2DP_W2_STOP_STREAM_WITH_SEID,
     A2DP_STREAMING_OPENED
 } a2dp_state_t;
 
 typedef struct {
-    bool         discover_seps;
-    bool         outgoing_active;
-    bool         have_config;
-    bool         stream_endpoint_configured;
+    // Configuration process state
     a2dp_state_t state;
+    // Stream Configuration initiated
+    bool         outgoing_active;
+    // Discover SEPSs requested
+    bool         discover_seps;
+    // Stream Endpoint configure
+    bool         stream_endpoint_configured;
+    // Configuration available
+    bool         have_config;
+    // Local Stream Endpoint matched to remote endpoint
     struct avdtp_stream_endpoint * local_stream_endpoint;
 } a2dp_config_process_t;
+
+typedef enum {
+    AVDTP_PARSER_GET_SERVICE_CATEGORY = 0,
+    AVDTP_PARSER_GET_CAPABILITIES_VALUE_LEN,
+    AVDTP_PARSER_GET_CAPABILITIES_VALUE,
+    AVDTP_PARSER_IGNORE_REST_OF_CAPABILITY_VALUE
+} avdtp_capability_parser_state_t;
 
 typedef struct {
     btstack_linked_item_t    item;
@@ -561,6 +594,10 @@ typedef struct {
 
     // used to prepare outgoing signaling packets
     avdtp_signaling_packet_t initiator_signaling_packet;
+    avdtp_capability_parser_state_t capability_parser_state;
+    avdtp_service_category_t  parser_service_category_id;
+    uint8_t parser_value_offset;
+    uint8_t parser_value_size;
 
     uint8_t initiator_local_seid;
     uint8_t initiator_remote_seid;
@@ -692,6 +729,9 @@ uint8_t avdtp_start_stream(uint16_t avdtp_cid, uint8_t local_seid);
 uint8_t avdtp_stop_stream (uint16_t avdtp_cid, uint8_t local_seid);
 uint8_t avdtp_abort_stream(uint16_t avdtp_cid, uint8_t local_seid);
 uint8_t avdtp_suspend_stream(uint16_t avdtp_cid, uint8_t local_seid);
+
+// required to send ABORT in IDLE state, which is allowed by spec but useless
+uint8_t avdtp_abort_stream_with_remote_seid(uint16_t avdtp_cid, uint8_t local_seid, uint8_t remote_seid);
 
 uint8_t avdtp_discover_stream_endpoints(uint16_t avdtp_cid);
 uint8_t avdtp_get_capabilities(uint16_t avdtp_cid, uint8_t remote_seid);

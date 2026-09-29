@@ -52,6 +52,9 @@
 #include "btstack_control.h"
 #include "btstack_debug.h"
 #include "btstack_chipset_bcm.h"
+
+#include <btstack_ltv_builder.h>
+
 #include "hci.h"
 
 #ifdef HAVE_POSIX_FILE_IO
@@ -76,14 +79,7 @@
 #endif
 
 static int send_download_command;
-static uint32_t init_script_offset;
-
-// Embedded == non posix systems
-
-// actual init script provided by separate bt_firmware_image.c from WICED SDK
-extern const uint8_t brcm_patchram_buf[];
-extern const int     brcm_patch_ram_length;
-extern const char    brcm_patch_version[];
+static int32_t init_script_offset;
 
 //
 // @note: Broadcom chips require higher UART clock for baud rate > 3000000 -> limit baud rate in hci.c
@@ -185,19 +181,17 @@ void btstack_chipset_bcm_set_hcd_folder_path(const char * path){
 }
 
 void btstack_chipset_bcm_set_device_name(const char * device_name){
-    // ignore if file path already set
-    if (hcd_file_path) {
-        log_error("chipset-bcm: set device name called %s although path %s already set", device_name, hcd_file_path);
-        return;
-    }
+    btstack_assert(hcd_file_path == NULL);
 
     // find in folder
     tinydir_dir dir = {};
     int res = tinydir_open(&dir, hcd_folder_path);
     if (res < 0){
-        log_error("chipset-bcm: could not get directory for %s", hcd_folder_path);
+        printf("chipset-bcm: could not get directory for %s\n", hcd_folder_path);
         return;
     }
+    char latest_file[1000] = {0};
+    int has_latest_file = 0;
     uint16_t device_name_len = (uint16_t) strlen(device_name);
     while (dir.has_next) {
         tinydir_file file;
@@ -213,32 +207,52 @@ void btstack_chipset_bcm_set_device_name(const char * device_name){
             continue;
         }
         // check suffix
-        if (strncasecmp(".hcd", &file.name[filename_len - 4], device_name_len) == 0) {
-            btstack_strcpy(matched_file, sizeof(matched_file), hcd_folder_path);
-            btstack_strcat(matched_file, sizeof(matched_file), "/");
-            btstack_strcat(matched_file, sizeof(matched_file), file.name);
-            hcd_file_path = matched_file;
-            break;
+        if (strncasecmp(".hcd", &file.name[filename_len - 4], 4) != 0) {
+            continue;
+        }
+
+        if (!has_latest_file || strcmp(file.name, latest_file) > 0) {
+            btstack_strcpy(latest_file, sizeof(latest_file), file.name);
+            has_latest_file = 1;
         }
     }
     tinydir_close(&dir);
-    if (hcd_file_path == NULL) {
-        log_error("chipset-bcm: could not find .hcd that starts with %s at path %s", device_name, hcd_folder_path);
+    if (has_latest_file){
+        btstack_strcpy(matched_file, sizeof(matched_file), hcd_folder_path);
+        btstack_strcat(matched_file, sizeof(matched_file), "/");
+        btstack_strcat(matched_file, sizeof(matched_file), latest_file);
+        hcd_file_path = matched_file;
+        printf("Use PatchRAM: %s\n", hcd_file_path);
+    } else {
+        printf("chipset-bcm: could not find .hcd that starts with %s at path %s\n", device_name, hcd_folder_path);
     }
 }
 
 #else
 
+static const uint8_t * custom_patchram_data;
+static uint32_t custom_patchram_size;
+static const uint8_t * active_patchram_data;
+static uint32_t active_patchram_size;
+
 static void chipset_init(const void * config){
     UNUSED(config);
-    log_info("chipset-bcm: init script %s, len %u", brcm_patch_version, brcm_patch_ram_length);
+    if (custom_patchram_data != NULL){
+        active_patchram_data = custom_patchram_data;
+        active_patchram_size = custom_patchram_size;
+        log_info("chipset-bcm: init custom script, len %u", (unsigned int) active_patchram_size);
+    } else {
+        active_patchram_data = brcm_patchram_buf;
+        active_patchram_size = (uint32_t) brcm_patch_ram_length;
+        log_info("chipset-bcm: init script %s, len %u", brcm_patch_version, (unsigned int) active_patchram_size);
+    }
     init_script_offset = 0;
     send_download_command = 1;
 }
 
 static btstack_chipset_result_t chipset_next_command(uint8_t * hci_cmd_buffer){
     // no initscript
-    if (brcm_patch_ram_length == 0) return BTSTACK_CHIPSET_NO_INIT_SCRIPT;
+    if (active_patchram_size == 0) return BTSTACK_CHIPSET_NO_INIT_SCRIPT;
 
     // send download firmware command
     if (send_download_command){
@@ -249,12 +263,12 @@ static btstack_chipset_result_t chipset_next_command(uint8_t * hci_cmd_buffer){
         return BTSTACK_CHIPSET_VALID_COMMAND;
     }
 
-    if (init_script_offset >= brcm_patch_ram_length) {
+    if ((uint32_t) init_script_offset >= active_patchram_size) {
         return BTSTACK_CHIPSET_DONE;
     }
 
-    int cmd_len = 3 + brcm_patchram_buf[init_script_offset+2];
-    memcpy(&hci_cmd_buffer[0], &brcm_patchram_buf[init_script_offset], cmd_len); 
+    int cmd_len = 3 + active_patchram_data[init_script_offset+2];
+    memcpy(&hci_cmd_buffer[0], &active_patchram_data[init_script_offset], cmd_len);
     init_script_offset += cmd_len;
     return BTSTACK_CHIPSET_VALID_COMMAND;     
 }
@@ -274,6 +288,16 @@ const btstack_chipset_t * btstack_chipset_bcm_instance(void){
     return &btstack_chipset_bcm;
 }
 
+void btstack_chipset_bcm_set_patchram(const uint8_t * data, uint32_t size){
+#ifdef HAVE_POSIX_FILE_IO
+    UNUSED(data);
+    UNUSED(size);
+#else
+    custom_patchram_data = data;
+    custom_patchram_size = data != NULL ? size : 0;
+#endif
+}
+
 /**
  * @brief Enable init file - needed by btstack_chipset_bcm_download_firmware when using h5
  * @param enabled
@@ -284,4 +308,54 @@ void btstack_chipset_bcm_enable_init_script(int enabled){
     } else {
         btstack_chipset_bcm.next_command = NULL;
     }
+}
+
+// Other lmp_subversion values:
+// 0x220c - CYW20819
+// 0x420e - CYW20719
+const char * btstack_chipset_bcm_identify_controller(uint16_t lmp_subversion) {
+    const char * device_name = NULL;
+    switch (lmp_subversion){
+        case 0x2119:
+            // CYW4373W
+            device_name = "BCM4373A0";
+            break;
+        case 0x220b:
+            // CYW20706
+            device_name = "BCM20703A2";
+            break;
+        case 0x2220:
+            // CYW5551x
+            device_name = "CYW55500A1";
+            break;
+        case 0x2257:
+            // CYW5557x
+            device_name = "CYW55560A1";
+            break;
+        default:
+            break;
+    }
+    return device_name;
+}
+
+uint8_t btstack_chipset_bcm_create_lc3_offloading_config(
+    uint8_t * buffer,
+    uint8_t size,
+    uint16_t sampling_frequency_hz,
+    btstack_lc3_frame_duration_t frame_duration,
+    uint16_t octets_per_frame) {
+
+    btstack_ltv_builder_context_t context;
+    btstack_ltv_builder_init(&context, buffer, size);
+    // sampling frequency
+    btstack_ltv_builder_add_tag(&context, 0x01);
+    btstack_ltv_builder_add_08(&context, 1 << ((sampling_frequency_hz / 8000) - 1));
+    // frame duration
+    btstack_ltv_builder_add_tag(&context, 0x02);
+    btstack_ltv_builder_add_08(&context, (frame_duration == BTSTACK_LC3_FRAME_DURATION_7500US) ? 0x01 : 0x02);
+    // set codec frame length
+    btstack_ltv_builder_add_tag(&context, 0x04);
+    btstack_ltv_builder_add_little_endian_16(&context, octets_per_frame);
+
+    return btstack_ltv_builder_get_length(&context);
 }

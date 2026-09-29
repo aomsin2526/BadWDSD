@@ -5,11 +5,7 @@
  *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "mbedtls/build_info.h"
 
 #include "mbedtls/platform.h"
 
@@ -52,7 +48,7 @@ struct options {
 } opt;
 
 
-int read_certificates(const char *const *filenames)
+static int read_certificates(const char *const *filenames)
 {
     mbedtls_x509_crt cas;
     int ret = 0;

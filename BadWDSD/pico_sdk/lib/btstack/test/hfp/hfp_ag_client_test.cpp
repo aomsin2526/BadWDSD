@@ -300,7 +300,7 @@ static void user_command(char cmd){
 
 static void simulate_test_sequence(hfp_test_item_t * test_item){
     char ** test_steps = test_item->test;
-    printf("\nSimulate test sequence: \"%s\"\n", test_item->name);
+    printf("Simulate test sequence: \"%s\"\n", test_item->name);
     
     int i = 0;
     int previous_step = -1;
@@ -313,41 +313,39 @@ static void simulate_test_sequence(hfp_test_item_t * test_item){
         printf("\nStep %d, %s \n", i, expected_cmd);
 
         if (strncmp(expected_cmd, "USER:", 5) == 0){
-            printf("\n---> USER: ");
+            printf("- USER: ");
             user_command(expected_cmd[5]);
             i++;
         } else if (strncmp(expected_cmd, "AT", 2) == 0){
-            // printf("\n---> NEXT STEP receive from HF: '%s'\n", expected_cmd);
+            printf("- receive from HF: '%s'\n", expected_cmd);
             inject_hfp_command_to_ag((uint8_t*)expected_cmd, expected_cmd_len);
             i++;
 
         } else {
             while (has_more_hfp_ag_commands()){
-                printf("\n---> NEXT STEP expect from AG: %s\n", expected_cmd);
+                printf("- expect from AG: '%s'\n", expected_cmd);
                 char * ag_cmd = get_next_hfp_ag_command();
-
-                int equal_cmds = strncmp(ag_cmd, expected_cmd, expected_cmd_len) == 0;
-                // printf("CHECK: %s == %s -> %u", ag_cmd, expected_cmd, equal_cmds);
-                if (!equal_cmds){
-                    printf("\nError: Expected:'%s', but got:'%s'\n", expected_cmd, ag_cmd);
-                    CHECK_EQUAL(equal_cmds,1);
-                    return;
-                } 
-                printf("Verified: '%s'\n", expected_cmd);
+                CHECK_TEXT(ag_cmd != NULL, "Missing AG command");
+                STRCMP_EQUAL(expected_cmd, ag_cmd);
+                printf("- Verified:       '%s'\n", expected_cmd);
                
                 i++;
                 if (i < test_item->len){
                     expected_cmd = test_steps[i];
                     expected_cmd_len = strlen(expected_cmd);
-                } 
+                    printf("\nStep %d, %s \n", i, expected_cmd);
+                }
             } 
-            // printf("\n---> NEXT STEP trigger once more AG\n");
+            printf("- trigger AG once more\n");
             inject_hfp_command_to_ag((uint8_t*)"NOP",3); 
         }
     }   
 }
 
 static void packet_handler(uint8_t packet_type, uint16_t channel, uint8_t * event, uint16_t event_size){
+    UNUSED(packet_type);
+    UNUSED(channel);
+    UNUSED(event_size);
 
     if (event[0] != HCI_EVENT_HFP_META) return;
     const char * dial_string;
@@ -468,6 +466,13 @@ TEST(HFPClient, PTSSLCTests){
     }
 }
 
+TEST(HFPClient, IssueTests){
+    for (int i = 0; i < hfp_pts_ag_issues_tests_size(); i++){
+        setup();
+        simulate_test_sequence(&hfp_pts_ag_issues_tests()[i]);
+        teardown();
+    }
+}
 
 int main (int argc, const char * argv[]){
     hfp_ag_register_packet_handler(packet_handler);

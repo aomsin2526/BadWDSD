@@ -25,13 +25,13 @@ extern "C" {
  * The random numbers (32 to 128 bit) to be supplied are read from the PRNG which is used
  * to help provide a large number space.
  *
- * The following (multiple) sources of entropy are available (of varying quality), each enabled by a #define:
+ * The following (multiple) sources of entropy are available (of varying quality), each enabled by a \#define:
  *
  *  - The Ring Oscillator (ROSC) (\ref PICO_RAND_ENTROPY_SRC_ROSC == 1):
  *    \ref PICO_RAND_ROSC_BIT_SAMPLE_COUNT bits are gathered from the ring oscillator "random bit" and mixed in each
  *    time. This should not be used if the ROSC is off, or the processor is running from
  *    the ROSC.
- *    \note the maximum throughput of ROSC bit sampling is controlled by PICO_RAND_MIN_ROSC_BIT_SAMPLE_TIME_US which defaults
+ *    \note The maximum throughput of ROSC bit sampling is controlled by PICO_RAND_MIN_ROSC_BIT_SAMPLE_TIME_US which defaults
  *    to 10us, i.e. 100,000 bits per second.
  *  - Time (\ref PICO_RAND_ENTROPY_SRC_TIME == 1): The 64-bit microsecond timer is mixed in each time.
  *  - Bus Performance Counter (\ref PICO_RAND_ENTROPY_SRC_BUS_PERF_COUNTER == 1): One of the bus fabric's performance
@@ -47,7 +47,7 @@ extern "C" {
  *  - Time (\ref PICO_RAND_SEED_ENTROPY_SRC_TIME == 1): The 64-bit microsecond timer is mixed into the seed.
  *  - Board Identifier (PICO_RAND_SEED_ENTROPY_SRC_BOARD_ID == 1): The board id via \ref pico_get_unique_board_id
  *    is mixed into the seed.
- *  - RAM hash (\ref PICO_RAND_SEED_ENTROPY_SRC_RAM_HASH (\ref PICO_RAND_SEED_ENTROPY_SRC_RAM_HASH): The hashed contents of a
+ *  - RAM hash (\ref PICO_RAND_SEED_ENTROPY_SRC_RAM_HASH): The hashed contents of a
  *    subset of RAM are mixed in. Initial RAM contents are undefined on power up, so provide a reasonable source of entropy.
  *    By default the last 1K of RAM (which usually contains the core 0 stack) is hashed, which may also provide for differences
  *    after each warm reset.
@@ -175,9 +175,14 @@ extern "C" {
 #define PICO_RAND_RAM_HASH_START   (PICO_RAND_RAM_HASH_END - 1024u)
 #endif
 
+/*! \brief A 128-bit random number value
+ *  \ingroup pico_rand
+ *
+ * Holds up to 128 bits of entropy returned by \ref get_rand_128.
+ */
 // We provide a maximum of 128 bits entropy in one go
 typedef struct rng_128 {
-    uint64_t r[2];
+    uint64_t r[2]; ///< Two 64-bit words comprising the 128-bit random value
 } rng_128_t;
 
 /*! \brief Get 128-bit random number

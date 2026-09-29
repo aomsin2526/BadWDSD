@@ -7,6 +7,7 @@
 #ifndef _PICO_CRITICAL_SECTION_H
 #define _PICO_CRITICAL_SECTION_H
 
+#include "pico.h"
 #include "pico/lock_core.h"
 
 #ifdef __cplusplus
@@ -26,9 +27,15 @@ extern "C" {
  *  should be as short as possible.
  */
 
+/*! \brief Critical section instance
+ *  \ingroup critical_section
+ *
+ * Structure holding the state for a single critical section, including
+ * the associated spin lock and the saved interrupt state.
+ */
 typedef struct __packed_aligned critical_section {
-    spin_lock_t *spin_lock;
-    uint32_t save;
+    spin_lock_t *spin_lock; ///< Spin lock used to prevent concurrent access from the other core
+    uint32_t save;          ///< Saved interrupt state, restored on exit
 } critical_section_t;
 
 /*! \brief  Initialise a critical_section structure allowing the system to assign a spin lock number
@@ -58,7 +65,7 @@ void critical_section_init_with_lock_num(critical_section_t *crit_sec, uint lock
  *
  * \param crit_sec Pointer to critical_section structure
  */
-static inline void critical_section_enter_blocking(critical_section_t *crit_sec) {
+__force_inline static void critical_section_enter_blocking(critical_section_t *crit_sec) {
     crit_sec->save = spin_lock_blocking(crit_sec->spin_lock);
 }
 
@@ -67,7 +74,7 @@ static inline void critical_section_enter_blocking(critical_section_t *crit_sec)
  *
  * \param crit_sec Pointer to critical_section structure
  */
-static inline void critical_section_exit(critical_section_t *crit_sec) {
+__force_inline static void critical_section_exit(critical_section_t *crit_sec) {
     spin_unlock(crit_sec->spin_lock, crit_sec->save);
 }
 
@@ -83,7 +90,7 @@ static inline void critical_section_exit(critical_section_t *crit_sec) {
 void critical_section_deinit(critical_section_t *crit_sec);
 
 /*! \brief Test whether a critical_section has been initialized
- *  \ingroup mutex
+ *  \ingroup critical_section
  *
  * \param crit_sec Pointer to critical_section structure
  * \return true if the critical section is initialized, false otherwise

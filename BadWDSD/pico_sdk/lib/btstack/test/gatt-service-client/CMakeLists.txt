@@ -5,7 +5,7 @@ project(gatt-client-test)
 find_package(PkgConfig REQUIRED)
 
 # CppuTest
-pkg_check_modules(CPPUTEST REQUIRED CppuTest)
+pkg_check_modules(CPPUTEST REQUIRED cpputest)
 include_directories(${CPPUTEST_INCLUDE_DIRS})
 link_directories(${CPPUTEST_LIBRARY_DIRS})
 link_libraries(${CPPUTEST_LIBRARIES})
@@ -16,8 +16,8 @@ include_directories(../../src)
 include_directories(../mock)
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 
-add_compile_options(--coverage)
-add_link_options(   --coverage)
+add_compile_options(-fsanitize=address,undefined)
+add_link_options(   -fsanitize=address,undefined)
 add_definitions(    -DCOVERAGE)
 add_definitions(    -DHAVE_ASSERT)
 
@@ -30,6 +30,7 @@ set(SOURCES
 	../../src/ble/gatt-service/ancs_client.c
 	../../src/ble/gatt-service/battery_service_client.c
 	../../src/ble/gatt-service/device_information_service_client.c
+	../../src/ble/gatt_service_client.c
 	../mock/mock_gatt_client.c
 )
 

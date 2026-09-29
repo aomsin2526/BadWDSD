@@ -173,6 +173,16 @@ uint8_t a2dp_sink_set_config_mpeg_audio(uint16_t a2dp_cid, uint8_t local_seid, u
 uint8_t a2dp_sink_set_config_mpeg_aac(uint16_t a2dp_cid,  uint8_t local_seid,  uint8_t remote_seid, const avdtp_configuration_mpeg_aac_t * configuration);
 
 /**
+ * @brief Select and configure MPEG-D USAC endpoint
+ * @param a2dp_cid          A2DP channel identifier.
+ * @param local_seid        ID of a local stream endpoint.
+ * @param remote_seid       ID of a remote stream endpoint.
+ * @param configuration     MPEG-D USAC Configuration
+ * @return status
+ */
+uint8_t a2dp_sink_set_config_mpegd_usac(uint16_t a2dp_cid,  uint8_t local_seid,  uint8_t remote_seid, const avdtp_configuration_mpegd_usac_t * configuration);
+
+/**
  * @brief Select and configure ATRAC endpoint
  * @param a2dp_cid 			A2DP channel identifier.
  * @param local_seid  		ID of a local stream endpoint.
@@ -192,6 +202,15 @@ uint8_t a2dp_sink_set_config_atrac(uint16_t a2dp_cid,  uint8_t local_seid, uint8
  * @return status
  */
 uint8_t a2dp_sink_set_config_other(uint16_t a2dp_cid,  uint8_t local_seid, uint8_t remote_seid, const uint8_t * media_codec_information, uint8_t media_codec_information_len);
+
+/**
+ * @brief Send delay report.
+ * @param a2dp_cid          A2DP channel identifier.
+ * @param local_seid        ID of a local stream endpoint.
+ * @param delay_100us       Delay in 1/10 ms units.
+ * @return status
+ */
+uint8_t a2dp_sink_delay_report(uint16_t a2dp_cid, uint8_t local_seid, uint16_t delay_100us);
 
 /**
  * @brief Register media configuration validator. Can reject insuitable configuration or report stream endpoint as currently busy

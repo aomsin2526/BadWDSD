@@ -35,8 +35,8 @@
  *
  */
 
-#ifndef __MESH_H
-#define __MESH_H
+#ifndef MESH_H
+#define MESH_H
 
 #include "btstack_defines.h"
 #include "mesh/provisioning.h"
@@ -47,6 +47,20 @@
 #if defined __cplusplus
 extern "C" {
 #endif
+
+/**
+ * Mesh Network Stack
+ *
+ * @TLV 'MA' x x
+ * @TLV 'MB' x x
+ * @TLV 'MFIS
+ * @TLV 'MFND
+ * @TLV 'MN' x x
+ * @TLV 'MP' x x
+ * @TLV 'MS' x x
+ * @TLV 'MV' x x
+ * @TLV 'PROV'
+ */
 
 /**
  * Init Mesh network stack
@@ -114,4 +128,4 @@ void mesh_access_appkey_finalize(mesh_transport_key_t * transport_key);
 }
 #endif
 
-#endif //__MESH_H
+#endif //MESH_H

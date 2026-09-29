@@ -10,6 +10,7 @@
 // Port related features
 #define HAVE_EM9304_PATCH_CONTAINER
 #define HAVE_EMBEDDED_TIME_MS
+#define HAVE_HAL_UART_BUFFERS
 
 // BTstack features that can be enabled
 #define ENABLE_BLE
@@ -25,7 +26,7 @@
 #define HCI_ACL_PAYLOAD_SIZE 100
 #define MAX_NR_GATT_CLIENTS 1
 #define MAX_NR_HCI_CONNECTIONS 1
-#define MAX_NR_HIDS_CLIENTS 1
+#define MAX_NR_HIDS_HOSTS     1
 #define MAX_NR_L2CAP_CHANNELS 1
 #define MAX_NR_L2CAP_SERVICES 1
 #define MAX_NR_SM_LOOKUP_ENTRIES 3

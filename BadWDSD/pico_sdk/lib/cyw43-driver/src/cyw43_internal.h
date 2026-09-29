@@ -63,10 +63,13 @@ typedef struct _cyw43_int_t {
     // private info for the bus implementation
     void *bus_data;
 
-    // Infineon "workaround" for f1 overflow problem
+    #if CYW43_INCLUDE_LEGACY_F1_OVERFLOW_WORKAROUND_VARIABLES
+    // These variables are no longer needed (they were never used in any production
+    // code), but a port can enable them if it still expects them to be there.
     uint32_t last_header[2];
     size_t last_size;
     uint32_t last_backplane_window;
+    #endif
 } cyw43_int_t;
 
 static_assert(sizeof(cyw43_int_t) == sizeof(cyw43_ll_t), "");

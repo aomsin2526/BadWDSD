@@ -4,11 +4,14 @@ entropy_init_free:0
 Entropy init-free-init-free
 entropy_init_free:1
 
+Entropy: count default sources
+entropy_count_sources:
+
 Create NV seed_file
 nv_seed_file_create:
 
 Entropy write/update seed file: good
-entropy_seed_file:"data_files/entropy_seed":0
+entropy_seed_file:"../framework/data_files/entropy_seed":0
 
 Entropy write/update seed file: nonexistent
 entropy_seed_file:"no_such_dir/file":MBEDTLS_ERR_ENTROPY_FILE_IO_ERROR
@@ -38,7 +41,7 @@ Entropy output length: 65 > BLOCK_SIZE
 entropy_func_len:65:MBEDTLS_ERR_ENTROPY_SOURCE_FAILED
 
 Entropy failing source
-entropy_source_fail:"data_files/entropy_seed"
+entropy_source_fail:"../framework/data_files/entropy_seed"
 
 Entropy threshold: 16=2*8
 entropy_threshold:16:2:8
@@ -83,9 +86,4 @@ Check NV seed manually #3
 entropy_nv_seed:"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
 Entropy self test
-depends_on:!MBEDTLS_TEST_NULL_ENTROPY
 entropy_selftest:0
-
-Entropy self test (MBEDTLS_TEST_NULL_ENTROPY)
-depends_on:MBEDTLS_TEST_NULL_ENTROPY
-entropy_selftest:1

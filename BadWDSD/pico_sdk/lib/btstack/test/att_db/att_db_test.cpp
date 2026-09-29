@@ -77,6 +77,9 @@ static write_callback_mode_t write_callback_mode = WRITE_CALLBACK_MODE_RETURN_DE
 
 // these can be tweaked to report errors or some data as needed by test case
 static uint16_t att_read_callback(hci_con_handle_t con_handle, uint16_t attribute_handle, uint16_t offset, uint8_t * buffer, uint16_t buffer_size){
+    UNUSED(con_handle);
+    UNUSED(attribute_handle);
+
 	switch (read_callback_mode){
 		case READ_CALLBACK_MODE_RETURN_ONE_BYTE:
 			return att_read_callback_handle_byte(0x55, offset, buffer, buffer_size);
@@ -88,6 +91,13 @@ static uint16_t att_read_callback(hci_con_handle_t con_handle, uint16_t attribut
 }
 
 static int att_write_callback(hci_con_handle_t con_handle, uint16_t attribute_handle, uint16_t transaction_mode, uint16_t offset, uint8_t *buffer, uint16_t buffer_size){
+    UNUSED(con_handle);
+    UNUSED(attribute_handle);
+    UNUSED(transaction_mode);
+    UNUSED(offset);
+    UNUSED(buffer);
+    UNUSED(buffer_size);
+
 	switch (write_callback_mode){
 		case WRITE_CALLBACK_MODE_RETURN_ERROR_WRITE_RESPONSE_PENDING:
 			return ATT_ERROR_WRITE_RESPONSE_PENDING;
@@ -125,6 +135,13 @@ static uint16_t att_prepare_write_request(uint16_t request_type, uint16_t attrib
 
 // ignore for now
 extern "C" void btstack_crypto_aes128_cmac_generator(btstack_crypto_aes128_cmac_t * request, const uint8_t * key, uint16_t size, uint8_t (*get_byte_callback)(uint16_t pos), uint8_t * hash, void (* callback)(void * arg), void * callback_arg){
+    UNUSED(request);
+    UNUSED(key);
+    UNUSED(size);
+    UNUSED(get_byte_callback);
+    UNUSED(hash);
+    UNUSED(callback);
+    UNUSED(callback_arg);
 }
 
 TEST_GROUP(AttDb){
@@ -200,10 +217,16 @@ TEST(AttDb, SetDB_NullAddress){
 TEST(AttDb, MtuExchange){
 	// test some function
 	att_request_len = 3;
-	const uint8_t att_request[3] = { ATT_EXCHANGE_MTU_REQUEST, 0, att_connection.max_mtu};
+	uint8_t att_request[3];
+    att_request[0] = ATT_EXCHANGE_MTU_REQUEST;
+    att_request[1] = 0;
+    att_request[2] = att_connection.max_mtu;
 	att_response_len = att_handle_request(&att_connection, (uint8_t *) att_request, att_request_len, att_response);
 	CHECK_EQUAL(att_request_len, att_response_len);
-	const uint8_t expected_response[] = { ATT_EXCHANGE_MTU_RESPONSE, att_connection.max_mtu, 0};
+	uint8_t expected_response[3];
+	expected_response[0] = ATT_EXCHANGE_MTU_RESPONSE;
+	expected_response[1] = att_connection.max_mtu;
+	expected_response[2] = 0;
 	MEMCMP_EQUAL(expected_response, att_response, att_response_len);
 }
 
@@ -254,7 +277,12 @@ TEST(AttDb, handle_read_multiple_request){
 		att_request_len = att_read_multiple_request(num_value_handles, value_handles);
 		CHECK_EQUAL(1 + 2 * num_value_handles, att_request_len);
 		att_response_len = att_handle_request(&att_connection, (uint8_t *) att_request, att_request_len, att_response);
-		const uint8_t expected_response[] = {ATT_ERROR_RESPONSE, ATT_READ_MULTIPLE_REQUEST, value_handles[0], 0, ATT_ERROR_INVALID_HANDLE};
+		uint8_t expected_response[5];
+        expected_response[0] = ATT_ERROR_RESPONSE;
+        expected_response[1] = ATT_READ_MULTIPLE_REQUEST;
+        expected_response[2] = value_handles[0];
+        expected_response[3] = 0;
+        expected_response[4] = ATT_ERROR_INVALID_HANDLE;
 		CHECK_EQUAL(sizeof(expected_response), att_response_len);
 		MEMCMP_EQUAL(expected_response, att_response, att_response_len);
 	}
@@ -267,7 +295,12 @@ TEST(AttDb, handle_read_multiple_request){
 		att_request_len = att_read_multiple_request(num_value_handles, value_handles);
 		CHECK_EQUAL(1 + 2 * num_value_handles, att_request_len);
 		att_response_len = att_handle_request(&att_connection, (uint8_t *) att_request, att_request_len, att_response);	
-		const uint8_t expected_response[] = {ATT_ERROR_RESPONSE, ATT_READ_MULTIPLE_REQUEST, value_handles[1], 0, ATT_ERROR_READ_NOT_PERMITTED};
+		uint8_t expected_response[5];
+		expected_response[0] = ATT_ERROR_RESPONSE;
+		expected_response[1] = ATT_READ_MULTIPLE_REQUEST;
+		expected_response[2] = value_handles[1];
+		expected_response[3] = 0;
+		expected_response[4] = ATT_ERROR_READ_NOT_PERMITTED;
 		CHECK_EQUAL(sizeof(expected_response), att_response_len);
 		MEMCMP_EQUAL(expected_response, att_response, att_response_len);
 	}
@@ -280,7 +313,12 @@ TEST(AttDb, handle_read_multiple_request){
 		att_request_len = att_read_multiple_request(num_value_handles, value_handles);
 		CHECK_EQUAL(1 + 2 * num_value_handles, att_request_len);
 		att_response_len = att_handle_request(&att_connection, (uint8_t *) att_request, att_request_len, att_response);	
-		const uint8_t expected_response[] = {ATT_ERROR_RESPONSE, ATT_READ_MULTIPLE_REQUEST, value_handles[1], 0, ATT_ERROR_INSUFFICIENT_AUTHENTICATION};
+		uint8_t expected_response[5];
+		expected_response[0] = ATT_ERROR_RESPONSE;
+		expected_response[1] = ATT_READ_MULTIPLE_REQUEST;
+		expected_response[2] = value_handles[1];
+		expected_response[3] = 0;
+		expected_response[4] = ATT_ERROR_INSUFFICIENT_AUTHENTICATION;
 		CHECK_EQUAL(sizeof(expected_response), att_response_len);
 		MEMCMP_EQUAL(expected_response, att_response, att_response_len);
 	}
@@ -624,8 +662,7 @@ TEST(AttDb, gatt_server_get_handle_range_for_service){
 
 	const uint8_t uuid128_1[] = {0x00, 0x00, 0xFF, 0x11, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B, 0x34, 0xFB};
 	const uint8_t uuid128_2[] = {0xAA, 0xBB, 0xFF, 0x11, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B, 0x34, 0xFB};
-	const uint8_t uuid128_3[] = {0xAA, 0xDD, 0xFF, 0x11, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B, 0x34, 0xFB};
-	
+
 
 	bool service_exists = gatt_server_get_handle_range_for_service_with_uuid128(uuid128_1, &start_handle, &end_handle);
 	CHECK_EQUAL(false, service_exists);
@@ -704,8 +741,6 @@ TEST(AttDb, gatt_server_get_client_configuration_handle_for_characteristic){
 
 
 TEST(AttDb, handle_signed_write_command){
-	uint16_t attribute_handle = gatt_server_get_value_handle_for_characteristic_with_uuid16(0, 0xffff, ORG_BLUETOOTH_CHARACTERISTIC_CSC_FEATURE);
-	
 	att_request[0] = ATT_SIGNED_WRITE_COMMAND;
 	att_request_len = 1;
 	att_response_len = att_handle_request(&att_connection, (uint8_t *) att_request, att_request_len, att_response);	
@@ -906,6 +941,38 @@ TEST(AttDb, att_read_callback_handle_little_endian_32){
 		uint16_t blob_size = att_read_callback_handle_little_endian_32(0x11223344, 0, callback_buffer, sizeof(callback_buffer));
 		CHECK_EQUAL(4, blob_size);
 	}
+}
+
+TEST(AttDb, notification_value_is_truncated_to_mtu){
+    uint8_t value[ATT_DEFAULT_MTU];
+    uint8_t packet[ATT_DEFAULT_MTU];
+    for (uint16_t i = 0; i < sizeof(value); i++){
+        value[i] = (uint8_t)i;
+    }
+
+    uint16_t size = att_prepare_handle_value_notification(&att_connection, 0x1234, value, sizeof(value), packet);
+
+    CHECK_EQUAL(ATT_DEFAULT_MTU, size);
+    CHECK_EQUAL(ATT_HANDLE_VALUE_NOTIFICATION, packet[0]);
+    CHECK_EQUAL(0x34, packet[1]);
+    CHECK_EQUAL(0x12, packet[2]);
+    MEMCMP_EQUAL(value, &packet[3], ATT_DEFAULT_MTU - 3u);
+}
+
+TEST(AttDb, indication_value_is_truncated_to_mtu){
+    uint8_t value[ATT_DEFAULT_MTU];
+    uint8_t packet[ATT_DEFAULT_MTU];
+    for (uint16_t i = 0; i < sizeof(value); i++){
+        value[i] = (uint8_t)i;
+    }
+
+    uint16_t size = att_prepare_handle_value_indication(&att_connection, 0x1234, value, sizeof(value), packet);
+
+    CHECK_EQUAL(ATT_DEFAULT_MTU, size);
+    CHECK_EQUAL(ATT_HANDLE_VALUE_INDICATION, packet[0]);
+    CHECK_EQUAL(0x34, packet[1]);
+    CHECK_EQUAL(0x12, packet[2]);
+    MEMCMP_EQUAL(value, &packet[3], ATT_DEFAULT_MTU - 3u);
 }
 
 

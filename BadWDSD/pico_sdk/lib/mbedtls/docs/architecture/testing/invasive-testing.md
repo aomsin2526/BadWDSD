@@ -31,7 +31,7 @@ Do not add test-specific interfaces if there's a practical way of doing it anoth
 
 ### Reliance on internal details
 
-In unit tests and in test programs, it's ok to include header files from `library/`. Do not define non-public interfaces in public headers (`include/mbedtls` has `*_internal.h` headers for legacy reasons, but this approach is deprecated). In contrast, sample programs must not include header files from `library/`.
+In unit tests and in test programs, it's ok to include internal header files from `library/`. Do not define non-public interfaces in public headers. In contrast, sample programs must not include header files from `library/`.
 
 Sometimes it makes sense to have unit tests on functions that aren't part of the public API. Declare such functions in `library/*.h` and include the corresponding header in the test code. If the function should be `static` for optimization but can't be `static` for testing, declare it as `MBEDTLS_STATIC_TESTABLE`, and make the tests that use it depend on `MBEDTLS_TEST_HOOKS` (see [“rules for compile-time options”](#rules-for-compile-time-options)).
 
@@ -275,7 +275,7 @@ This section lists some strategies that are currently used for invasive testing,
 
 Goal: test that `mbedtls_platform_zeroize` does wipe the memory buffer.
 
-Solution ([debugger](#debugger-based-testing)): implemented in `tests/scripts/test_zeroize.gdb`.
+Solution ([debugger](#debugger-based-testing)): implemented in `framework/tests/programs/test_zeroize.gdb`.
 
 Rationale: this cannot be tested by adding C code, because the danger is that the compiler optimizes the zeroization away, and any C code that observes the zeroization would cause the compiler not to optimize it away.
 

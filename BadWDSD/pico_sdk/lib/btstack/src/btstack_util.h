@@ -166,8 +166,8 @@ static inline uint16_t btstack_flip_16(uint16_t value){
  * @return 1 if on big endian
  */
 static inline int btstack_is_big_endian(void){
-	uint16_t sample = 0x0100;
-	return (int) *(uint8_t*) &sample;
+	uint16_t test_value = 0x0100;
+	return (int) *(uint8_t*) &test_value;
 }
 
 /** 
@@ -175,8 +175,8 @@ static inline int btstack_is_big_endian(void){
  * @return 1 if on little endian
  */
 static inline int btstack_is_little_endian(void){
-	uint16_t sample = 0x0001;
-	return (int) *(uint8_t*) &sample;
+	uint16_t test_value = 0x0001;
+	return (int) *(uint8_t*) &test_value;
 }
 
 /**
@@ -301,11 +301,19 @@ void uuid_add_bluetooth_prefix(uint8_t * uuid128, uint32_t short_uuid);
 bool uuid_has_bluetooth_prefix(const uint8_t * uuid128);
 
 /**
- * @brief Parse unsigned number 
- * @param str to parse
+ * @brief Parse an unsigned decimal number from a NUL-terminated string.
+ * @param str NUL-terminated string to parse.
  * @return value
  */
 uint32_t btstack_atoi(const char * str);
+
+/**
+ * @brief Parse an unsigned decimal number from a length-delimited string.
+ * @param str Byte sequence to parse; it does not need to be NUL-terminated.
+ * @param len Maximum number of bytes to parse.
+ * @return value
+ */
+uint32_t btstack_atoi_n(const char * str, size_t len);
 
 /**
  * @brief Return number of digits of a uint32 number
@@ -474,6 +482,22 @@ uint16_t btstack_virtual_memcpy(
     const uint8_t * field_data, uint16_t field_len, uint16_t field_offset, 
     uint8_t * buffer, uint16_t buffer_size, uint16_t buffer_offset);
 
+/**
+ * Convert bytes to hex string
+ * @param dst buffer for hex string, needs to be twice as large as src_size + 1
+ * @param src_data
+ * @param src_size
+ */
+void btstack_bytes_to_hex(char * dst, const uint8_t * src_data, uint16_t src_size);
+
+/**
+ * Convert hex string to bytes
+ * @param dst
+ * @param dst_size
+ * @param src
+ * @return true if conversion was successful
+ */
+bool btstack_hex_to_bytes(uint8_t * dst, uint16_t dst_size, const char * src);
 
 /* API_END */
 

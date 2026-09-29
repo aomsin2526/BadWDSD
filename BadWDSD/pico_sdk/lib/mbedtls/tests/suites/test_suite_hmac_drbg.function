@@ -48,6 +48,8 @@ void hmac_drbg_entropy_usage(int md_alg)
     entropy.len = sizeof(buf);
     entropy.p = buf;
 
+    MD_PSA_INIT();
+
     md_info = mbedtls_md_info_from_type(md_alg);
     TEST_ASSERT(md_info != NULL);
     if (mbedtls_md_get_size(md_info) <= 20) {
@@ -118,6 +120,7 @@ void hmac_drbg_entropy_usage(int md_alg)
 
 exit:
     mbedtls_hmac_drbg_free(&ctx);
+    MD_PSA_DONE();
 }
 /* END_CASE */
 
@@ -126,8 +129,9 @@ void hmac_drbg_seed_file(int md_alg, char *path, int ret)
 {
     const mbedtls_md_info_t *md_info;
     mbedtls_hmac_drbg_context ctx;
-
     mbedtls_hmac_drbg_init(&ctx);
+
+    MD_PSA_INIT();
 
     md_info = mbedtls_md_info_from_type(md_alg);
     TEST_ASSERT(md_info != NULL);
@@ -141,6 +145,7 @@ void hmac_drbg_seed_file(int md_alg, char *path, int ret)
 
 exit:
     mbedtls_hmac_drbg_free(&ctx);
+    MD_PSA_DONE();
 }
 /* END_CASE */
 
@@ -157,6 +162,8 @@ void hmac_drbg_buf(int md_alg)
     memset(buf, 0, sizeof(buf));
     memset(out, 0, sizeof(out));
 
+    MD_PSA_INIT();
+
     md_info = mbedtls_md_info_from_type(md_alg);
     TEST_ASSERT(md_info != NULL);
     TEST_ASSERT(mbedtls_hmac_drbg_seed_buf(&ctx, md_info, buf, sizeof(buf)) == 0);
@@ -171,6 +178,7 @@ void hmac_drbg_buf(int md_alg)
 
 exit:
     mbedtls_hmac_drbg_free(&ctx);
+    MD_PSA_DONE();
 }
 /* END_CASE */
 
@@ -189,6 +197,8 @@ void hmac_drbg_no_reseed(int md_alg, data_t *entropy,
 
     p_entropy.p = entropy->x;
     p_entropy.len = entropy->len;
+
+    MD_PSA_INIT();
 
     md_info = mbedtls_md_info_from_type(md_alg);
     TEST_ASSERT(md_info != NULL);
@@ -219,6 +229,7 @@ void hmac_drbg_no_reseed(int md_alg, data_t *entropy,
 
 exit:
     mbedtls_hmac_drbg_free(&ctx);
+    MD_PSA_DONE();
 }
 /* END_CASE */
 
@@ -237,6 +248,8 @@ void hmac_drbg_nopr(int md_alg, data_t *entropy, data_t *custom,
     p_entropy.p = entropy->x;
     p_entropy.len = entropy->len;
 
+    MD_PSA_INIT();
+
     md_info = mbedtls_md_info_from_type(md_alg);
     TEST_ASSERT(md_info != NULL);
 
@@ -252,6 +265,7 @@ void hmac_drbg_nopr(int md_alg, data_t *entropy, data_t *custom,
 
 exit:
     mbedtls_hmac_drbg_free(&ctx);
+    MD_PSA_DONE();
 }
 /* END_CASE */
 
@@ -269,6 +283,8 @@ void hmac_drbg_pr(int md_alg, data_t *entropy, data_t *custom,
     p_entropy.p = entropy->x;
     p_entropy.len = entropy->len;
 
+    MD_PSA_INIT();
+
     md_info = mbedtls_md_info_from_type(md_alg);
     TEST_ASSERT(md_info != NULL);
 
@@ -284,12 +300,18 @@ void hmac_drbg_pr(int md_alg, data_t *entropy, data_t *custom,
 
 exit:
     mbedtls_hmac_drbg_free(&ctx);
+    MD_PSA_DONE();
 }
 /* END_CASE */
 
 /* BEGIN_CASE depends_on:MBEDTLS_SELF_TEST */
 void hmac_drbg_selftest()
 {
+    MD_PSA_INIT();
+
     TEST_ASSERT(mbedtls_hmac_drbg_self_test(1) == 0);
+
+exit:
+    MD_PSA_DONE();
 }
 /* END_CASE */

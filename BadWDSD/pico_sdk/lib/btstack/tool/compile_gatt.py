@@ -11,8 +11,8 @@
 # - pip3 install pycryptodomex
 # alternatively, the pycryptodome package can be used instead
 # - pip3 install pycryptodome
+# alternatively, openssl with CMAC support can be used instead
 
-import codecs
 import csv
 import io
 import os
@@ -20,9 +20,23 @@ import re
 import string
 import sys
 import argparse
+import subprocess
 import tempfile
 
+def warn(message):
+    print("WARNING: %s" % message, file=sys.stderr)
+
+def error(message):
+    print("ERROR: %s" % message, file=sys.stderr)
+
+verbose = False
+
+def verbose_print(message):
+    if verbose:
+        print(message)
+
 have_crypto = True
+have_openssl = False
 # try to import PyCryptodome independent from PyCrypto
 try:
     from Cryptodome.Cipher import AES
@@ -34,8 +48,24 @@ except ImportError:
         from Crypto.Hash import CMAC
     except ImportError:
         have_crypto = False
-        print("\n[!] PyCryptodome required to calculate GATT Database Hash but not installed (using random value instead)")
-        print("[!] Please install PyCryptodome, e.g. 'pip3 install pycryptodomex' or 'pip3 install pycryptodome'\n")
+        try:
+            subprocess.run(
+                [
+                    'openssl', 'dgst',
+                    '-mac', 'cmac',
+                    '-macopt', 'cipher:aes-128-cbc',
+                    '-macopt', 'hexkey:00000000000000000000000000000000'
+                ],
+                input=b'',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True
+            )
+            have_openssl = True
+        except (OSError, subprocess.CalledProcessError):
+            print("\n[!] PyCryptodome required to calculate GATT Database Hash but not installed (using random value instead)", file=sys.stderr)
+            print("[!] Please install PyCryptodome, e.g. 'pip3 install pycryptodomex' or 'pip3 install pycryptodome'", file=sys.stderr)
+            print("[!] Alternatively, install openssl with CMAC support\n", file=sys.stderr)
 
 header = '''
 // clang-format off
@@ -56,13 +86,8 @@ header = '''
 #if __cplusplus >= 200704L
 constexpr
 #endif
-const uint8_t profile_data[] =
+static const uint8_t profile_data[] =
 '''
-
-print('''
-BLE configuration generator for use with BTstack
-Copyright 2018 BlueKitchen GmbH
-''')
 
 assigned_uuids = {
     'GAP_SERVICE'          : 0x1800,
@@ -160,6 +185,21 @@ def aes_cmac(key, n):
         cobj = CMAC.new(key, ciphermod=AES)
         cobj.update(n)
         return cobj.digest()
+    elif have_openssl:
+        result = subprocess.run(
+            [
+                'openssl', 'dgst',
+                '-mac', 'cmac',
+                '-macopt', 'cipher:aes-128-cbc',
+                '-macopt', 'hexkey:' + key.hex()
+            ],
+            input=n,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True
+        )
+        digest = result.stdout.decode('ascii').strip().split()[-1]
+        return bytes.fromhex(digest)
     else:
         # return random value
         return os.urandom(16)
@@ -168,7 +208,7 @@ def read_defines(infile):
     defines = dict()
     with open (infile, 'rt') as fin:
         for line in fin:
-            parts = re.match('#define\\s+(\\w+)\\s+(\\w+)',line)
+            parts = re.match(r'#define\s+(\w+)\s+(\w+)',line)
             if parts and len(parts.groups()) == 2:
                 (key, value) = parts.groups()
                 defines[key] = int(value, 16)
@@ -187,12 +227,12 @@ def twoByteLEFor(value):
     return [ (value & 0xff), (value >> 8)]
 
 def is_128bit_uuid(text):
-    if re.match("[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}", text):
+    if re.match(r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}", text):
         return True
     return False
 
 def parseUUID128(uuid):
-    parts = re.match("([0-9A-Fa-f]{4})([0-9A-Fa-f]{4})-([0-9A-Fa-f]{4})-([0-9A-Fa-f]{4})-([0-9A-Fa-f]{4})-([0-9A-Fa-f]{4})([0-9A-Fa-f]{4})([0-9A-Fa-f]{4})", uuid)
+    parts = re.match(r"([0-9A-Fa-f]{4})([0-9A-Fa-f]{4})-([0-9A-Fa-f]{4})-([0-9A-Fa-f]{4})-([0-9A-Fa-f]{4})-([0-9A-Fa-f]{4})([0-9A-Fa-f]{4})([0-9A-Fa-f]{4})", uuid)
     uuid_bytes = []
     for i in range(8, 0, -1):
         uuid_bytes = uuid_bytes + twoByteLEFor(int(parts.group(i),16))
@@ -217,7 +257,7 @@ def parseProperties(properties):
         if property in property_flags:
             value |= property_flags[property]
         else:
-            print("WARNING: property %s undefined" % (property))
+            warn("property %s undefined" % (property))
 
     return value
 
@@ -231,7 +271,7 @@ def prettyPrintProperties(properties):
                 value += " | "
             value += property
         else:
-            print("WARNING: property %s undefined" % (property))
+            warn("property %s undefined" % (property))
 
     return value
 
@@ -439,7 +479,7 @@ def parseService(fout, parts, service_type):
 
     serviceDefinitionComplete(fout)
 
-    read_only_anybody_flags = property_flags['READ'];
+    read_only_anybody_flags = property_flags['READ']
     
     write_indent(fout)
     fout.write('// 0x%04x %s\n' % (handle, '-'.join(parts)))
@@ -479,7 +519,7 @@ def parseIncludeService(fout, parts):
     global handle
     global total_size
     
-    read_only_anybody_flags = property_flags['READ'];
+    read_only_anybody_flags = property_flags['READ']
 
     uuid = parseUUID(parts[1])
     uuid_size = len(uuid)
@@ -529,10 +569,10 @@ def parseCharacteristic(fout, parts):
     global current_characteristic_uuid_string
     global characteristic_indices
 
-    read_only_anybody_flags = property_flags['READ'];
+    read_only_anybody_flags = property_flags['READ']
 
     # enumerate characteristics with same UUID, using optional name tag if available
-    current_characteristic_uuid_string = c_string_for_uuid(parts[1]);
+    current_characteristic_uuid_string = c_string_for_uuid(parts[1])
     index = 1
     if current_characteristic_uuid_string in characteristic_indices:
         index = characteristic_indices[current_characteristic_uuid_string] + 1
@@ -591,7 +631,7 @@ def parseCharacteristic(fout, parts):
 
     # add UUID128 flag for value handle
     if uuid_size == 16:
-        value_flags = value_flags | property_flags['LONG_UUID'];
+        value_flags = value_flags | property_flags['LONG_UUID']
 
     write_indent(fout)
     properties_string = prettyPrintProperties(parts[2])
@@ -737,7 +777,7 @@ def parseCharacteristicFormat(fout, parts):
     global handle
     global total_size
 
-    read_only_anybody_flags = property_flags['READ'];
+    read_only_anybody_flags = property_flags['READ']
 
     identifier = parts[1]
     presentation_formats[identifier] = handle
@@ -775,7 +815,7 @@ def parseCharacteristicAggregateFormat(fout, parts):
     global handle
     global total_size
 
-    read_only_anybody_flags = property_flags['READ'];
+    read_only_anybody_flags = property_flags['READ']
     size = 2 + 2 + 2 + 2 + (len(parts)-1) * 2
 
     write_indent(fout)
@@ -787,8 +827,8 @@ def parseCharacteristicAggregateFormat(fout, parts):
     write_16(fout, 0x2905)
     for identifier in parts[1:]:
         if not identifier in presentation_formats:
-            print(parts)
-            print("ERROR: identifier '%s' in CHARACTERISTIC_AGGREGATE_FORMAT undefined" % identifier)
+            print(parts, file=sys.stderr)
+            error("identifier '%s' in CHARACTERISTIC_AGGREGATE_FORMAT undefined" % identifier)
             sys.exit(1)
         format_handle = presentation_formats[identifier]
         write_16(fout, format_handle)
@@ -803,7 +843,7 @@ def parseExternalReportReference(fout, parts):
     global handle
     global total_size
 
-    read_only_anybody_flags = property_flags['READ'];
+    read_only_anybody_flags = property_flags['READ']
     size = 2 + 2 + 2 + 2 + 2
     
     report_uuid = int(parts[2], 16)
@@ -823,7 +863,7 @@ def parseReportReference(fout, parts):
     global handle
     global total_size
 
-    read_only_anybody_flags = property_flags['READ'];
+    read_only_anybody_flags = property_flags['READ']
     size = 2 + 2 + 2 + 2 + 1 + 1
     
     report_id = parts[2]
@@ -845,7 +885,7 @@ def parseNumberOfDigitals(fout, parts):
     global handle
     global total_size
 
-    read_only_anybody_flags = property_flags['READ'];
+    read_only_anybody_flags = property_flags['READ']
     size = 2 + 2 + 2 + 2 + 1
 
     no_of_digitals = parts[1]
@@ -865,7 +905,7 @@ def parseLines(fname_in, fin, fout):
     global handle
     global total_size
 
-    line_count = 0;
+    line_count = 0
     for line in fin:
         line = line.strip("\n\r ")
         line_count += 1
@@ -876,31 +916,31 @@ def parseLines(fname_in, fin, fout):
 
         if line.startswith("#import"):
             imported_file = ''
-            parts = re.match('#import\\s+<(.*)>\\w*',line)
+            parts = re.match(r'#import\s+<(.*)>\w*',line)
             if parts and len(parts.groups()) == 1:
                 imported_file = parts.groups()[0]
-            parts = re.match('#import\\s+"(.*)"\\w*',line)
+            parts = re.match(r'#import\s+"(.*)"\w*',line)
             if parts and len(parts.groups()) == 1:
                 imported_file = parts.groups()[0]
             if len(imported_file) == 0:
-                print('ERROR: #import in file %s - line %u neither <name.gatt> nor "name.gatt" form', (fname_in, line_count))
+                error('#import in file %s - line %u neither <name.gatt> nor "name.gatt" form' % (fname_in, line_count))
                 continue
 
             imported_file = getFile( imported_file )
-            print("Importing %s" % imported_file)
+            verbose_print("Importing %s" % imported_file)
             try:
-                imported_fin = codecs.open (imported_file, encoding='utf-8')
+                imported_fin = open (imported_file, encoding='utf-8')
                 fout.write('\n\n    // ' + line + ' -- BEGIN\n')
                 parseLines(imported_file, imported_fin, fout)
                 fout.write('    // ' + line + ' -- END\n')
             except IOError as e:
-                print('ERROR: Import failed. Please check path.')
+                error('Import failed. Please check path.')
 
             continue
 
         if line.startswith("#TODO"):
-            print ("WARNING: #TODO in file %s - line %u not handled, skipping declaration:" % (fname_in, line_count))
-            print ("'%s'" % line)
+            warn("#TODO in file %s - line %u not handled, skipping declaration:" % (fname_in, line_count))
+            print("'%s'" % line, file=sys.stderr)
             fout.write("// " + line + '\n')
             continue
             
@@ -999,7 +1039,7 @@ def parseLines(fname_in, fin, fout):
                 parseGenericDynamicDescriptor(fout, parts, 0x290D, 'ENVIRONMENTAL_SENSING_TRIGGER_SETTING')
                 continue
 
-            print("WARNING: unknown token: %s\n" % (parts[0]))
+            warn("unknown token: %s\n" % (parts[0]))
 
 def parse(fname_in, fin, fname_out, tool_path, fout):
     global handle
@@ -1017,13 +1057,13 @@ def parse(fname_in, fin, fname_out, tool_path, fout):
 
     serviceDefinitionComplete(fout)
     write_indent(fout)
-    fout.write("// END\n");
+    fout.write("// END\n")
     write_indent(fout)
     write_16(fout,0)
     fout.write("\n")
     total_size = total_size + 2
     
-    fout.write("}; // total size %u bytes \n" % total_size);
+    fout.write("}; // total size %u bytes \n" % total_size)
 
 def listHandles(fout):
     fout.write('\n\n')
@@ -1047,8 +1087,8 @@ def getFile( fileName ):
         # print("test %s" % fullFile)
         if os.path.isfile( fullFile ) == True:
             return fullFile
-    print ("'{0}' not found".format( fileName ))
-    print ("Include paths: %s" % ", ".join(include_paths))
+    error("'{0}' not found".format( fileName ))
+    print("Include paths: %s" % ", ".join(include_paths), file=sys.stderr)
     exit(-1)
 
 
@@ -1062,6 +1102,8 @@ default_includes = [os.path.normpath(path) for path in [
 
 parser = argparse.ArgumentParser(description='BLE GATT configuration generator for use with BTstack')
 
+parser.add_argument('-v', '--verbose', action='store_true',
+        help='enable verbose output on stdout')
 parser.add_argument('-I', action='append', nargs=1, metavar='includes', 
         help='include search path for .gatt service files and bluetooth_gatt.h (default: %s)' % ", ".join(default_includes))
 parser.add_argument('gattfile', metavar='gattfile', type=str,
@@ -1070,6 +1112,12 @@ parser.add_argument('hfile', metavar='hfile', type=str,
         help='header file to be generated')
 
 args = parser.parse_args()
+verbose = args.verbose
+
+verbose_print('''
+BLE configuration generator for use with BTstack
+Copyright 2018 BlueKitchen GmbH
+''')
 
 # add include path arguments
 if args.I != None:
@@ -1085,7 +1133,7 @@ try:
     bluetooth_gatt = read_defines(gen_path)
 
     filename = args.hfile
-    fin  = codecs.open (args.gattfile, encoding='utf-8')
+    fin = open(args.gattfile, encoding="utf-8")
 
     # pass 1: create temp .h file
     ftemp = tempfile.TemporaryFile(mode='w+t')
@@ -1101,7 +1149,7 @@ try:
         # python3
         db_hash_sequence = [('0x%02x' % i) for i in db_hash]
     else:
-        print("AES CMAC returns unexpected type %s, abort" % type(db_hash))
+        error("AES CMAC returns unexpected type %s, abort" % type(db_hash))
         sys.exit(1)
     # reverse hash to get little endian
     db_hash_sequence.reverse()
@@ -1115,11 +1163,11 @@ try:
     fout.close()
     ftemp.close()
 
-    print('Created %s' % filename)
+    verbose_print('Created %s' % filename)
 
 except IOError as e:
-    parser.print_help() 
-    print(e)
+    parser.print_help(sys.stderr)
+    print(e, file=sys.stderr)
     sys.exit(1)
 
-print('Compilation successful!\n')
+verbose_print('Compilation successful!\n')

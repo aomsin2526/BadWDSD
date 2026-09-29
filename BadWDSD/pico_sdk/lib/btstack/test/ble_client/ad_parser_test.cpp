@@ -58,8 +58,6 @@
 #include "ad_parser.h"
 #include "l2cap.h"
 
-extern "C" void le_handle_advertisement_report(uint8_t *packet, uint16_t size);
-
 static uint8_t expected_bt_addr[] = {0x34, 0xB1, 0xF7, 0xD1, 0x77, 0x9B};
 static uint8_t adv_multi_packet[] = {
     0x3E, 0x3B, 0x02, 0x03, // num_reports = 1
@@ -84,8 +82,8 @@ void CHECK_EQUAL_ARRAY(const uint8_t * expected, uint8_t * actual, int size){
     }
 }
 
-static int dummy_callback(void){
-    return 0;
+static void mock_hci_transport_register_packet_handler(void (*packet_handler)(uint8_t packet_type, uint8_t * packet, uint16_t size)){
+    UNUSED(packet_handler);
 }
 
 static hci_transport_t dummy_transport = {
@@ -93,14 +91,20 @@ static hci_transport_t dummy_transport = {
   /*  .transport.init                          = */  NULL,
   /*  .transport.open                          = */  NULL,
   /*  .transport.close                         = */  NULL,
-  /*  .transport.register_packet_handler       = */  (void (*)(void (*)(uint8_t, uint8_t *, uint16_t))) dummy_callback,
+  /*  .transport.register_packet_handler       = */  mock_hci_transport_register_packet_handler,
   /*  .transport.can_send_packet_now           = */  NULL,
   /*  .transport.send_packet                   = */  NULL,
   /*  .transport.set_baudrate                  = */  NULL,
+  /*  .transport.reset_link                    = */  NULL,
+  /*  .transport.set_sco_config                = */  NULL,
 };
 
 
 void packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size){
+    UNUSED(packet_type);
+    UNUSED(channel);
+    UNUSED(size);
+
     CHECK_EQUAL(0xE2, packet[2]);                   // event type
     CHECK_EQUAL(0x01, packet[3]);                   // address type
     CHECK_EQUAL_ARRAY(expected_bt_addr, &packet[4], 6);
@@ -122,7 +126,20 @@ TEST_GROUP(ADParser){
 };
 
 TEST(ADParser, TestAdvertisementEventMultipleReports){
-    le_handle_advertisement_report(adv_multi_packet, sizeof(adv_multi_packet));
+    hci_le_handle_advertisement_report(adv_multi_packet, sizeof(adv_multi_packet));
+}
+
+TEST(ADParser, TestAdvertisementEventTruncatedFixedReport){
+    // One report is announced, but only its first field is present.
+    // The parser must not read the data-length field at offset + 8.
+    uint8_t truncated_report[] = { HCI_EVENT_LE_META, 3, HCI_SUBEVENT_LE_ADVERTISING_REPORT, 1, 0 };
+    hci_le_handle_advertisement_report(truncated_report, sizeof(truncated_report));
+}
+
+TEST(ADParser, TestAdvertisementEventMissingReportCount){
+    // The LE Meta Event names the Advertising Report subevent but has no count.
+    uint8_t missing_report_count[] = { HCI_EVENT_LE_META, 1, HCI_SUBEVENT_LE_ADVERTISING_REPORT };
+    hci_le_handle_advertisement_report(missing_report_count, sizeof(missing_report_count));
 }
 
 int main (int argc, const char * argv[]){

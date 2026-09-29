@@ -50,6 +50,7 @@ extern "C" {
 
 #include "bluetooth.h"
 #include "btstack_chipset.h"
+#include "btstack_lc3.h"
 #include <stdint.h>
 
 /**
@@ -77,7 +78,7 @@ void btstack_chipset_realtek_set_config_file_path(const char *path);
 void btstack_chipset_realtek_set_config_folder_path(const char *path);
 
 /**
- * @brief Set product id
+ * @brief Set USB Product id
  * @param id
  */
 void btstack_chipset_realtek_set_product_id(uint16_t id);
@@ -97,9 +98,40 @@ uint16_t btstack_chipset_realtek_get_num_usb_controllers(void);
 void btstack_chipset_realtek_get_vendor_product_id(uint16_t index, uint16_t * out_vendor_id, uint16_t * out_product_id);
 
 /**
+ * @brief Set LMP Subversion for UART Controller
+ */
+void btstack_chipset_realtek_set_local_info(uint8_t hci_version, uint16_t hci_revision, uint16_t lmp_subversion);
+
+ /**
+  * @brief Get Baudrate from Config File
+  */
+uint32_t btstack_chipset_realtek_get_config_baudrate(void);
+
+/**
  * Get chipset instance for REALTEK chipsets
  */
 const btstack_chipset_t *btstack_chipset_realtek_instance(void);
+
+#ifdef ENABLE_LE_AUDIO_CODEC_OFFLOAD
+/**
+ * @brief Setup Codec Config for LC3 Offloading
+ * Asserts if size is smaller than 17
+ * @param buffer
+ * @param size of buffer
+ * @param sampling_frequency_hz
+ * @param frame_duration
+ * @param channel_allocation,
+ * @param octets_per_frame
+ * @return size of config
+ */
+uint8_t btstack_chipset_realtek_create_lc3_offloading_config(
+    uint8_t * buffer,
+    uint8_t size,
+    uint16_t sampling_frequency_hz,
+    btstack_lc3_frame_duration_t frame_duration,
+    uint32_t channel_allocation,
+    uint16_t octets_per_frame);
+#endif
 
 #if defined __cplusplus
 }

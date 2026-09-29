@@ -56,7 +56,10 @@
 
 #define MAX_ATTRIBUTE_VALUE_SIZE 300
 
-static const char * remote_addr_string = "00:1A:7D:DA:71:01";
+#ifndef REMOTE_ADDR_STRING
+#define REMOTE_ADDR_STRING "00:1A:7D:DA:71:01"
+#endif
+static const char * remote_addr_string = REMOTE_ADDR_STRING;
 
 static bd_addr_t remote_addr;
 
@@ -122,7 +125,7 @@ static enum {
 
 static uint16_t hid_host_cid = 0;
 static bool     hid_host_descriptor_available = false;
-static hid_protocol_mode_t hid_host_report_mode = HID_PROTOCOL_MODE_REPORT_WITH_FALLBACK_TO_BOOT;
+static hid_protocol_mode_t hid_host_report_mode = HID_PROTOCOL_MODE_REPORT;
 
 /* @section Main application configuration
  *
@@ -194,7 +197,7 @@ static void hid_host_set_leds(void){
     if (hid_host_caps_lock){
         output_report[caps_lock_report_offset] = 1 << (hid_host_led_caps_lock_bit & 0x07);
     }
-    hid_host_send_set_report(hid_host_cid, HID_REPORT_TYPE_OUTPUT, hid_host_led_report_id, output_report, hid_host_led_report_len);
+    hid_host_send_report(hid_host_cid, hid_host_led_report_id, output_report, hid_host_led_report_len);
 }
 
 static void hid_host_demo_lookup_caps_lock_led(void){
@@ -326,16 +329,18 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
 #endif
                 /* LISTING_PAUSE */
                 case HCI_EVENT_PIN_CODE_REQUEST:
-					// inform about pin code request
-                    printf("Pin code request - using '0000'\n");
+                    // inform about legacy pairing with pin code - should only happen before Core v2.1
+                    printf("Pin code request for Legacy Pairing received -> abort pairing'\n");
                     hci_event_pin_code_request_get_bd_addr(packet, event_addr);
-                    gap_pin_code_response(event_addr, "0000");
-					break;
+                    gap_pin_code_negative(event_addr);
+                    break;
 
                 case HCI_EVENT_USER_CONFIRMATION_REQUEST:
                     // inform about user confirmation request
                     printf("SSP User Confirmation Request with numeric value '%"PRIu32"'\n", little_endian_read_32(packet, 8));
-                    printf("SSP User Confirmation Auto accept\n");
+                    printf("Accepting Pairing - TODO: require actual user action\n");
+                    hci_event_user_confirmation_request_get_bd_addr(packet, event_addr);
+                    gap_ssp_confirmation_response(event_addr);
                     break;
 
                 /* LISTING_RESUME */
@@ -343,11 +348,18 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
                     switch (hci_event_hid_meta_get_subevent_code(packet)){
 
                         case HID_SUBEVENT_INCOMING_CONNECTION:
-                            // There is an incoming connection: we can accept it or decline it.
-                            // The hid_host_report_mode in the hid_host_accept_connection function 
-                            // allows the application to request a protocol mode. 
-                            // For available protocol modes, see hid_protocol_mode_t in btstack_hid.h file. 
-                            hid_host_accept_connection(hid_subevent_incoming_connection_get_hid_cid(packet), hid_host_report_mode);
+                            // There is an incoming connection: we can accept it or decline it
+
+                            // If there are no resources to handle the connection,
+                            // the status will be ERROR_CODE_MEMORY_CAPACITY_EXCEEDED
+
+                            // The hid_host_report_mode in the hid_host_accept_connection function
+                            // allows the application to request a protocol mode.
+
+                            // For available protocol modes, see hid_protocol_mode_t in btstack_hid.h file.
+                            if (hid_subevent_incoming_connection_get_status(packet) == ERROR_CODE_SUCCESS) {
+                                hid_host_accept_connection(hid_subevent_incoming_connection_get_hid_cid(packet), hid_host_report_mode);
+                            }
                             break;
                         
                         case HID_SUBEVENT_CONNECTION_OPENED:

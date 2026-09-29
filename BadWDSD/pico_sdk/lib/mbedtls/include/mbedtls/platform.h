@@ -25,21 +25,13 @@
  */
 #ifndef MBEDTLS_PLATFORM_H
 #define MBEDTLS_PLATFORM_H
+#include "mbedtls/private_access.h"
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "mbedtls/build_info.h"
 
 #if defined(MBEDTLS_HAVE_TIME)
 #include "mbedtls/platform_time.h"
 #endif
-
-/** Hardware accelerator failed */
-#define MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED     -0x0070
-/** The requested feature is not supported by the platform */
-#define MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED -0x0072
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,7 +41,7 @@ extern "C" {
  * \name SECTION: Module settings
  *
  * The configuration options you can set for this module are in this section.
- * Either change them in config.h or define them on the compiler command line.
+ * Either change them in mbedtls_config.h or define them on the compiler command line.
  * \{
  */
 
@@ -93,6 +85,9 @@ extern "C" {
 #endif
 #if !defined(MBEDTLS_PLATFORM_STD_FREE)
 #define MBEDTLS_PLATFORM_STD_FREE       free /**< The default \c free function to use. */
+#endif
+#if !defined(MBEDTLS_PLATFORM_STD_SETBUF)
+#define MBEDTLS_PLATFORM_STD_SETBUF   setbuf /**< The default \c setbuf function to use. */
 #endif
 #if !defined(MBEDTLS_PLATFORM_STD_EXIT)
 #define MBEDTLS_PLATFORM_STD_EXIT      exit /**< The default \c exit function to use. */
@@ -299,6 +294,59 @@ int mbedtls_platform_set_vsnprintf(int (*vsnprintf_func)(char *s, size_t n,
 #endif /* MBEDTLS_PLATFORM_VSNPRINTF_ALT */
 
 /*
+ * The function pointers for setbuf
+ */
+#if defined(MBEDTLS_PLATFORM_SETBUF_ALT)
+#include <stdio.h>
+/**
+ * \brief                  Function pointer to call for `setbuf()` functionality
+ *                         (changing the internal buffering on stdio calls).
+ *
+ * \note                   The library calls this function to disable
+ *                         buffering when reading or writing sensitive data,
+ *                         to avoid having extra copies of sensitive data
+ *                         remaining in stdio buffers after the file is
+ *                         closed. If this is not a concern, for example if
+ *                         your platform's stdio doesn't have any buffering,
+ *                         you can set mbedtls_setbuf to a function that
+ *                         does nothing.
+ *
+ *                         The library always calls this function with
+ *                         `buf` equal to `NULL`.
+ */
+extern void (*mbedtls_setbuf)(FILE *stream, char *buf);
+
+/**
+ * \brief                  Dynamically configure the function that is called
+ *                         when the mbedtls_setbuf() function is called by the
+ *                         library.
+ *
+ * \param   setbuf_func   The \c setbuf function implementation
+ *
+ * \return                 \c 0
+ */
+int mbedtls_platform_set_setbuf(void (*setbuf_func)(
+                                    FILE *stream, char *buf));
+#else
+#undef mbedtls_setbuf
+#if defined(MBEDTLS_PLATFORM_SETBUF_MACRO)
+/**
+ * \brief                  Macro defining the function for the library to
+ *                         call for `setbuf` functionality (changing the
+ *                         internal buffering on stdio calls).
+ *
+ * \note                   See extra comments on the mbedtls_setbuf() function
+ *                         pointer above.
+ *
+ * \return                 \c 0 on success, negative on error.
+ */
+#define mbedtls_setbuf    MBEDTLS_PLATFORM_SETBUF_MACRO
+#else
+#define mbedtls_setbuf    setbuf
+#endif /* MBEDTLS_PLATFORM_SETBUF_MACRO */
+#endif /* MBEDTLS_PLATFORM_SETBUF_ALT */
+
+/*
  * The function pointers for exit
  */
 #if defined(MBEDTLS_PLATFORM_EXIT_ALT)
@@ -335,6 +383,37 @@ int mbedtls_platform_set_exit(void (*exit_func)(int status));
 #define MBEDTLS_EXIT_FAILURE MBEDTLS_PLATFORM_STD_EXIT_FAILURE
 #else
 #define MBEDTLS_EXIT_FAILURE 1
+#endif
+
+#if defined(MBEDTLS_ENTROPY_C) && \
+    !defined(MBEDTLS_NO_PLATFORM_ENTROPY) && \
+    !(defined(_WIN32) && !defined(EFIX64) && !defined(EFI32))
+/* Platforms where MBEDTLS_PLATFORM_DEV_RANDOM is used
+ * unless a dedicated system call is available both at
+ * compile time and at run time. */
+#define MBEDTLS_PLATFORM_HAVE_DEV_RANDOM
+#endif
+
+#if !defined(MBEDTLS_PLATFORM_DEV_RANDOM)
+#define MBEDTLS_PLATFORM_DEV_RANDOM "/dev/random"
+#endif
+
+/* Arrange for mbedtls_platform_dev_random to always be visible to
+ * Doxygen, because it's linked from the documentation of
+ * MBEDTLS_PLATFORM_DEV_RANDOM and that documentation can be visible
+ * even in configurations where it isn't used. */
+#if defined(MBEDTLS_PLATFORM_HAVE_DEV_RANDOM) || defined(__DOXYGEN__)
+/**
+ * Path to a special file that returns cryptographic-quality random bytes
+ * when read.
+ *
+ * This variable is only declared on platforms where it is used.
+ * It is available when the macro `MBEDTLS_PLATFORM_HAVE_DEV_RANDOM` is defined.
+ *
+ * The default value is #MBEDTLS_PLATFORM_DEV_RANDOM.
+ * See the documentation of this option for guidance.
+ */
+extern const char *mbedtls_platform_dev_random;
 #endif
 
 /*
@@ -390,7 +469,7 @@ int mbedtls_platform_set_nv_seed(
  *          setup or teardown operations.
  */
 typedef struct mbedtls_platform_context {
-    char dummy; /**< A placeholder member, as empty structs are not portable. */
+    char MBEDTLS_PRIVATE(dummy); /**< A placeholder member, as empty structs are not portable. */
 }
 mbedtls_platform_context;
 

@@ -48,18 +48,32 @@
 #include "btstack_bool.h"
 #include "btstack_util.h"
 
+#ifdef ENABLE_PRINTF_TO_LOG
+#include <stdio.h>
+#endif
+
 static const hci_dump_t * hci_dump_implementation;
 static int  max_nr_packets;
 static int  nr_packets;
 static bool packet_log_enabled;
+
+#define BTSNOOP_MON_COMMAND_PKT             0x0002u
+#define BTSNOOP_MON_EVENT_PKT               0x0003u
+#define BTSNOOP_MON_ACL_TX_PKT              0x0004u
+#define BTSNOOP_MON_ACL_RX_PKT              0x0005u
+#define BTSNOOP_MON_SCO_TX_PKT              0x0006u
+#define BTSNOOP_MON_SCO_RX_PKT              0x0007u
+#define BTSNOOP_MON_SYSTEM_NOTE             0x000cu
+#define BTSNOOP_MON_ISO_TX_PKT              0x0012u
+#define BTSNOOP_MON_ISO_RX_PKT              0x0013u
 
 // levels: debug, info, error
 static bool log_level_enabled[3] = { 1, 1, 1};
 
 static bool hci_dump_log_level_active(int log_level){
     if (hci_dump_implementation == NULL) return false;
+    if (log_level >= HCI_DUMP_LOG_LEVEL_PRINT) return true;
     if (log_level < HCI_DUMP_LOG_LEVEL_DEBUG) return false;
-    if (log_level > HCI_DUMP_LOG_LEVEL_ERROR) return false;
     return log_level_enabled[log_level];
 }
 
@@ -97,12 +111,24 @@ void hci_dump_packet(uint8_t packet_type, uint8_t in, uint8_t *packet, uint16_t 
 }
 
 void hci_dump_log(int log_level, const char * format, ...){
-    if (!hci_dump_log_level_active(log_level)) return;
+    va_list args_log;
+    va_start(args_log, format);
 
-    va_list argptr;
-    va_start(argptr, format);
-    (*hci_dump_implementation->log_message)(log_level, format, argptr);
-    va_end(argptr);
+#ifdef ENABLE_PRINTF_TO_LOG
+    if (log_level == HCI_DUMP_LOG_LEVEL_PRINT) {
+        // copy args list and use for vprintf
+        va_list args_printf;
+        va_copy(args_printf, args_log);
+        vprintf(format, args_printf);
+        va_end(args_printf);
+    }
+#endif
+
+    if (hci_dump_log_level_active(log_level)) {
+        (*hci_dump_implementation->log_message)(log_level, format, args_log);
+
+    }
+    va_end(args_log);
 }
 
 #ifdef __AVR__
@@ -170,22 +196,34 @@ void hci_dump_setup_header_bluez(uint8_t * buffer, uint32_t tv_sec, uint32_t tv_
     buffer[12] = packet_type;
 }
 
-// From https://fte.com/webhelpii/hsu/Content/Technical_Information/BT_Snoop_File_Format.htm
+// BTSnoop with Linux Monitor data link type uses the flags field for adapter id and packet opcode.
 void hci_dump_setup_header_btsnoop(uint8_t * buffer, uint32_t ts_usec_high, uint32_t ts_usec_low, uint32_t cumulative_drops, uint8_t packet_type, uint8_t in, uint16_t len) {
-    uint32_t packet_flags = 0;
-    if (in){
-        packet_flags |= 1;
-    }
+    uint16_t opcode;
     switch (packet_type){
         case HCI_COMMAND_DATA_PACKET:
-        case HCI_EVENT_PACKET:
-            packet_flags |= 2;
-        default:
+            opcode = BTSNOOP_MON_COMMAND_PKT;
             break;
+        case HCI_EVENT_PACKET:
+            opcode = BTSNOOP_MON_EVENT_PKT;
+            break;
+        case HCI_ACL_DATA_PACKET:
+            opcode = in ? BTSNOOP_MON_ACL_RX_PKT : BTSNOOP_MON_ACL_TX_PKT;
+            break;
+        case HCI_SCO_DATA_PACKET:
+            opcode = in ? BTSNOOP_MON_SCO_RX_PKT : BTSNOOP_MON_SCO_TX_PKT;
+            break;
+        case HCI_ISO_DATA_PACKET:
+            opcode = in ? BTSNOOP_MON_ISO_RX_PKT : BTSNOOP_MON_ISO_TX_PKT;
+            break;
+        case LOG_MESSAGE_PACKET:
+            opcode = BTSNOOP_MON_SYSTEM_NOTE;
+            break;
+        default:
+            return;
     }
     big_endian_store_32(buffer,  0, len);               // Original Length
     big_endian_store_32(buffer,  4, len);               // Included Length
-    big_endian_store_32(buffer,  8, packet_flags);      // Packet Flags
+    big_endian_store_32(buffer,  8, opcode);            // Adapter ID (0) and Packet Opcode
     big_endian_store_32(buffer, 12, cumulative_drops);  // Cumulativ Drops
     big_endian_store_32(buffer, 16, ts_usec_high);            // Timestamp Microseconds High
     big_endian_store_32(buffer, 20, ts_usec_low);             // Timestamp Microseconds Low

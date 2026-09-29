@@ -5,13 +5,241 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ---
-
 ## Unreleased
-### Added
-### Fixed
-- GAP: store link key for standard/non-SSP pairing
-### Changed
 
+### Added
+- esp32: support micro-ecc from tinycrypt
+- HAL UART DMA: `HAVE_HAL_UART_BUFFERS` allows `hal_uart_dma_send_block` and `hal_uart_dma_receive_block` to
+  return true to indicate that buffer has been sent/received, without a completion callback
+
+### Fixed
+- L2CAP: reject MTU smaller than 48 bytes for basic channels
+- SM: fix BR/EDR->LE CTKD overwrite of BR/EDR link key
+- SM: fix BR/EDR->LE CTKD check for existing LTK
+- A2DP: ignore unexpected responses, keep state for Delay Report response
+- GATT Service Client: handle zero or multiple CCCDs for a given Characteristic UUID
+- RFCOMM: only deliver RFCOMM data with size > 0
+- ESP32 port: use `HAVE_HAL_UART_BUFFERS` in UART HAL
+- MSP432P401LP-CC256x port: ise `HAVE_HAL_UART_BUFFERS` in UART HAL
+- Renesas EK-RA6M4A-DA14531 port: use `HAVE_HAL_UART_BUFFERS` in UART HAL
+- Renesas TB-S1JA-CC256x port: use `HAVE_HAL_UART_BUFFERS` in UART HAL
+- STM32 L073RZ Nucleo EM9304 port: use `HAVE_HAL_UART_BUFFERS` in UART HAL
+
+### Changed
+- HCI: align synchronous transport with asynchronous by simulating a deferred packet sent event 
+- esp32: use individual drivers for esp-idf 5.3 and later
+- esp32: select large app partition for esp32-s31 binaries
+- Embedded UART block adapter: support `HAVE_HAL_UART_BUFFERS` completion handling via `btstack_run_loop_execute_on_main_thread
+- FreeRTOS UART block adapter: support `HAVE_HAL_UART_BUFFERS` completion handling via `btstack_run_loop_execute_on_main_thread`
+
+## Release v1.8.2
+
+### Added
+- Chipset BCM: btstack_chipset_bcm_set_patchram() allows to provide dynamic PatchRAM buffer
+- ATT DB/GATT Server: add gatt_server_get_client_configuration_value to decode Client Characteristic Configuration writes
+- HCI: configure default LE Data Length with hci_le_set_max_data_length and hci_le_set_default_data_length
+- HCI Dump: add `hci_dump_buffered` to buffer packets in memory and flush on timeout, full buffer, or explicit request
+- HCI Dump: use Linux Monitor (data link 2001) for BTSnoop which allows for debug messages as System Notes
+- GAP: set LE Data Length for connection with gap_le_set_data_length
+- A2DP: support MPEG-D USAC configuration
+- HFP HF: add APIs and event for HF Indicator supported/enabled state
+- LE Audio: add Broadcast Sink/Source Lite examples and Unicast Gateway/Headset Lite demos
+- POSIX-H4: support newer CYW55xxx Controllers with --airoc-download-mode flag
+- POSIX-H4 and Windows-H4: support Zephyr-based Controllers
+- Windows-H4: support AIROC download mode
+- Web-H4: support CYW55310 and package .hcd files
+- esp32: support external Bluetooth Controller
+- btstack_resample: add btstack_resample_get_min_factor_for_output_capacity
+- Tool: compile_gatt.py adds verbose mode and OpenSSL fallback if PyCryptodome is not installed
+
+### Fixed
+- HCI: clear pending CIS send requests when a CIG is removed or a CIS disconnects
+- HCI: validate incoming HCI packets before dispatch and avoid out-of-bounds reads for malformed ISO packets
+- GAP: emit GAP_SUBEVENT_LE_CONNECTION_COMPLETE for timeout of directed advertising
+- GAP: avoid sending HCI Authenticate a second time in some cases
+- L2CAP: verify ERTM start frame
+- L2CAP: avoid out-of-bounds read during option parsing
+- L2CAP: fix configuration response for multiple unknown options
+- A2DP: get capabilities of all streamendpoints
+- A2DP: avoid assert for outgoing connection to local Bluetooth address
+- AVDTP: fix serialization of MPEG-D USAC configuration
+- AVRCP Target: fix response for GetElementAttributes with attribute Song Length
+- Classic profiles: improve packet parser in AVRCP, BNEP, HID Host, HSP, OBEX, RFCOMM, and SDP Server
+- GATT Service Client: reject disconnect/unregister while connection setup or active connections are in progress
+- Mesh and LE Audio: improve parsers
+- btstack_crypto: fix DHKey calculation for newer mbedTLS that require f_rnd for ECC multiplications
+- a2dp_sink_demo: avoid buffer overrun for HAVE_BTSTACK_AUDIO_EFFECTIVE_SAMPLERATE
+
+### Changed
+- Chipset BCM: ENABLE_AIROC_DOWNLOAD_MODE enables support, hci_set_airoc_download_mode activates it
+- GAP: LE link layer commands are sent sequentially
+- GAP: set default minimum encryption key size to 16. Can be reduced with gap_set_required_encryption_key_size()
+- SM: set default minimum encryption key size to 16. Can be reduced with sm_set_encryption_key_size_range()
+- SM: enable Secure Connections Only mode by default. Can be disabled with sm_set_secure_connections_only_mode()
+- GAP: set default for automatic accept of SSP numeric comparison or just works to off. Can be enabled with gap_ssp_set_auto_accept()
+- RFCOMM: send initial credits after modem status has been exchanged
+- GATT Service Client: gatt_service_client_unregister_client returns a status
+- HFP: rework HF Indicator handling to track supported and enabled state per AG
+- LE Audio: remove BASS client/server implementation
+- posix-h4-zephyr: deprecated. Zephyr-based Controllers are supported by posix-h4 port
+- posix-h4-airoc: moved to port/archive. Use posix-h4 with --airoc-download-mode
+- raspi: moved to port/archive. Use port/linux
+- windows-h4-zephyr: moved to port/archive. Zephyr-based Controllers are supported by windows-h4
+- example: require encryption for all LE demos
+
+
+## Release v1.8.1
+
+### Added
+- HCI: add Core v6.2 commands and events, including Channel Sounding definitions
+- GAP: ENABLE_LE_SHORTER_CONNECTION_INTERVALS provides:
+  - gap_request_connection_rate_update
+  - gap_request_frame_space_update
+- A2DP Source: emit capabilities for MPEG-D USAC codec
+- HAL Audio: add external trigger support, playback/recording timestamps, and optional gain/volume control
+- Port for STM32 F4-Discovery with Infineon CYW55310
+
+### Fixed
+- HCI ISO: reset CIG/BIG state on startup, mark streams idle on disconnect, and make can-send-now handling more robust
+- SDP Server: return Invalid Continuation State if needed
+- AVDTP Initiator: Allow abort operation in any state
+- AVDTP: improve packet parsing in initiator/acceptor, including DELAYREPORT handling
+- AVRCP: improve packet parsing in controller, target, and browsing implementations
+- HID Host: support reports longer than 255 bytes
+- HFP: Service Level Disconnect with active SCO connection
+- HFP HF: allow to answer call from HFP_SUBEVENT_START_RINGING
+- LE Audio: validate metadata serialization buffer sizes
+
+### Changed
+- HCI: emit HCI_EVENT_CIS_CAN_SEND_NOW and HCI_EVENT_BIS_CAN_SEND_NOW via registered ISO packet handler
+- GAP: gap_disconnect returns ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER instead of emitting HCI Disconnected Event
+- AVDTP Initiator: handle fragmented Get(All)Capabilities response
+- HID Device: add hid_device_accept_truncated_hid_reports to optionally accept shorter HID reports
+- BASS Client: rework API to use GATT Service Client
+- Chipset BCM: select lexicographically latest matching .hcd file
+- Daemon: emit hci command complete for failed gap_disconnect
+
+
+## Release v1.8
+
+### Added
+- HCI: add hci_request_sco_can_send_now_event_for_con_handle
+- HCI: fix implicit flow control for small SCO buffers
+- HCI: provide status in GAP_EVENT_SECURITY_LEVEL
+- SM: provide CTKD Active field in SM_EVENT_PAIRING_COMPLETE
+- SM: emit SM_EVENT_SECURITY_REQUEST from Peripheral
+- SM: applications triggers pairing on SM_EVENT_SECURITY_REQUEST if ENABLE_EXPLICIT_PAIRING_ON_SECURITY_REQUEST
+- SM: emits GAP_SUBEVENT_BONDING_DELETED before storing updated bonding information and on gap_delete_bonding()
+- GATT Service: emit GATTSERVICE_SUBEVENT_GATT_DATABASE_HASH if ENABLE_GATT_CLIENT_CACHING
+- GATT Service Client: cache service and characteristic results in TLV if ENABLE_GATT_CLIENT_CACHING
+- Linked List: add get previous item function
+- Linear Buffer provides streaming inteface for existing memory buffer, see src/btstack_chunk_buffer.h
+- HCI Dump: Log printf into packet log with ENABLE_PRINTF_TO_LOG
+- Audio Implementation using SDL2
+- Audio Generator: wrapper for Silence, Sine, MOD- and Vorbis-Player and "Bridge" generators
+- Audio Player: combines supported audio generators into a unified player interface
+- Chipset: support LC3 offloading for Infineon and Realtek Controller
+- Port for Ezurio Vela IF820 dev kit
+- Port for WebAssembly running in Chrome-based browsers that support WebSerial API
+
+### Fixed
+- GAP: emit Dedicated Bonding Complete after link key was received
+- L2CAP: use L2CAP_CONNECTION_PIN_OR_LINK_KEY_MISSING status in connection complete event
+- RFCOMM: use L2CAP_CONNECTION_PIN_OR_LINK_KEY_MISSING status in connection complete event
+- HCI: fix association between iso streams and cis params via cis_id
+- RFCOMM: allow to trigger reconnect from failed channel open event
+- SM: Security Manager registers itself as first HCI packet handler
+- GATT Client: handle notifications and indications during MTU exchange
+- ATT Server: restore CCC for HCI_EVENT_ENCRYPTION_CHANGE_V2
+- HFP: rework event handling, fixes issue with parallel audio setup
+- HFP: emit service level connection after reporting indicator mapping
+
+### Changed
+- HCI: emit HCI_EVENT_SCO_CAN_SEND_NOW round robin
+- L2CAP: don't drop link key for connection response "security block"
+- HIDS Client: rename into HIDS Host to match HIDS Device
+  - src/ble/gatt-service/hids_client.* -> src/ble/gatt-service/hids_host.*
+  - MAX_NR_HIDS_CLIENTS -> MAX_NR_HIDS_HOSTS in btstack_config.h
+- btstack_audio: return 0 on success for source and sink init
+- btstack_audio: provide timeinfo in playback/recording callbacks for sample-accurate playback
+- libusb: allow to specify USB device with bus ID and port path
+- Zephyr: update port for Zephyr 4.2.0
+- Zephyr: support Ezurio M.2 Adapter for STM32 Nucleo-144 boards
+
+
+## Release v1.7
+
+### Added
+- HCI: support newer AIROC Controller that require Download Mode with ENABLE_AIROC_DOWNLOAD_MODE
+- GAP: simulate HCI_EVENT_REMOTE_NAME_REQUEST_COMPLETE if HCI Remote Name Request fails 
+- btstack_base64_encoder: add implementation
+- ATT DB: add gatt_server_get_database_hash
+- AVRCP Controller: Add send generic PASS THROUGH command
+- AVRCP Controller: handle response timout
+- AVRCP Controller: emit AVRCP_SUBEVENT_PLAYER_APPLICATION_SETTING_ATTRIBUTES_LIST event
+- AVRCP Controller: emit AVRCP_SUBEVENT_PLAYER_APPLICATION_SETTING_VALUES_LIST event
+- GATT Server: store Database Hash in TLV and discard stored CCCs if database changes
+- GATT Service Client: component that discovers characteristics and enables notifications/indications
+- HID Host: storage for HID Descriptors is now optional
+- HID Device: allow for SDP Record without Service Name attribute
+- Chipset: support for Realtek Controller with H4 transport, e.g. RTL8761CTV
+- Zephyr: provide hal_flash_bank implementation for native flash driver
+- Zephyr: explicit run loop and HCI transport implementations
+- POSIX: support error condition for file descriptors in btstack_run_loop
+- Linux: HCI Transport for Linux HCI Kernel Socket
+- Linux: Audio sink implementation for Linux ALSA
+- esp32: support stdin over USB Serial/JTAG Console
+- HID Keyboard Demo: Reconnect to last bonded device on startup
+- PBAP Client: add pbap_get_vcard_listing_size
+
+### Fixed
+- HCI: fix incorrect assert/regression in num completed packets handling introduced in 6ec1ca0
+- HCI: handle connection collision, ignore page timeout after incoming connection event
+- L2CAP: do not sent I-Frames in ERTM WAIT_F state
+- L2CAP: trigger retransmission for ERTM Reject and RR
+- L2CAP: fix transmission for ERTM if num rx buffers different from num tx buffers
+- RFCOMM: limit max frame size by size of outgoing buffer when ERTM enabled
+- BNEP: emit channel opened with ERROR_CODE_REMOTE_USER_TERMINATED_CONNECTION if connection cannot be set up
+- GAP: store link key for standard/non-SSP pairing
+- GAP: fix gap_sniff_subrating_configure
+- SM: fix pairing as Peripheral with Extended Advertising and LE Advertisement Set Terminated after Connection Complete 
+- AVRCP Target: fix UNIT INFO response
+- AVRCP Target: fix Set Absolute Volume Response
+- AVRCP Target: fix Get Element Attributes Response
+- AVDTP: trigger SEP discovery for incoming AVDTP connection after outgoing connection was triggered
+- HID Host: emit HID_SUBEVENT_INCOMING_CONNECTION if memory allocation fails
+- HFP AG: avoid recursion with synchronous HCI transport 
+- HFP HF: return ERROR_CODE_COMMAND_DISALLOWED if indicator is not enabled
+- HFP HF: send Apple Accessory information after service level connection
+- HFP HF: send phone service info with +CNUM
+- HFP HF: handle rfcomm messages larger than 255 bytes
+ 
+### Changed
+- HCI: hci_request_cis_can_send_now_events for CIG in Central role will emit can send now events for all streams in group
+- HCI: improve sco send without sco flow control for smaller packets
+- HCI: use page scan repetition mode R1 for classic connections
+- L2CAP: return list of unknown options for invalid configuration request
+- GAP: validate params in gap_set_scan_params
+- GAP: emit Dedicated Bonding Complete after pairing without enabling encryption
+- SM: derive BR/EDR Link Key from LE LTK before sending DHKey Check
+- AVRCP Controller: avrcp_controller_query_player_application_setting_value_text queries subset of attribute values
+- AVRCP Controller: avrcp_controller_query_player_application_setting_attribute_text queries subset of attribute ids
+- HFP HF: replace HFP_SUBEVENT_ENHANCED_VOICE_RECOGNITION_AG_(READY_TO_ACCEPT_AUDIO_INPUT | IS_STARTING_SOUND | 
+          IS_PROCESSING_AUDIO_INPUT | MESSAGE) with a single HFP_SUBEVENT_ENHANCED_VOICE_RECOGNITION_AG_STATE event
+- HFP HF: introduce timeout of 5 seconds for receiving AG OK|ERROR response on VRA commands
+- HFP HF: notify all connected AGs on HF indicator change in hfp_hf_set_hf_indicator
+- HFP HF: emit HFP_SUBEVENT_VOICE_RECOGNITION_ACTIVATED with status code ERROR_CODE_UNSPECIFIED_ERROR if AG disables VRA before SCO
+- HID Host: remove HID_PROTOCOL_MODE_REPORT_WITH_FALLBACK_TO_BOOT
+- HID Host: emit HID_SUBEVENT_INCOMING_CONNECTION if memory allocation fails
+- GATT Compiler: make profile_data static to allow one per source file
+- esp32: rework build that avoids copy of btstack files into esp-idf components folder
+- esp32: provide skeleton project for out-of-tree builds
+- max32630-fthr: updated
+- POSIX: use -b for baudrate and -m for BD_ADDR on command line
+- POSIX-H4 variants: exit on power on failure
+- POSIX: rename posix-h4-bcm to posix-h4-airoc for newer AIROC Controllers
+- STM32: updated ports to STM32CubeF4 v1.28.0
+- Zephyr: update for Zephyr v4.0
 
 ## Release v1.6.2
 
@@ -1280,5 +1508,3 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - L2CAP: fix default remote MTU as 672 instead of 48 (Minimal MTU)
 - HCI: avoid double free during halting
 - SM: fixed reconnect using legacy pairing in slave role
-
-

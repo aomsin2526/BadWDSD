@@ -54,6 +54,11 @@ extern "C" {
 #include "classic/btstack_link_key_db.h"
 #endif
 
+// LC3 Offloading
+#if defined(ENABLE_LC3_OFFLOAD_AIROC) || defined(ENABLE_LC3_OFFLOAD_REALTEK)
+#define ENABLE_LE_AUDIO_CODEC_OFFLOAD
+#endif
+
 // BIG has up to 2 BIS (stereo)
 #ifndef MAX_NR_BIS
 #define MAX_NR_BIS 2
@@ -213,13 +218,13 @@ typedef struct {
 
 typedef struct {
     uint8_t  big_handle;
-    uint8_t  sync_handle;
     uint8_t  encryption;
+    uint16_t sync_handle;
     uint8_t  broadcast_code[16];
     uint8_t  mse;
     uint16_t big_sync_timeout_10ms;
     uint8_t  num_bis;
-    uint8_t bis_indices[MAX_NR_BIS];
+    uint8_t  bis_indices[MAX_NR_BIS];
 } le_audio_big_sync_params_t;
 
 typedef enum {
@@ -248,12 +253,13 @@ typedef struct {
     const le_audio_big_params_t * params;
     // request to send
     bool can_send_now_requested;
+#ifdef ENABLE_ISO_BIG_TRANSMIT_TRACKING
     // previous and current timestamp of number completed event to track ISO intervals
     bool     num_completed_timestamp_previous_valid;
     bool     num_completed_timestamp_current_valid;
     uint32_t num_completed_timestamp_previous_ms;
     uint32_t num_completed_timestamp_current_ms;
-
+#endif
 } le_audio_big_t;
 
 typedef struct {
@@ -320,9 +326,38 @@ typedef struct {
     hci_con_handle_t acl_con_handles[MAX_NR_CIS];
     bool cis_setup_active[MAX_NR_CIS];
     bool cis_established[MAX_NR_CIS];
+    uint8_t highest_outgoing_cis_index;
     // request to send
     bool can_send_now_requested;
 } le_audio_cig_t;
+
+// LC3 Offload Configuration = Codec on Controller
+#define LE_AUDIO_OFFLOAD_CONFIG_LEN 20
+typedef struct {
+    uint16_t delay_us;
+    uint8_t  data_path_id;
+
+    hci_audio_coding_format_t coding_format;
+    uint16_t company_id;
+    uint16_t vendor_specific_codec_id;
+
+    uint8_t  config_len;
+    uint8_t  config_data[LE_AUDIO_OFFLOAD_CONFIG_LEN];
+} le_audio_offload_config_t;
+
+typedef enum {
+    GAP_PRIVACY_CLIENT_STATE_IDLE,
+    GAP_PRIVACY_CLIENT_STATE_PENDING,
+    GAP_PRIVACY_CLIENT_STATE_READY
+} gap_privacy_client_state_t;
+
+struct gap_privacy_client {
+    btstack_linked_item_t * next;
+    void (*callback)(struct gap_privacy_client * client, bd_addr_t random_addr);
+    gap_privacy_client_state_t state;
+};
+
+typedef struct gap_privacy_client gap_privacy_client_t;
 
 /* API_START */
 
@@ -512,6 +547,7 @@ bool gap_secure_connections_active(void);
 
 /**
  * @brief If set, BTstack will confirm a numeric comparison and enter '000000' if requested.
+ * @note Default: auto_accept disabled
  */
 void gap_ssp_set_auto_accept(int auto_accept);
 
@@ -579,8 +615,10 @@ void gap_set_page_timeout(uint16_t page_timeout);
  * @param scan_interval range 0x0004..0x4000, unit 0.625 ms
  * @param scan_window range 0x0004..0x4000, unit 0.625 ms
  * @param scanning_filter_policy 0 = all devices, 1 = all from whitelist
+ * @return status
  */
-void gap_set_scan_params(uint8_t scan_type, uint16_t scan_interval, uint16_t scan_window, uint8_t scanning_filter_policy);
+uint8_t gap_set_scan_params(uint8_t scan_type, uint16_t scan_interval, uint16_t scan_window,
+                            uint8_t scanning_filter_policy);
 
 /**
  * @brief Set parameters for LE Scan
@@ -803,8 +841,8 @@ uint8_t gap_periodic_advertising_stop(uint8_t advertising_handle);
  * @param skip The number of periodic advertising packets that can be skipped after a successful receive
  * @param sync_timeout Range: 0x000A to 0x4000, Time = N*10 ms, Time Range: 100 ms to 163.84 s
  * @param cte_type  bit 0 = Do not sync to packets with an AoA Constant Tone Extension
- *                  bit 1 = Do not sync to packets with an AoD Constant Tone Extension with 1 μs slots
- *                  bit 2 = Do not sync to packets with an AoD Constant Tone Extension with 2 μs slots
+ *                  bit 1 = Do not sync to packets with an AoD Constant Tone Extension with 1 us slots
+ *                  bit 2 = Do not sync to packets with an AoD Constant Tone Extension with 2 us slots
  *                  bit 3 = Do not sync to packets without a Constant Tone Extension
  * @return status
  */
@@ -907,6 +945,17 @@ uint8_t gap_cis_create(uint8_t cig_id, hci_con_handle_t cis_con_handles [], hci_
  */
 uint8_t gap_cis_accept(hci_con_handle_t cis_con_handle);
 
+#ifdef ENABLE_LE_AUDIO_CODEC_OFFLOAD
+/**
+ * @brief Set codec configuration send to Controller for LC3 Offloading
+ * @param cis_handle
+ * @param data_direction
+ * @param offload_config
+ */
+uint8_t gap_cis_set_codec_configuration(hci_con_handle_t cis_handle, uint8_t data_direction,
+                                        const le_audio_offload_config_t* offload_config);
+#endif
+
 /**
  * @brief Reject Connected Isochronous Stream (CIS)
  * @param cis_con_handle
@@ -995,6 +1044,40 @@ int gap_connection_parameter_range_included(le_connection_parameter_range_t * ex
 uint8_t gap_request_connection_subrating(hci_con_handle_t con_handle, uint16_t subrate_min, uint16_t subrate_max,
                                      uint16_t max_latency, uint16_t continuation_number, uint16_t supervision_timeout);
 
+#ifdef ENABLE_LE_SHORTER_CONNECTION_INTERVALS
+/**
+ * @brief Request a connection rate update for a given LE connection
+ * @param con_handle
+ * @param connection_interval_min_us (unit: us)
+ * @param connection_interval_max_us (unit: us)
+ * @param subrate_min
+ * @param subrate_max
+ * @param max_latency (in units of subrated connection events)
+ * @param continuation_number (Minimum number of underlying connection events to remain active after a packet containing a Link Layer PDU with a non-zero Length field is sent or received)
+ * @param supervision_timeout (unit: 10ms) range: 10..3200 (100 ms to 32 s)
+ * @param min_ce_length (unit: 0.625 ms)
+ * @param max_ce_length (unit: 0.625 ms)
+ * @return status
+ */
+uint8_t gap_request_connection_rate_update(hci_con_handle_t con_handle, uint16_t connection_interval_min_us,
+                                           uint16_t connection_interval_max_us, uint16_t subrate_min,
+                                           uint16_t subrate_max, uint16_t max_latency,
+                                           uint16_t continuation_number, uint16_t supervision_timeout,
+                                           uint16_t min_ce_length, uint16_t max_ce_length);
+
+/**
+ * @brief Request a frame space update for a given LE connection
+ * @param con_handle
+ * @param frame_space_min_us (unit: us)
+ * @param frame_space_max_us (unit: us)
+ * @param phys bitmask: 1 = LE 1M PHY, 2 = LE 2M PHY, 4 = LE Coded PHY
+ * @param spacing_types bitmask: 1 = T_IFS_ACL_CP, 2 = T_IFS_ACL_PC, 4 = T_MCES, 8 = T_IFS_CIS, 16 = T_MSS_CIS
+ * @return status
+ */
+uint8_t gap_request_frame_space_update(hci_con_handle_t con_handle, uint16_t frame_space_min_us,
+                                 uint16_t frame_space_max_us, uint8_t phys, uint16_t spacing_types);
+#endif
+
 /**
  * @brief Set max number of connections in LE Peripheral role (if Bluetooth Controller supports it)
  * @note: default: 1
@@ -1080,6 +1163,17 @@ uint8_t gap_auto_connection_stop_all(void);
  */
 uint8_t gap_le_set_phy(hci_con_handle_t con_handle, uint8_t all_phys, uint8_t tx_phys, uint8_t rx_phys, uint16_t phy_options);
 
+#ifdef ENABLE_LE_DATA_LENGTH_EXTENSION
+/**
+ * @brief Set LE Data Length
+ * @param con_handle
+ * @param tx_octets
+ * @param tx_time in us
+ * @return status
+ */
+uint8_t gap_le_set_data_length(hci_con_handle_t con_handle, uint8_t tx_octets, uint16_t tx_time);
+#endif
+
 /**
  * @brief Get connection interval
  * @param con_handle
@@ -1159,7 +1253,7 @@ void gap_delete_all_link_keys(void);
 /** 
  * @brief Store link key for remote device with baseband address
  * @param addr
- * @param link_key
+ * @param link_key in HCI / Little Endian byte order
  * @param link_key_type
  * @note On most desktop ports, the Link Key DB uses a TLV and there is one TLV storage per
  *       Controller resp. its Bluetooth Address. As the Bluetooth Address is retrieved during
@@ -1170,7 +1264,7 @@ void gap_store_link_key_for_bd_addr(bd_addr_t addr, link_key_t link_key, link_ke
 /**
  * @brief Get link for remote device with basband address
  * @param addr
- * @param link_key (out) is stored here
+ * @param link_key (out) is stored here in HCI / Little Endian byte order
  * @param link_key_type (out) is stored here
  * @note On most desktop ports, the Link Key DB uses a TLV and there is one TLV storage per
  *       Controller resp. its Bluetooth Address. As the Bluetooth Address is retrieved during
@@ -1192,7 +1286,7 @@ int gap_link_key_iterator_init(btstack_link_key_iterator_t * it);
  * @brief Get next Link Key
  * @param it
  * @brief addr
- * @brief link_key
+ * @brief link_key in HCI / Little Endian byte order
  * @brief type of link key
  * @return 1, if valid link key found
  * @see note on gap_link_key_iterator_init
@@ -1357,7 +1451,7 @@ uint8_t gap_ssp_io_capabilities_negative(const bd_addr_t addr);
  * Send Link Key Reponse
  * @note Link Key (Negative) Reply is sent automatically unless ENABLE_EXPLICIT_LINK_KEY_RESPONSE
  * @param addr
- * @param link_key
+ * @param link_key in HCI / Little Endian byte order
  * @param type or INVALID_LINK_KEY if link key not available
  * @return status
  */
@@ -1462,19 +1556,6 @@ void gap_set_peer_privacy_mode(le_privacy_mode_t privacy_mode );
  * @return EROOR_CODE_SUCCESS if supported by Controller
  */
 uint8_t gap_load_resolving_list_from_le_device_db(void);
-
-typedef enum {
-    GAP_PRIVACY_CLIENT_STATE_IDLE,
-    GAP_PRIVACY_CLIENT_STATE_PENDING,
-    GAP_PRIVACY_CLIENT_STATE_READY
-} gap_privacy_client_state_t;
-
-struct gap_privacy_client {
-    btstack_linked_item_t * next;
-    void (*callback)(struct gap_privacy_client * client, bd_addr_t random_addr);
-    gap_privacy_client_state_t state;
-};
-typedef struct gap_privacy_client gap_privacy_client_t;
 
 /**
  * @brief Register callback that gets executed during random address update

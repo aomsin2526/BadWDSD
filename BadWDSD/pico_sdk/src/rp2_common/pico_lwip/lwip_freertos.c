@@ -25,7 +25,7 @@ static void tcpip_init_done(void *param) {
 }
 
 bool lwip_freertos_init(async_context_t *context) {
-    assert(!lwip_context);
+    assert(!lwip_context || lwip_context == context);
     lwip_context = context;
     static bool done_lwip_init;
     if (!done_lwip_init) {

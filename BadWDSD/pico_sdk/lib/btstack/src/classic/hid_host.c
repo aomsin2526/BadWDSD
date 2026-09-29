@@ -272,20 +272,21 @@ static void hid_emit_set_protocol_response_event(hid_host_connection_t * connect
     hid_host_callback(HCI_EVENT_PACKET, connection->hid_cid, &event[0], pos);
 }
 
-static void hid_emit_incoming_connection_event(hid_host_connection_t * connection){
-    uint8_t event[13];
+static void hid_emit_incoming_connection_event(uint16_t hid_cid, bd_addr_t remote_addr, hci_con_handle_t con_handle, uint8_t status){
+    uint8_t event[14];
     uint16_t pos = 0;
     event[pos++] = HCI_EVENT_HID_META;
     pos++;  // skip len
     event[pos++] = HID_SUBEVENT_INCOMING_CONNECTION;
-    little_endian_store_16(event, pos, connection->hid_cid);
+    little_endian_store_16(event, pos, hid_cid);
     pos += 2;
-    reverse_bd_addr(connection->remote_addr, &event[pos]);
+    reverse_bd_addr(remote_addr, &event[pos]);
     pos += 6;
-    little_endian_store_16(event,pos,connection->con_handle);
+    little_endian_store_16(event,pos,con_handle);
     pos += 2;
+    event[pos++] = status;
     event[1] = pos - 2;
-    hid_host_callback(HCI_EVENT_PACKET, connection->hid_cid, &event[0], pos);
+    hid_host_callback(HCI_EVENT_PACKET, hid_cid, &event[0], pos);
 }   
 
 // setup get report response event - potentially in-place of original l2cap packet
@@ -528,7 +529,6 @@ static void hid_host_handle_sdp_client_query_result(uint8_t packet_type, uint16_
     uint8_t       *element;
     uint32_t       uuid;
     uint8_t        status = ERROR_CODE_SUCCESS;
-    bool try_fallback_to_boot;
     bool finalize_connection;
 
     
@@ -560,8 +560,11 @@ static void hid_host_handle_sdp_client_query_result(uint8_t packet_type, uint16_
                     process_data = true;
                     break;
                 case BLUETOOTH_ATTRIBUTE_HID_DESCRIPTOR_LIST:
-                    // directly process BLUETOOTH_ATTRIBUTE_HID_DESCRIPTOR_LIST with state machine
-                    hid_host_handle_sdp_hid_descriptor_list(connection, attribute_offset, attribute_data);
+                    // directly process BLUETOOTH_ATTRIBUTE_HID_DESCRIPTOR_LIST with state machine if hid_descriptor_storage is available
+                    if (hid_host_descriptor_storage != NULL){
+                        hid_host_handle_sdp_hid_descriptor_list(connection, attribute_offset, attribute_data);
+                        break;
+                    }
                     break;
                 default:
                     break;
@@ -655,7 +658,6 @@ static void hid_host_handle_sdp_client_query_result(uint8_t packet_type, uint16_
             
         case SDP_EVENT_QUERY_COMPLETE:
             status = sdp_event_query_complete_get_status(packet);
-            try_fallback_to_boot = false;
             finalize_connection = false;
 
             switch (status){
@@ -664,11 +666,7 @@ static void hid_host_handle_sdp_client_query_result(uint8_t packet_type, uint16_
                     //  but no HID record
                     if (!connection->control_psm || !connection->interrupt_psm) {
                         status = ERROR_CODE_UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
-                        if (connection->requested_protocol_mode == HID_PROTOCOL_MODE_REPORT_WITH_FALLBACK_TO_BOOT){
-                            try_fallback_to_boot = true;
-                        } else {
-                            finalize_connection = true;
-                        }
+                        finalize_connection = true;
                         break;
                     }
                     // report mode possible
@@ -681,11 +679,7 @@ static void hid_host_handle_sdp_client_query_result(uint8_t packet_type, uint16_
 
                 // SDP connection failed or remote does not have SDP server
                 default:
-                    if (connection->requested_protocol_mode == HID_PROTOCOL_MODE_REPORT_WITH_FALLBACK_TO_BOOT){
-                        try_fallback_to_boot = true;
-                    } else {
-                        finalize_connection = true;
-                    }
+                    finalize_connection = true;
                     break;
             }
             
@@ -697,25 +691,6 @@ static void hid_host_handle_sdp_client_query_result(uint8_t packet_type, uint16_
             }
 
             hid_emit_sniff_params_event(connection);
-                
-            if (try_fallback_to_boot){
-                if (connection->incoming){
-                    connection->set_protocol = true;
-                    connection->state = HID_HOST_CONNECTION_ESTABLISHED;
-                    connection->requested_protocol_mode = HID_PROTOCOL_MODE_BOOT;
-                    hid_emit_descriptor_available_event(connection);
-                    l2cap_request_can_send_now_event(connection->control_cid);
-                } else {
-                    connection->state = HID_HOST_W4_CONTROL_CONNECTION_ESTABLISHED;
-                    status = l2cap_create_channel(hid_host_packet_handler, connection->remote_addr, BLUETOOTH_PSM_HID_CONTROL, 0xffff, &connection->control_cid);
-                    if (status != ERROR_CODE_SUCCESS){
-                        hid_host_sdp_context_control_cid = 0;
-                        hid_emit_connected_event(connection, status);
-                        hid_host_finalize_connection(connection);
-                    }
-                }
-                break;
-            }
 
             // report mode possible
             if (connection->incoming) {
@@ -742,7 +717,6 @@ static void hid_host_handle_sdp_client_query_result(uint8_t packet_type, uint16_
 
 
 static void hid_host_handle_control_packet(hid_host_connection_t * connection, uint8_t *packet, uint16_t size){
-    UNUSED(size);
     uint8_t param;
     hid_message_type_t         message_type;
     hid_handshake_param_type_t message_status;
@@ -750,6 +724,8 @@ static void hid_host_handle_control_packet(hid_host_connection_t * connection, u
 
     uint8_t * in_place_event;
     uint8_t status;
+
+    if (size < 1u) return;
 
     message_type   = (hid_message_type_t)(packet[0] >> 4);
     if (message_type == HID_MESSAGE_TYPE_HID_CONTROL){
@@ -836,6 +812,10 @@ static void hid_host_handle_control_packet(hid_host_connection_t * connection, u
 
             switch (message_type){
                 case HID_MESSAGE_TYPE_DATA:
+                    if (size < 2u) {
+                        message_status = HID_HANDSHAKE_PARAM_TYPE_ERR_INVALID_PARAMETER;
+                        break;
+                    }
                     protocol_mode = (hid_protocol_mode_t)packet[1];
                     switch (protocol_mode){
                         case HID_PROTOCOL_MODE_BOOT:
@@ -871,6 +851,7 @@ static void hid_host_packet_handler(uint8_t packet_type, uint16_t channel, uint8
     uint8_t   status;
     uint16_t  l2cap_cid;
     hid_host_connection_t * connection;
+    hci_con_handle_t con_handle;
 
     switch (packet_type) {
 
@@ -895,7 +876,8 @@ static void hid_host_packet_handler(uint8_t packet_type, uint16_t channel, uint8
             event = hci_event_packet_get_type(packet);
             switch (event) {            
                 case L2CAP_EVENT_INCOMING_CONNECTION:
-                    l2cap_event_incoming_connection_get_address(packet, address); 
+                    l2cap_event_incoming_connection_get_address(packet, address);
+                    con_handle = l2cap_event_incoming_connection_get_handle(packet);
                     // connection should exist if psm == PSM_HID_INTERRUPT
                     connection = hid_host_get_connection_for_bd_addr(address);
 
@@ -905,23 +887,20 @@ static void hid_host_packet_handler(uint8_t packet_type, uint16_t channel, uint8
                                 l2cap_decline_connection(channel);
                                 break; 
                             }
-                        
                             connection = hid_host_create_connection(address);
-                            if (!connection){
+                            if (connection == NULL) {
                                 log_error("Cannot create connection for %s", bd_addr_to_str(address));
                                 l2cap_decline_connection(channel);
-                                break;
+                            } else {
+                                connection->state = HID_HOST_W4_CONTROL_CONNECTION_ESTABLISHED;
+                                connection->hid_descriptor_status = ERROR_CODE_UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+                                connection->con_handle = con_handle;
+                                connection->control_cid = l2cap_event_incoming_connection_get_local_cid(packet);
+                                connection->incoming = true;
+                                // emit connection request
+                                // user calls either hid_host_accept_connection or hid_host_decline_connection
+                                hid_emit_incoming_connection_event(connection->hid_cid, address, con_handle, ERROR_CODE_SUCCESS);
                             }
-
-                            connection->state = HID_HOST_W4_CONTROL_CONNECTION_ESTABLISHED;
-                            connection->hid_descriptor_status = ERROR_CODE_UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
-                            connection->con_handle = l2cap_event_incoming_connection_get_handle(packet);
-                            connection->control_cid = l2cap_event_incoming_connection_get_local_cid(packet);
-                            connection->incoming = true;
-                            
-                            // emit connection request
-                            // user calls either hid_host_accept_connection or hid_host_decline_connection
-                            hid_emit_incoming_connection_event(connection);
                             break;
                             
                         case PSM_HID_INTERRUPT:
@@ -955,9 +934,12 @@ static void hid_host_packet_handler(uint8_t packet_type, uint16_t channel, uint8
                     
                     status = l2cap_event_channel_opened_get_status(packet); 
                     if (status != ERROR_CODE_SUCCESS){
+                        uint16_t hid_cid = connection->hid_cid;
                         log_info("L2CAP connection %s failed: 0x%02xn", bd_addr_to_str(address), status);
                         hid_emit_connected_event(connection, status);
-                        hid_host_finalize_connection(connection);
+                        if (hid_host_get_connection_for_hid_cid(hid_cid) == connection) {
+                            hid_host_finalize_connection(connection);
+                        }
                         break;
                     }
                     
@@ -1008,7 +990,6 @@ static void hid_host_packet_handler(uint8_t packet_type, uint16_t channel, uint8
                             
                             switch (connection->requested_protocol_mode){
                                 case HID_PROTOCOL_MODE_BOOT:
-                                case HID_PROTOCOL_MODE_REPORT_WITH_FALLBACK_TO_BOOT:
                                     connection->set_protocol = true;
                                     connection->interrupt_psm = BLUETOOTH_PSM_HID_INTERRUPT;
                                     l2cap_request_can_send_now_event(connection->control_cid);
@@ -1055,8 +1036,12 @@ static void hid_host_packet_handler(uint8_t packet_type, uint16_t channel, uint8
                     }
 
                     if (l2cap_cid == connection->control_cid){
+                        uint16_t hid_cid = connection->hid_cid;
                         connection->control_cid = 0;
                         hid_emit_event(connection, HID_SUBEVENT_CONNECTION_CLOSED);
+                        if (hid_host_get_connection_for_hid_cid(hid_cid) != connection) {
+                            break;
+                        }
                         hid_descriptor_storage_delete(connection);
                         hid_host_finalize_connection(connection);
                         break;
@@ -1192,6 +1177,7 @@ static void hid_host_packet_handler(uint8_t packet_type, uint16_t channel, uint8
 
 
 void hid_host_init(uint8_t * hid_descriptor_storage, uint16_t hid_descriptor_storage_len){
+    btstack_assert((hid_descriptor_storage_len == 0) || (hid_descriptor_storage != NULL));
     hid_host_descriptor_storage = hid_descriptor_storage;
     hid_host_descriptor_storage_len = hid_descriptor_storage_len;
 
@@ -1431,7 +1417,7 @@ uint8_t hid_host_send_set_protocol_mode(uint16_t hid_cid, hid_protocol_mode_t pr
 }
 
 
-uint8_t hid_host_send_report(uint16_t hid_cid, uint16_t report_id, const uint8_t * report, uint8_t report_len){
+uint8_t hid_host_send_report(uint16_t hid_cid, uint16_t report_id, const uint8_t * report, uint16_t report_len){
     hid_host_connection_t * connection = hid_host_get_connection_for_hid_cid(hid_cid);
     if (!connection || !connection->control_cid || !connection->interrupt_cid) {
         return ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER;

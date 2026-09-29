@@ -78,20 +78,12 @@
 #define AVRCP_BROWSING_MAX_MEDIA_ITEMS              10
 
 #ifdef HAVE_BTSTACK_STDIN
-// mac 2011: static bd_addr_t remote = {0x04, 0x0C, 0xCE, 0xE4, 0x85, 0xD3};
-// pts: static bd_addr_t remote = {0x00, 0x1B, 0xDC, 0x08, 0x0A, 0xA5};
-// mac 2013: 
-// static const char * device_addr_string = "84:38:35:65:d1:15";
-// iPhone 5S: static const char * device_addr_string = "54:E4:3A:26:A2:39";
-// phone 2013:  
-// static const char * device_addr_string = "B0:34:95:CB:97:C4";
-// iPod 
-// static const char * device_addr_string = "B0:34:95:CB:97:C4";
-// iPhone
-static const char * device_addr_string = "6C:72:E7:10:22:EE";
-
-static bd_addr_t device_addr;
+#ifndef REMOTE_ADDR_STRING
+#define REMOTE_ADDR_STRING "00:1A:7D:DA:71:01"
 #endif
+static const char * device_addr_string = REMOTE_ADDR_STRING;
+#endif
+static bd_addr_t device_addr;
 
 typedef enum {
     AVRCP_BROWSING_STATE_IDLE,
@@ -173,9 +165,11 @@ static int playable_folder_index = 0;
 
 static uint16_t browsing_uid_counter = 0;
 
+#ifdef HAVE_BTSTACK_STDIN
 static uint8_t  parent_folder_set = 0;
 static uint8_t  parent_folder_uid[8];
 static char     parent_folder_name[AVRCP_BROWSING_MAX_BROWSABLE_ITEM_NAME_LEN];
+#endif
 
 static avrcp_browsable_item_t folders[AVRCP_BROWSING_MAX_FOLDERS];
 static int folder_index = -1;
@@ -188,6 +182,7 @@ static int media_player_item_index = -1;
 
 static btstack_packet_callback_registration_t hci_event_callback_registration;
 
+#ifdef HAVE_BTSTACK_STDIN
 static uint8_t ertm_buffer[10000];
 static l2cap_ertm_config_t ertm_config = {
     1,  // ertm mandatory
@@ -199,7 +194,7 @@ static l2cap_ertm_config_t ertm_config = {
     4,
     1,     // 16-bit FCS
 };
-
+#endif
 
 static inline int next_index(int * index, int max_value){
     if ((*index) < max_value){
@@ -411,6 +406,12 @@ static void avrcp_browsing_controller_packet_handler(uint8_t packet_type, uint16
     switch (packet_type) {   
         case HCI_EVENT_PACKET:
             switch (packet[0]){
+                case HCI_EVENT_USER_CONFIRMATION_REQUEST:
+                    printf("SSP User Confirmation Request with numeric value '%06"PRIu32"'\n", hci_event_user_confirmation_request_get_numeric_value(packet));
+                    printf("Accepting Pairing - TODO: require actual user action\n");
+                    hci_event_user_confirmation_request_get_bd_addr(packet, address);
+                    gap_ssp_confirmation_response(address);
+                    break;
                 case HCI_EVENT_AVRCP_META:
                      switch (packet[2]){
                         case AVRCP_SUBEVENT_BROWSING_CONNECTION_ESTABLISHED: {

@@ -96,7 +96,7 @@ bool le_audio_base_parser_init(le_audio_base_parser_t * parser, const uint8_t * 
         if ((offset+1) > size) {
             return false;
         }
-        int8_t meta_len = buffer[offset++];
+        uint8_t meta_len = buffer[offset++];
         offset += meta_len;
         if (offset > size) {
             return false;
@@ -179,12 +179,9 @@ const uint8_t * le_audio_base_bis_parser_get_codec_specific_configuration(le_aud
 
 void le_audio_base_parser_bis_next(le_audio_base_parser_t * parser){
     btstack_assert(parser->bis_offset > 0);
+    btstack_assert(parser->bis_index < parser->bis_count);
     parser->bis_index++;
-    if (parser->bis_index < parser->bis_count){
-        parser->bis_offset += 1 + 1 + parser->buffer[parser->bis_offset+1];
-    } else {
-        parser->bis_offset = 0;
-    }
+    parser->bis_offset += 1 + 1 + parser->buffer[parser->bis_offset+1];
 }
 
 void le_audio_base_parser_subgroup_next(le_audio_base_parser_t * parser){
@@ -192,11 +189,15 @@ void le_audio_base_parser_subgroup_next(le_audio_base_parser_t * parser){
     while (parser->bis_index < parser->bis_count){
         le_audio_base_parser_bis_next(parser);
     }
+    btstack_assert(parser->subgroup_index < parser->subgroup_count);
+    parser->subgroup_offset = parser->bis_offset;
     parser->subgroup_index++;
-    if (parser->subgroup_index < parser->subgroup_count){
-        parser->subgroup_offset = parser->bis_offset;
-        le_audio_base_parser_fetch_subgroup_info(parser);
-    } else {
+    if (parser->subgroup_index == parser->subgroup_count){
+        parser->subgroup_offset = 0;
         parser->bis_offset = 0;
+        parser->bis_count = 0;
+        parser->bis_index = 0;
+        return;
     }
+    le_audio_base_parser_fetch_subgroup_info(parser);
 }

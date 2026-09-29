@@ -75,6 +75,21 @@
 #define HSP_HS_MICROPHONE_GAIN "AT+VGM"
 #define HSP_HS_SPEAKER_GAIN "AT+VGS"
 
+static bool hsp_hs_packet_has_prefix(const uint8_t * packet, uint16_t size, const char * prefix){
+    size_t prefix_len = strlen(prefix);
+    return (size >= prefix_len) && (memcmp(packet, prefix, prefix_len) == 0);
+}
+
+static uint8_t hsp_hs_parse_gain(const uint8_t * packet, uint16_t size, size_t prefix_len){
+    uint16_t pos;
+    uint8_t gain = 0;
+    for (pos = (uint16_t) prefix_len; pos < size; pos++){
+        if ((packet[pos] < '0') || (packet[pos] > '9')) break;
+        gain = (uint8_t)((gain * 10u) + (packet[pos] - '0'));
+    }
+    return gain;
+}
+
 static const char hsp_hs_default_service_name[] = "Headset";
 
 typedef enum {
@@ -531,33 +546,33 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
             size--;
             packet++;
         }
-        if (strncmp((char *)packet, HSP_AG_RING, strlen(HSP_AG_RING)) == 0){
+        if (hsp_hs_packet_has_prefix(packet, size, HSP_AG_RING)){
             emit_event(HSP_SUBEVENT_RING);
-        } else if (strncmp((char *)packet, HSP_AG_OK, strlen(HSP_AG_OK)) == 0){
+        } else if (hsp_hs_packet_has_prefix(packet, size, HSP_AG_OK)){
             hsp_hs_wait_ok = 0;
-        } else if (strncmp((char *)packet, HSP_MICROPHONE_GAIN, strlen(HSP_MICROPHONE_GAIN)) == 0){
-            uint8_t gain = (uint8_t)btstack_atoi((char*)&packet[strlen(HSP_MICROPHONE_GAIN)]);
+        } else if (hsp_hs_packet_has_prefix(packet, size, HSP_MICROPHONE_GAIN)){
+            uint8_t gain = hsp_hs_parse_gain(packet, size, strlen(HSP_MICROPHONE_GAIN));
             emit_event_with_value(HSP_SUBEVENT_MICROPHONE_GAIN_CHANGED, gain);
         
-        } else if (strncmp((char *)packet, HSP_SPEAKER_GAIN, strlen(HSP_SPEAKER_GAIN)) == 0){
-            uint8_t gain = (uint8_t)btstack_atoi((char*)&packet[strlen(HSP_SPEAKER_GAIN)]);
+        } else if (hsp_hs_packet_has_prefix(packet, size, HSP_SPEAKER_GAIN)){
+            uint8_t gain = hsp_hs_parse_gain(packet, size, strlen(HSP_SPEAKER_GAIN));
             emit_event_with_value(HSP_SUBEVENT_SPEAKER_GAIN_CHANGED, gain);
         } else {
             if (!hsp_hs_callback) return;
             // strip trailing newline
-            while ((size > 0) && ((packet[size-1] == '\n') || (packet[size-1] == '\r'))){
+			while ((size > 0) && ((packet[size-1] == '\n') || (packet[size-1] == '\r'))){
                 size--;
             }
 			if ((size + 4) > 255) return;
-            // add trailing \0
-            packet[size] = 0;
-            // re-use incoming buffer to avoid reserving buffers/memcpy - ugly but efficient
-            uint8_t * event = packet - 6;
+            // Keep the trailing NUL for callbacks without modifying the received RFCOMM buffer.
+            uint8_t event[HCI_EVENT_BUFFER_SIZE + 1u];
             event[0] = HCI_EVENT_HSP_META;
             event[1] = (uint8_t) (size + 4);
             event[2] = HSP_SUBEVENT_AG_INDICATION;
             little_endian_store_16(event, 3, hsp_hs_rfcomm_handle);
             event[5] = (uint8_t) size;
+            memcpy(&event[6], packet, size);
+            event[6u + size] = 0;
             (*hsp_hs_callback)(HCI_EVENT_PACKET, 0, event, size+6);
         }
         hsp_run();

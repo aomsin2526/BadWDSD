@@ -41,8 +41,8 @@ static struct timeout {
     alarm_id_t alarm_id;
     absolute_time_t target;
     absolute_time_t fired_at;
-    uint pool;
     uint fired_count;
+    uint8_t pool;
     bool cancelled;
     bool not_cancelled; // tried to cancel but it was done
 } timeouts[NUM_TIMEOUTS];
@@ -52,7 +52,7 @@ int64_t timer_callback1(alarm_id_t id, void *user_data) {
     assert(timeout >= timeouts && timeout < (timeouts + NUM_TIMEOUTS));
     timeout->fired_at = get_absolute_time();
     timeout->fired_count++;
-//    printf("%d %d %ld\n", timeout->pool, id, to_us_since_boot(timeout->target));
+//    printf("%d %d %lld\n", timeout->pool, id, to_us_since_boot(timeout->target));
     return 0;
 }
 
@@ -85,6 +85,8 @@ static int issue_1953_test(void);
 static int issue_2118_test(void);
 static int issue_2148_test(void);
 static int issue_2186_test(void);
+static int issue_2374_test(void);
+static int batch_cancel_test(void);
 
 int main() {
     setup_default_uart();
@@ -125,8 +127,8 @@ int main() {
     }
     PICOTEST_CHECK(absolute_time_diff_us(time_base, get_absolute_time()) < init_ms * 1000, "This is a flaky test :-(");
 
-    uint64_t last_fired_at[NUM_ALARMS];
-    uint64_t last_target[NUM_ALARMS];
+    uint64_t last_fired_at[NUM_ALARMS] = {};
+    uint64_t last_target[NUM_ALARMS] = {};
     memset(&last_fired_at, 0, sizeof(last_fired_at));
     printf("Sleeping...\n");
     sleep_us(TEST_LENGTH_US + 250000);
@@ -242,10 +244,9 @@ int main() {
     PICOTEST_CHECK(absolute_time_diff_us(near_the_end_of_time, at_the_end_of_time) > 0, "near the end of time should be before the end of time")
     PICOTEST_END_SECTION();
 
-    if (issue_195_test()) {
-        return -1;
-    }
-    issue_1812_test();
+    picotest_error_code |= issue_195_test();
+
+    picotest_error_code |= issue_1812_test();
 
     // Destroy alarm pools (except for default)
     for(uint i=0; i<NUM_ALARMS; i++) {
@@ -255,15 +256,104 @@ int main() {
         }
     }
 
-    issue_1953_test();
+#if PICO_ON_DEVICE // requires too much fidelity for host
+    picotest_error_code |= issue_1953_test();
+#endif
 
-    issue_2118_test();
+    picotest_error_code |= issue_2118_test();
 
-    issue_2148_test();
+    picotest_error_code |= issue_2148_test();
     
-    issue_2186_test();
+    picotest_error_code |= issue_2186_test();
+
+    picotest_error_code |= issue_2374_test();
+
+    // todo currently fails with pico_host_sdl
+#if PICO_ON_DEVICE
+    picotest_error_code |= batch_cancel_test();
+#endif
 
     PICOTEST_END_TEST();
+}
+
+// Cancelling several alarms before the pool's handler gets a chance to run. Both bugs this
+// covers need the head of the ordered list cancelled along with at least one entry behind it,
+// which is why they are cancelled as a batch:
+//
+// Disabling interrupts around the cancels is what makes this deterministic on one core: each
+// cancel_alarm() forces the pool IRQ, so without it the handler runs in between and there is
+// never a batch to get wrong.
+#define BATCH_CANCEL_ALARMS 8
+#define BATCH_CANCEL_ROUNDS 4
+
+static int64_t batch_cancel_callback(__unused alarm_id_t id, __unused void *user_data) {
+    return 0;   // these are cancelled long before they are due
+}
+
+static volatile bool batch_cancel_live_fired;
+
+static int64_t batch_cancel_live_callback(__unused alarm_id_t id, __unused void *user_data) {
+    batch_cancel_live_fired = true;
+    return 0;
+}
+
+// fill the default pool, returning how many alarms it accepted
+static uint batch_cancel_fill(alarm_id_t *ids, uint max) {
+    uint n = 0;
+    while (n < max) {
+        alarm_id_t id = add_alarm_in_ms(60000, batch_cancel_callback, NULL, true);
+        if (id <= 0) break;
+        ids[n++] = id;
+    }
+    return n;
+}
+
+static void batch_cancel_free(alarm_id_t *ids, uint n) {
+    for (uint i = 0; i < n; i++) cancel_alarm(ids[i]);
+    sleep_ms(2);    // let the handler retire them
+}
+
+static int batch_cancel_test(void) {
+    PICOTEST_START_SECTION("Cancelling a batch of alarms must not lose pool entries");
+    static alarm_id_t ids[MAX_TIMERS_PER_POOL];
+
+    // how many the pool takes when nothing has gone wrong yet
+    uint capacity = batch_cancel_fill(ids, MAX_TIMERS_PER_POOL);
+    batch_cancel_free(ids, capacity);
+    printf("pool capacity %u\n", capacity);
+    PICOTEST_CHECK_AND_ABORT(capacity > BATCH_CANCEL_ALARMS, "pool too small to test with");
+
+    for (uint round = 0; round < BATCH_CANCEL_ROUNDS; round++) {
+        // An alarm that is NOT cancelled, to prove the pool still arms for it afterwards.
+        // It is deliberately later than the batch, so the head of the ordered list is one of
+        // the cancelled entries - that is what both bugs need. Nothing is added after the
+        // cancels either, as an add would force the IRQ and hide a handler that returned with
+        // nothing armed.
+        batch_cancel_live_fired = false;
+        for (uint i = 0; i < BATCH_CANCEL_ALARMS; i++) {
+            ids[i] = add_alarm_in_ms(100, batch_cancel_callback, NULL, true);
+            PICOTEST_CHECK_AND_ABORT(ids[i] > 0, "could not fill the batch");
+        }
+        alarm_id_t live = add_alarm_in_ms(200, batch_cancel_live_callback, NULL, true);
+        PICOTEST_CHECK_AND_ABORT(live > 0, "could not add the live alarm");
+        uint32_t save = save_and_disable_interrupts();
+        for (uint i = 0; i < BATCH_CANCEL_ALARMS; i++) cancel_alarm(ids[i]);
+        restore_interrupts(save);
+
+        absolute_time_t deadline = make_timeout_time_ms(1000);
+        while (!batch_cancel_live_fired && !time_reached(deadline)) tight_loop_contents();
+        PICOTEST_CHECK(batch_cancel_live_fired,
+                       "round %u: the uncancelled alarm never fired - nothing was left armed",
+                       round);
+
+        uint now = batch_cancel_fill(ids, MAX_TIMERS_PER_POOL);
+        batch_cancel_free(ids, now);
+        PICOTEST_CHECK(now == capacity, "round %u: pool holds %u alarms, expected %u - %u lost",
+                       round, now, capacity, capacity - now);
+        if (now != capacity) break;
+    }
+    PICOTEST_END_SECTION();
+    return 0;
 }
 
 #define ISSUE_195_TIMER_DELAY 50
@@ -370,9 +460,13 @@ static int issue_2118_test(void) {
     }
     PICOTEST_CHECK(counter_2118 >= 100, "Repeating timer failure");
 
+#if PICO_ON_DEVICE
+    uint pool_alarm_num = alarm_pool_hardware_alarm_num(pool);
+#endif
     alarm_pool_destroy(pool);
 #if PICO_ON_DEVICE
-    hard_assert(timer_hw->armed == 0); // check destroying the pool unarms its timer
+    // check destroying the pool unarms its timer.
+    hard_assert(!(timer_hw->armed & (1u << pool_alarm_num)));
     set_sys_clock_hz(SYS_CLK_HZ, true);
     setup_default_uart();
 #endif
@@ -417,6 +511,45 @@ static int issue_2148_test(void) {
     PICOTEST_CHECK(tm.tm_year == tm_check.tm_year, "failed to get year");
 
     aon_timer_stop();
+    PICOTEST_END_SECTION();
+#endif
+    return 0;
+}
+
+static void fill_stack(int val) {
+    uint8_t array[50];
+    memset(array, val, sizeof(array));
+}
+
+// aon_timer_get_time called aon_timer_get_time_calendar which called datetime_to_tm
+// which didn't initialise tm_isdst
+static int issue_2374_test(void) {
+#if HAS_RP2040_RTC && !__clang__
+    PICOTEST_START_SECTION("Issue #2374 defect - time goes backwards");
+    setenv("TZ", "PST8PDT7,M3.2.0/2,M11.1.0/02:00:00", 1);
+    tzset();
+
+    struct timespec ts = { .tv_sec = 1743055938, .tv_nsec = 0 };
+    aon_timer_start(&ts);
+
+    struct timespec ts1;
+    fill_stack(1); // Setting tm_isdst if it's uninitialised
+    hard_assert(aon_timer_get_time(&ts1));
+
+    sleep_ms(1000);
+
+    struct timespec ts2;
+    fill_stack(0); // Setting tm_isdst if it's uninitialised
+    hard_assert(aon_timer_get_time(&ts2));
+
+    // Check time hasn't been adjusted due to dst
+    hard_assert(ts1.tv_sec == ts2.tv_sec - 1);
+
+    setenv("TZ", "", 1);
+    tzset();
+
+    aon_timer_stop();
+
     PICOTEST_END_SECTION();
 #endif
     return 0;

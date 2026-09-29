@@ -65,7 +65,8 @@ static const int16_t sine_int16[] = {
 -19260,  -17557,  -15786,  -13952,  -12062,  -10126,   -8149,   -6140,   -4107,   -2057,
 };
 
-static void audio_playback(int16_t * pcm_buffer, uint16_t num_samples_to_write){
+static void audio_playback(int16_t * pcm_buffer, uint16_t num_samples_to_write, const btstack_audio_context_t * context){
+    UNUSED(context);
     int count;
     for (count = 0; count < num_samples_to_write ; count++){
         unsigned int channel;
@@ -90,8 +91,9 @@ int btstack_main(int argc, const char * argv[]){
         printf("BTstack Audio Sink not setup\n");
         return 10;
     }
-    audio->init(NUM_CHANNELS, 44100, &audio_playback);
-    audio->start_stream();
+    audio->init(NUM_CHANNELS, 48000, &audio_playback);
+    audio->set_volume(70);
+	audio->start_stream();
 
     return 0;
 }

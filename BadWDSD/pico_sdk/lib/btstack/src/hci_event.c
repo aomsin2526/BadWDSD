@@ -64,6 +64,7 @@ static inline bool hci_event_can_store(uint16_t pos, uint16_t size, uint16_t to_
  *
  * Format:
  *   1,2,3,4: one to four byte value
+ *   a,b: signed 8/16 bit value
  *   H: HCI connection handle
  *   B: Bluetooth Baseband Address (BD_ADDR)
  *   D: 8 byte data block
@@ -80,12 +81,15 @@ uint16_t hci_event_create_from_template_and_arglist(uint8_t *hci_event_buffer, u
 
     uint16_t pos = 2;
 
+    const char *format = event->format;
+
     // store subevent code if set
     if (event->subevent_code != 0){
         hci_event_buffer[pos++] = event->subevent_code;
+        btstack_assert(*format == '1');
+        format++;
     }
     
-    const char *format = event->format;
     uint16_t word;
     uint32_t longword;
     uint8_t * ptr;
@@ -94,11 +98,13 @@ uint16_t hci_event_create_from_template_and_arglist(uint8_t *hci_event_buffer, u
     while (*format != 0) {
         switch(*format) {
             case '1': //  8 bit value
+            case 'a': // signed 8 bit value
                 if (!hci_event_can_store(pos, buffer_size, 1, &overrun)) break;
                 word = va_arg(argptr, int);  // minimal va_arg is int: 2 bytes on 8+16 bit CPUs
                 hci_event_buffer[pos++] = word & 0xff;
                 break;
             case '2': // 16 bit value
+            case 'b': // signed 16 bit value
             case 'H': // hci_handle
                 if (!hci_event_can_store(pos, buffer_size, 2, &overrun)) break;
                 word = va_arg(argptr, int);  // minimal va_arg is int: 2 bytes on 8+16 bit CPUs
@@ -194,5 +200,10 @@ const hci_event_t hci_event_number_of_completed_packets_1 = {
 /* LE Subevents */
 
 const hci_event_t hci_subevent_le_connection_complete = {
-    HCI_EVENT_LE_META, HCI_SUBEVENT_LE_CONNECTION_COMPLETE, "1H11B2221"
+    HCI_EVENT_LE_META, HCI_SUBEVENT_LE_CONNECTION_COMPLETE, "11H11B2221"
+};
+
+/* GAP Subevents */
+const hci_event_t gap_subevent_bonding_deleted = {
+    HCI_EVENT_META_GAP, GAP_SUBEVENT_BONDING_DELETED, "11B1H"
 };

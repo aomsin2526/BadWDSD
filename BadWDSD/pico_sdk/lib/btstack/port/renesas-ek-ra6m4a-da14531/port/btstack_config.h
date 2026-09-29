@@ -1,5 +1,5 @@
 //
-// btstack_config.h for STM32 F4 Discovery + TI CC256x port
+// btstack_config.h for Renesas EK-RA6M4A-DA14531 + Renesas DA14531 port
 //
 // Documentation: https://bluekitchen-gmbh.com/btstack/#how_to/
 //
@@ -10,18 +10,19 @@
 // Port related features
 #define HAVE_BTSTACK_STDIN
 #define HAVE_EMBEDDED_TIME_MS
+#define HAVE_HAL_UART_BUFFERS
 
 // BTstack features that can be enabled
 #define ENABLE_BLE
-#define ENABLE_LE_CENTRAL
-#define ENABLE_L2CAP_LE_CREDIT_BASED_FLOW_CONTROL_MODE
-#define ENABLE_LE_PERIPHERAL
-#define ENABLE_LOG_INFO
-#define ENABLE_LOG_ERROR
-#define ENABLE_PRINTF_HEXDUMP
-#define ENABLE_TLV_FLASH_WRITE_ONCE
 #define ENABLE_BTSTACK_ASSERT
+#define ENABLE_L2CAP_LE_CREDIT_BASED_FLOW_CONTROL_MODE
+#define ENABLE_LE_CENTRAL
+#define ENABLE_LE_PERIPHERAL
+#define ENABLE_LOG_ERROR
+#define ENABLE_LOG_INFO
+#define ENABLE_PRINTF_HEXDUMP
 #define ENABLE_SEGGER_RTT
+#define ENABLE_TLV_FLASH_WRITE_ONCE
 
 // BTstack configuration. buffers, sizes, ...
 #define HCI_ACL_PAYLOAD_SIZE (1691 + 4)

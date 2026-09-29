@@ -56,6 +56,11 @@ extern "C" {
 #define ENABLE_GATT_FIND_INFORMATION_FOR_CCC_DISCOVERY
 #endif
 
+// We need to query remote GATT Service for Caching or EATT support
+#if defined(ENABLE_GATT_CLIENT_CACHING) || defined (ENABLE_GATT_OVER_EATT)
+#define ENABLE_GATT_CLIENT_SERVICE_QUERY
+#endif
+
 typedef enum {
     P_READY,
     P_W2_EMIT_QUERY_COMPLETE_EVENT,
@@ -150,7 +155,6 @@ typedef enum {
     P_L2CAP_CLOSED,
 } gatt_client_state_t;
 
-    
 typedef enum{
     SEND_MTU_EXCHANGE,
     SENT_MTU_EXCHANGE,
@@ -159,24 +163,26 @@ typedef enum{
 } gatt_client_mtu_t;
 
 typedef enum {
-    GATT_CLIENT_SERVICE_DISCOVER_W2_SEND,
-    GATT_CLIENT_SERVICE_DISCOVER_W4_DONE,
-    GATT_CLIENT_SERVICE_DISCOVER_CHARACTERISTICS_W2_SEND,
-    GATT_CLIENT_SERVICE_DISCOVER_CHARACTERISTICS_W4_DONE,
-    GATT_CLIENT_SERVICE_SERVICE_CHANGED_WRITE_CCCD_W2_SEND,
-    GATT_CLIENT_SERVICE_SERVICE_CHANGED_WRITE_CCCD_W4_DONE,
-    GATT_CLIENT_SERVICE_DATABASE_HASH_READ_W2_SEND,
-    GATT_CLIENT_SERVICE_DATABASE_HASH_READ_W4_DONE,
-    GATT_CLIENT_SERVICE_DATABASE_HASH_WRITE_CCCD_W2_SEND,
-    GATT_CLIENT_SERVICE_DATABASE_HASH_WRITE_CCCD_W4_DONE,
-    GATT_CLIENT_SERVICE_DONE,
-} gatt_client_service_state_t;
+    GATT_CLIENT_SERVICE_QUERY_DISCOVER_SERVICE_W2_SEND,
+    GATT_CLIENT_SERVICE_QUERY_DISCOVER_SERVICE_W4_DONE,
+    GATT_CLIENT_SERVICE_QUERY_DISCOVER_CHARACTERISTICS_W2_SEND,
+    GATT_CLIENT_SERVICE_QUERY_DISCOVER_CHARACTERISTICS_W4_DONE,
+    GATT_CLIENT_SERVICE_QUERY_DONE,
+} gatt_client_service_query_state_t;
+
+typedef enum {
+    GATT_CLIENT_CACHING_DISCOVER_CHARACTERISTICS_W2_SEND,
+    GATT_CLIENT_CACHING_DISCOVER_CHARACTERISTICS_W4_DONE,
+    GATT_CLIENT_CACHING_SERVICE_CHANGED_WRITE_CCCD_W2_SEND,
+    GATT_CLIENT_CACHING_SERVICE_CHANGED_WRITE_CCCD_W4_DONE,
+    GATT_CLIENT_CACHING_DATABASE_HASH_READ_W2_SEND,
+    GATT_CLIENT_CACHING_DATABASE_HASH_READ_W4_DONE,
+    GATT_CLIENT_CACHING_DONE,
+} gatt_client_caching_state_t;
 
 #ifdef ENABLE_GATT_OVER_EATT
 typedef enum {
     GATT_CLIENT_EATT_IDLE,
-    GATT_CLIENT_EATT_DISCOVER_GATT_SERVICE_W2_SEND,
-    GATT_CLIENT_EATT_DISCOVER_GATT_SERVICE_W4_DONE,
     GATT_CLIENT_EATT_READ_SERVER_SUPPORTED_FEATURES_W2_SEND,
     GATT_CLIENT_EATT_READ_SERVER_SUPPORTED_FEATURES_W4_DONE,
     GATT_CLIENT_EATT_FIND_CLIENT_SUPPORTED_FEATURES_W2_SEND,
@@ -278,19 +284,29 @@ typedef struct gatt_client{
     uint16_t service_id;
     uint16_t connection_id;
 
-    // GATT Service Changes
-    gatt_client_service_state_t gatt_service_state;
+    // GATT Service Query
+#ifdef ENABLE_GATT_CLIENT_SERVICE_QUERY
+    gatt_client_service_query_state_t service_query_state;
+
+    // GATT Service Info
     uint16_t                    gatt_service_start_group_handle;
     uint16_t                    gatt_service_end_group_handle;
+#endif
+
+#ifdef ENABLE_GATT_CLIENT_CACHING
+    // GATT Caching
+    gatt_client_caching_state_t caching_state;
+
     // - Service Changed
     uint16_t                    gatt_service_changed_value_handle;
     uint16_t                    gatt_service_changed_cccd_handle;
     uint16_t                    gatt_service_changed_end_handle;
     // - Database Hash
     uint16_t                    gatt_service_database_hash_value_handle;
-    uint16_t                    gatt_service_database_hash_cccd_handle;
-    uint16_t                    gatt_service_database_hash_end_handle;
-
+    uint8_t                     database_hash[16];
+    bool                        database_hash_valid;
+    uint16_t                    cache_id;
+#endif
 } gatt_client_t;
 
 // Single characteristic, with wildcards for con_handle and attribute_handle
@@ -484,6 +500,22 @@ uint8_t gatt_client_discover_primary_services_by_uuid16_with_context(btstack_pac
  *                ERROR_CODE_SUCCESS         , if query is successfully registered  
  */
 uint8_t gatt_client_discover_primary_services_by_uuid128(btstack_packet_handler_t callback, hci_con_handle_t con_handle, const uint8_t * uuid128);
+
+/**
+ * @brief Discovers a specific primary service given its UUID. This service may exist multiple times. 
+ * For each found service a GATT_EVENT_SERVICE_QUERY_RESULT event will be emitted.
+ * The GATT_EVENT_QUERY_COMPLETE event marks the end of discovery. 
+ * @param callback   
+ * @param con_handle
+ * @param uuid128
+ * @param service_id    - context provided to callback in events
+ * @param connection_id - context provided to callback in events
+ * @return status BTSTACK_MEMORY_ALLOC_FAILED, if no GATT client for con_handle is found 
+ *                GATT_CLIENT_IN_WRONG_STATE , if GATT client is not ready
+ *                ERROR_CODE_SUCCESS         , if query is successfully registered  
+ */
+uint8_t gatt_client_discover_primary_services_by_uuid128_with_context(btstack_packet_handler_t callback, hci_con_handle_t con_handle,
+                                                                      const uint8_t * uuid128, uint16_t service_id, uint16_t connection_id);
 
 /** 
  * @brief Finds included services within the specified service. 
@@ -792,7 +824,7 @@ uint8_t gatt_client_read_long_value_of_characteristic_using_value_handle_with_of
  *                GATT_CLIENT_IN_WRONG_STATE , if GATT client is not ready
  *                ERROR_CODE_SUCCESS         , if query is successfully registered 
  */
-uint8_t gatt_client_read_multiple_characteristic_values(btstack_packet_handler_t callback, hci_con_handle_t con_handle, int num_value_handles, uint16_t * value_handles);
+uint8_t gatt_client_read_multiple_characteristic_values(btstack_packet_handler_t callback, hci_con_handle_t con_handle, uint16_t num_value_handles, uint16_t * value_handles);
 
 /*
  * @brief Read multiple varaible characteristic values. Only supported over LE Enhanced Bearer
@@ -806,7 +838,7 @@ uint8_t gatt_client_read_multiple_characteristic_values(btstack_packet_handler_t
  *                GATT_CLIENT_IN_WRONG_STATE , if GATT client is not ready
  *                ERROR_CODE_SUCCESS         , if query is successfully registered
  */
-uint8_t gatt_client_read_multiple_variable_characteristic_values(btstack_packet_handler_t callback, hci_con_handle_t con_handle, int num_value_handles, uint16_t * value_handles);
+uint8_t gatt_client_read_multiple_variable_characteristic_values(btstack_packet_handler_t callback, hci_con_handle_t con_handle, uint16_t num_value_handles, uint16_t * value_handles);
 
 /**
  * @brief Writes the characteristic value using the characteristic's value handle without 
@@ -835,6 +867,7 @@ uint8_t gatt_client_write_value_of_characteristic_without_response(hci_con_handl
  * @return status ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER                  if no HCI connection for con_handle is found
  *                BTSTACK_MEMORY_ALLOC_FAILED                               if no GATT client for con_handle could be allocated 
  *                GATT_CLIENT_IN_WRONG_STATE                                if GATT client is not ready
+ *                GATT_CLIENT_VALUE_TOO_LONG                                if message and signing trailer exceed ATT MTU
  *                ERROR_CODE_SUCCESS                                        if query is successfully registered
  */
 uint8_t gatt_client_signed_write_without_response(btstack_packet_handler_t callback, hci_con_handle_t con_handle, uint16_t value_handle,
@@ -1149,7 +1182,7 @@ uint8_t gatt_client_write_client_characteristic_configuration_with_context(btsta
  * When configured, GATT_EVENT_QUERY_COMPLETE event is emitted
  * If supported, the Database Hash is read as well
  *
- * Requires ENABLE_GATT_CLIENT_SERVICE_CHANGED
+ * Requires ENABLE_GATT_CLIENT_CACHING
  *
  * @param callback
  */
@@ -1158,7 +1191,7 @@ void gatt_client_add_service_changed_handler(btstack_packet_callback_registratio
 /**
  * @brief Remove callback for service changes
  *
- * Requires ENABLE_GATT_CLIENT_SERVICE_CHANGED
+ * Requires ENABLE_GATT_CLIENT_CACHING
  *
  * @param callback
  */
@@ -1240,7 +1273,10 @@ uint8_t gatt_client_cancel_write(btstack_packet_handler_t callback, hci_con_hand
  * @note callback might happen during call to this function
  * @param callback_registration to point to callback function and context information
  * @param con_handle
- * @return ERROR_CODE_SUCCESS if ok, ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER if handle unknown, and ERROR_CODE_COMMAND_DISALLOWED if callback already registered
+ * @return ERROR_CODE_SUCCESS if ok, otherwise:
+ *       - ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER if connection handle unknown,
+ *       - ERROR_CODE_MEMORY_CAPACITY_EXCEEDED if GATT client memory exceeded, or
+ *       - ERROR_CODE_COMMAND_DISALLOWED if GATT client already registered callback
  */
 uint8_t gatt_client_request_to_send_gatt_query(btstack_context_callback_registration_t * callback_registration, hci_con_handle_t con_handle);
 
@@ -1257,7 +1293,7 @@ uint8_t gatt_client_remove_gatt_query(btstack_context_callback_registration_t * 
  * @note callback might happen during call to this function
  * @param callback_registration to point to callback function and context information
  * @param con_handle
- * @return ERROR_CODE_SUCCESS if ok, ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER if handle unknown, and ERROR_CODE_COMMAND_DISALLOWED if callback already registered
+ * @return ERROR_CODE_SUCCESS if ok, ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER if connection handle unknown, and ERROR_CODE_COMMAND_DISALLOWED if callback already registered
  */
 uint8_t gatt_client_request_to_write_without_response(btstack_context_callback_registration_t * callback_registration, hci_con_handle_t con_handle);
 
@@ -1272,6 +1308,22 @@ uint8_t gatt_client_request_to_write_without_response(btstack_context_callback_r
  * @return status
  */
 uint8_t gatt_client_request_can_write_without_response_event(btstack_packet_handler_t callback, hci_con_handle_t con_handle);
+
+#ifdef ENABLE_GATT_CLIENT_CACHING
+/**
+ * @brief Get GATT Database Hash for remote device
+ * @param con_handle
+ * @return database hash or NULL if not available
+ */
+const uint8_t * gatt_client_get_database_hash(hci_con_handle_t con_handle);
+
+/**
+ * @brief Get next cache id for remote device. This allows to enumerate all GATT Service Client requets
+ * @param con_handle
+ * @return
+ */
+uint16_t gatt_client_get_next_cache_id(hci_con_handle_t con_handle);
+#endif
 
 /**
  * @brief Map ATT Error Code to (extended) Error Codes

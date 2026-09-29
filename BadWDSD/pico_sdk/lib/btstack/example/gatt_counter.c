@@ -74,8 +74,8 @@
 static int  le_notification_enabled;
 static btstack_timer_source_t heartbeat;
 static btstack_packet_callback_registration_t hci_event_callback_registration;
+static btstack_packet_callback_registration_t sm_event_callback_registration;
 static hci_con_handle_t con_handle;
-static uint8_t battery = 100;
 
 #ifdef ENABLE_GATT_OVER_CLASSIC
 static uint8_t gatt_service_buffer[70];
@@ -104,12 +104,14 @@ const uint8_t adv_data[] = {
 };
 const uint8_t adv_data_len = sizeof(adv_data);
 
-static void le_counter_setup(void){
+static void gatt_counter_setup(void){
 
     l2cap_init();
 
-    // setup SM: Display only
+    // setup SM: Just Works pairing, without bonding
     sm_init();
+    sm_set_io_capabilities(IO_CAPABILITY_NO_INPUT_NO_OUTPUT);
+    sm_set_authentication_requirements(0);
 
 #ifdef ENABLE_GATT_OVER_CLASSIC
     // init SDP, create record for GATT and register with SDP
@@ -128,9 +130,6 @@ static void le_counter_setup(void){
     // setup ATT server
     att_server_init(profile_data, att_read_callback, att_write_callback);    
 
-    // setup battery service
-    battery_service_server_init(battery);
-
     // setup advertisements
     uint16_t adv_int_min = 0x0030;
     uint16_t adv_int_max = 0x0030;
@@ -144,6 +143,10 @@ static void le_counter_setup(void){
     // register for HCI events
     hci_event_callback_registration.callback = &packet_handler;
     hci_add_event_handler(&hci_event_callback_registration);
+
+    // register for SM events
+    sm_event_callback_registration.callback = &packet_handler;
+    sm_add_event_handler(&sm_event_callback_registration);
 
     // register for ATT event
     att_server_register_packet_handler(packet_handler);
@@ -172,7 +175,7 @@ static int  counter_string_len;
 
 static void beat(void){
     counter++;
-    counter_string_len = snprintf(counter_string, sizeof(counter_string), "BTstack counter %04u", counter);
+    counter_string_len = btstack_snprintf_assert_complete(counter_string, sizeof(counter_string), "BTstack counter %04u", counter);
     puts(counter_string);
 }
 
@@ -181,13 +184,6 @@ static void heartbeat_handler(struct btstack_timer_source *ts){
         beat();
         att_server_request_can_send_now_event(con_handle);
     }
-
-    // simulate battery drain
-    battery--;
-    if (battery < 50) {
-        battery = 100;
-    }
-    battery_service_server_set_battery_value(battery);
 
     btstack_run_loop_set_timer(ts, HEARTBEAT_PERIOD_MS);
     btstack_run_loop_add_timer(ts);
@@ -210,6 +206,10 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
     if (packet_type != HCI_EVENT_PACKET) return;
     
     switch (hci_event_packet_get_type(packet)) {
+        case SM_EVENT_JUST_WORKS_REQUEST:
+            printf("Just Works requested\n");
+            sm_just_works_confirm(sm_event_just_works_request_get_handle(packet));
+            break;
         case HCI_EVENT_DISCONNECTION_COMPLETE:
             le_notification_enabled = 0;
             break;
@@ -278,10 +278,12 @@ static int att_write_callback(hci_con_handle_t connection_handle, uint16_t att_h
 }
 /* LISTING_END */
 
-int btstack_main(void);
-int btstack_main(void)
-{
-    le_counter_setup();
+int btstack_main(int argc, const char * argv[]);
+int btstack_main(int argc, const char * argv[]){
+    UNUSED(argc);
+    UNUSED(argv);
+
+    gatt_counter_setup();
 
     // turn on!
 	hci_power_control(HCI_POWER_ON);

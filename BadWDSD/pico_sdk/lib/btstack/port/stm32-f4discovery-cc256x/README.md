@@ -1,7 +1,7 @@
 # BTstack Port for STM32 F4 Discovery Board with CC256x
 
 This port uses the STM32 F4 Discovery Board with TI's CC256XEM ST Adapter Kit that allows to plug in a CC256xB or CC256xC Bluetooth module.
-STCubeMX was used to provide the HAL, initialize the device, and the Makefile. For easy development, Ozone project files are generated as well.
+STCubeMX was used to provide the HAL, initialize the device, and create an initial CMakeLists.txt. For easy development, Ozone project files are generated as well.
 
 ## Hardware
 
@@ -17,16 +17,18 @@ The module with the older CC2564B is around USD 20, while the one with the new C
 
 ## Software
 
-To build all examples, run make
-
-	$ make
+The build system uses CMake. To build all examples, run `cmake` and `make` in the build folder. The examples are built with
+    
+    $ mkdir build
+    $ cd build
+    $ cmake ..
+    $ make
 
 All examples and the .jedbug Ozone project files are placed in the 'build' folder.
 
-
 ## Flash And Run The Examples
 
-The Makefile builds different versions: 
+Cmake builds different versions: 
 - example.elf: .elf file with all debug information
 - example.bin: .bin file that can be used for flashing
 
@@ -48,10 +50,18 @@ In src/btstack_config.h resp. in example/btstack_config.h of the generated proje
 Also, the full packet log can be enabled in src/port.c resp. btstack/port/stm32-f4discovery-cc256x/src/port.c by uncommenting the hci_dump_init(..) line. The console output can then be converted into .pklg files for OS X PacketLogger or WireShark by running tool/create_packet_log.py
 
 ## GATT Database
-In BTstack, the GATT Database is defined via the .gatt file in the example folder. The Makefile contains rules to update the .h file when the .gatt was modified.
+In BTstack, the GATT Database is defined via the .gatt file in the example folder. The CMakeLists.txt contains rules to update the .h file when the .gatt was modified.
 
 
 ## Maintainer Notes - Updating The Port
 
 The Audio BSP is from the STM32F4Cube V1.16 firmware and not generated from STM32CubeMX. To update the HAL, run 'generate code' in CubeMX. After that, make sure to re-apply the patches to the UART and check if the hal config was changed.
 
+## High Accuracy Audio Timing
+We use TIM3 to count I2S Bit Clock ticks and use TIM2 as 1 Mhz clock with TIM2 Channel 1 Input Capture to get microsecond timestamps of the audio frames.
+In addition, TIM2 Channel 2 is used to get microsecond timestamps of an external event, e.g. for Bluetooth ISO Time synchronization.
+
+Hardware setup: connect the following pins:
+- PC10 with PD2 (I2S3_CK to ETR 2 of TIM3)
+- PC6 with PA15 (Channel1 Output Compare of TIM3 to TIM2 Channel 1 Input Capture)
+- PA1 to the extern Bluetotoh ISO Time synchronization signal

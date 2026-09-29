@@ -14,7 +14,10 @@ CFLAGS += -Wall -Wextra -Wpedantic -Werror
 CFLAGS += -Wno-unused-local-typedefs
 CFLAGS += -m32
 
-SRC += \
+SRC_BT += \
+	src/cyw43_bthci_uart.c \
+
+SRC_WL += \
 	src/cyw43_ctrl.c \
 	src/cyw43_ll.c \
 	src/cyw43_lwip.c \

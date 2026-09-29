@@ -74,12 +74,11 @@ endfunction()
 
 # add map file generation for the given target
 function(pico_add_map_output TARGET)
-    pico_get_runtime_output_directory(${TARGET} output_path)
     get_target_property(target_type ${TARGET} TYPE)
     if ("EXECUTABLE" STREQUAL "${target_type}")
-        target_link_options(${TARGET} PRIVATE "LINKER:-Map=${output_path}$<IF:$<BOOL:$<TARGET_PROPERTY:OUTPUT_NAME>>,$<TARGET_PROPERTY:OUTPUT_NAME>,$<TARGET_PROPERTY:NAME>>${CMAKE_EXECUTABLE_SUFFIX}.map")
+        target_link_options(${TARGET} PRIVATE "LINKER:-Map=$<TARGET_FILE:${TARGET}>.map")
     else ()
-        target_link_options(${TARGET} INTERFACE "LINKER:-Map=${output_path}$<IF:$<BOOL:$<TARGET_PROPERTY:OUTPUT_NAME>>,$<TARGET_PROPERTY:OUTPUT_NAME>,$<TARGET_PROPERTY:NAME>>${CMAKE_EXECUTABLE_SUFFIX}.map")
+        target_link_options(${TARGET} INTERFACE "LINKER:-Map=$<TARGET_FILE:${TARGET}>.map")
     endif ()
 endfunction()
 
@@ -166,9 +165,7 @@ macro(pico_simple_hardware_impl_target NAME)
                 )
 
         pico_mirrored_target_link_libraries(hardware_${NAME} INTERFACE pico_platform)
-        if (NOT PICO_NO_HARDWARE)
-            target_link_libraries(hardware_${NAME} INTERFACE hardware_claim)
-        endif()
+        target_link_libraries(hardware_${NAME} INTERFACE hardware_claim)
     endif()
 endmacro()
 
@@ -196,6 +193,21 @@ function(pico_add_doxygen_exclude SOURCE_DIR)
     endif()
     list(APPEND PICO_DOXYGEN_EXCLUDE_PATHS "${SOURCE_DIR}")
     set(PICO_DOXYGEN_EXCLUDE_PATHS "${PICO_DOXYGEN_EXCLUDE_PATHS}" CACHE INTERNAL "")
+endfunction()
+
+# e.g. pico_fixup_default_impl PICO_DEFAULT_FLOAT_IMPL pico_float default)
+# if the passed variable is undefined it will set it to the default value, and then if not already prefixed
+# will prepend the prefix
+function(pico_fixup_default_impl DEFAULT_IMPL_VAR_NAME PREFIX DEFAULT_VALUE)
+    if (NOT ${DEFAULT_IMPL_VAR_NAME})
+        set(${DEFAULT_IMPL_VAR_NAME} "${DEFAULT_VALUE}")
+    endif()
+    set(PREFIX "${PREFIX}_")
+    string(FIND "${${DEFAULT_IMPL_VAR_NAME}}" "${PREFIX}" POS)
+    if (NOT POS EQUAL 0)
+        set(${DEFAULT_IMPL_VAR_NAME} "${PREFIX}${${DEFAULT_IMPL_VAR_NAME}}")
+    endif()
+    set(${DEFAULT_IMPL_VAR_NAME} "${${DEFAULT_IMPL_VAR_NAME}}" PARENT_SCOPE)
 endfunction()
 
 include(${PICO_PLATFORM_CMAKE_FILE})

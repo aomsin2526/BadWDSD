@@ -61,11 +61,11 @@ void btstack_tlv_builder_init(btstack_tlv_builder_context_t * context, uint8_t *
     context->write_pos = 0;
 }
 
-uint16_t btstack_tlv_builder_remaining_space(btstack_tlv_builder_context_t * context){
+uint16_t btstack_tlv_builder_remaining_space(const btstack_tlv_builder_context_t* context){
     return context->size - context->write_pos;
 }
 
-uint16_t btstack_tlv_builder_get_length(btstack_tlv_builder_context_t * context){
+uint16_t btstack_tlv_builder_get_length(const btstack_tlv_builder_context_t* context){
     return context->write_pos;
 }
 
@@ -110,9 +110,9 @@ void btstack_tlv_builder_add_big_endian_32(btstack_tlv_builder_context_t * conte
 void btstack_tlv_builder_add_bytes(btstack_tlv_builder_context_t * context, const uint8_t * data, uint16_t length) {
     btstack_assert(context->write_pos != 0);
     btstack_assert(data != NULL);
+    uint16_t write_pos = context->write_pos;
     btstack_tlv_builder_increase_tag(context, length);
-    memcpy(&context->buffer[context->write_pos], data, length);
-    context->write_pos += length;
+    memcpy(&context->buffer[write_pos], data, length);
 }
 
 void btstack_tlv_builder_add_string(btstack_tlv_builder_context_t * context, const char * text) {

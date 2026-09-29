@@ -60,6 +60,7 @@ extern "C" {
 #define HCI_DUMP_LOG_LEVEL_DEBUG 0
 #define HCI_DUMP_LOG_LEVEL_INFO  1
 #define HCI_DUMP_LOG_LEVEL_ERROR 2
+#define HCI_DUMP_LOG_LEVEL_PRINT 3
 
 #define HCI_DUMP_HEADER_SIZE_PACKETLOGGER 13
 #define HCI_DUMP_HEADER_SIZE_BLUEZ        13
@@ -107,10 +108,11 @@ void hci_dump_enable_packet_log(bool enabled);
  */
 void hci_dump_enable_log_level(int log_level, int enable);
 
-/*
+/**
  * @brief Set max number of packets - output file might be truncated
+ * @param packets - number of packets to log, -1 for unlimited
  */
-void hci_dump_set_max_packets(int packets); // -1 for unlimited
+void hci_dump_set_max_packets(int packets);
 
 /**
  * @brief Dump Packet

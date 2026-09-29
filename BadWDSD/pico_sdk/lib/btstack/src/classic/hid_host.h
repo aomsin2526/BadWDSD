@@ -132,7 +132,12 @@ typedef struct {
 /* API_START */
 
 /**
- * @brief Set up HID Host 
+ * @brief Set up HID Host and provide storage for HID Descriptors
+ * If storage for HID Descriptors is provided, the HID Host will fetch and store the HID Descriptors
+ * for each connection and inform the application via HID_SUBEVENT_DESCRIPTOR_AVAILABLE event.
+ * The app can then access the HID descriptor for a particular connection with
+ * hid_descriptor_storage_get_descriptor_data and hid_descriptor_storage_get_descriptor_len.
+ * @note if hid_descriptor_storage is NULL, the HID Host will not store the HID Descriptor
  * @param hid_descriptor_storage
  * @param hid_descriptor_storage_len
  */
@@ -141,6 +146,8 @@ void hid_host_init(uint8_t * hid_descriptor_storage, uint16_t hid_descriptor_sto
 /**
  * @brief Register callback for the HID Host. 
  * @param callback
+ * @note HID Reports might be larger than what fits into regular HCI Event, i.e. the 8-bit lenght field might be invalid
+ *       Instead, you can use the provided uint16_t packet_size value
  */
 void hid_host_register_packet_handler(btstack_packet_handler_t callback);
 
@@ -259,7 +266,7 @@ uint8_t hid_host_send_get_report(uint16_t hid_cid, hid_report_type_t report_type
  * @param report_len
  * @result status ERROR_CODE_SUCCESS on success, otherwise ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER, ERROR_CODE_COMMAND_DISALLOWED
  */
-uint8_t hid_host_send_report(uint16_t hid_cid, uint16_t report_id, const uint8_t * report, uint8_t report_len);
+uint8_t hid_host_send_report(uint16_t hid_cid, uint16_t report_id, const uint8_t * report, uint16_t report_len);
 
 /**
  * @brief Get descriptor data

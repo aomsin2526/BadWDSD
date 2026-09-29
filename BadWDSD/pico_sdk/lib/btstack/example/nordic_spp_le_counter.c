@@ -103,7 +103,7 @@ static int  counter_string_len;
 
 static void beat(void){
     counter++;
-    counter_string_len = snprintf(counter_string, sizeof(counter_string), "BTstack counter %03u", counter);
+    counter_string_len = btstack_snprintf_assert_complete(counter_string, sizeof(counter_string), "BTstack counter %03u", counter);
 }
 
 static void nordic_can_send(void * context){
@@ -150,9 +150,11 @@ static void nordic_spp_packet_handler(uint8_t packet_type, uint16_t channel, uin
     }
 }
 
-int btstack_main(void);
-int btstack_main(void)
-{
+int btstack_main(int argc, const char * argv[]);
+int btstack_main(int argc, const char * argv[]){
+    UNUSED(argc);
+    UNUSED(argv);
+
     l2cap_init();
 
     // setup SM: Display only

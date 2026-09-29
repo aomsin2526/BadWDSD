@@ -159,7 +159,10 @@ uint8_t a2dp_source_establish_stream(bd_addr_t remote_addr, uint16_t *avdtp_cid)
             return status;
         }
         connection = avdtp_get_connection_for_avdtp_cid(outgoing_cid);
-        btstack_assert(connection != NULL);
+        if (connection == NULL) {
+            // if the remote addr matches our address, the SDP query fill fail, which finalizes the just created connection struct
+            return ERROR_CODE_UNSPECIFIED_ERROR;
+        }
 
         // setup state
         connection->a2dp_source_config_process.outgoing_active = true;
@@ -199,6 +202,10 @@ uint8_t a2dp_source_pause_stream(uint16_t avdtp_cid, uint8_t local_seid){
     return avdtp_suspend_stream(avdtp_cid, local_seid);
 }
 
+uint8_t a2dp_source_stop_stream(uint16_t avdtp_cid, uint8_t local_seid){
+    return avdtp_stop_stream(avdtp_cid, local_seid);
+}
+
 void a2dp_source_stream_endpoint_request_can_send_now(uint16_t avdtp_cid, uint8_t local_seid){
     avdtp_source_stream_endpoint_request_can_send_now(avdtp_cid, local_seid);
 }
@@ -228,6 +235,10 @@ uint8_t a2dp_source_set_config_mpeg_audio(uint16_t a2dp_cid, uint8_t local_seid,
 
 uint8_t a2dp_source_set_config_mpeg_aac(uint16_t a2dp_cid,  uint8_t local_seid,  uint8_t remote_seid, const avdtp_configuration_mpeg_aac_t * configuration){
     return a2dp_config_process_set_mpeg_aac(AVDTP_ROLE_SOURCE, a2dp_cid, local_seid, remote_seid, configuration);
+}
+
+uint8_t a2dp_source_set_config_mpegd_usac(uint16_t a2dp_cid,  uint8_t local_seid,  uint8_t remote_seid, const avdtp_configuration_mpegd_usac_t * configuration){
+    return a2dp_config_process_set_mpegd_usac(AVDTP_ROLE_SOURCE, a2dp_cid, local_seid, remote_seid, configuration);
 }
 
 uint8_t a2dp_source_set_config_atrac(uint16_t a2dp_cid, uint8_t local_seid, uint8_t remote_seid, const avdtp_configuration_atrac_t * configuration){
@@ -277,6 +288,12 @@ uint8_t a2dp_source_reconfigure_stream_sampling_frequency(uint16_t avdtp_cid, ui
             (void)memcpy(connection->a2dp_source_config_process.local_stream_endpoint->media_codec_info, connection->a2dp_source_config_process.local_stream_endpoint->remote_sep.configuration.media_codec.media_codec_information, codec_info_len);
             status = avdtp_config_atrac_set_sampling_frequency(connection->a2dp_source_config_process.local_stream_endpoint->media_codec_info, sampling_frequency);
             break;
+        case AVDTP_CODEC_MPEG_D_USAC:
+            codec_info_len = 7;
+            (void)memcpy(connection->a2dp_source_config_process.local_stream_endpoint->media_codec_info, connection->a2dp_source_config_process.local_stream_endpoint->remote_sep.configuration.media_codec.media_codec_information, codec_info_len);
+            status = avdtp_config_mpegd_usac_set_sampling_frequency(connection->a2dp_source_config_process.local_stream_endpoint->media_codec_info, sampling_frequency);
+            break;
+
         default:
             return ERROR_CODE_UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
     }
@@ -292,7 +309,7 @@ uint8_t a2dp_source_reconfigure_stream_sampling_frequency(uint16_t avdtp_cid, ui
     // start reconfigure
     connection->a2dp_source_config_process.state = A2DP_W2_RECONFIGURE_WITH_SEID;
 
-    return avdtp_source_reconfigure(
+   return avdtp_source_reconfigure(
             avdtp_cid,
             avdtp_stream_endpoint_seid(connection->a2dp_source_config_process.local_stream_endpoint),
             connection->a2dp_source_config_process.local_stream_endpoint->remote_sep.seid,
@@ -319,4 +336,3 @@ void a2dp_source_register_media_config_validator(uint8_t (*callback)(const avdtp
     a2dp_source_media_config_validator = callback;
     avdtp_source_register_media_config_validator(&a2dp_source_media_config_validator_callback);
 }
-

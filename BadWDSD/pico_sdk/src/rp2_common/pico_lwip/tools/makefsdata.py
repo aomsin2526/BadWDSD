@@ -18,8 +18,12 @@ LWIP_HTTPD_SSI_EXTENSIONS = [".shtml", ".shtm", ".ssi", ".xml", ".json"]
 def process_file(input_dir, file):
     results = []
 
+    # Ignore response files
+    if file.suffix == ".response":
+        return None
+
     # Check content type
-    content_type, _ = mimetypes.guess_type(file)
+    content_type, content_encoding = mimetypes.guess_type(file)
     if content_type is None:
         content_type = "application/octet-stream"
 
@@ -31,15 +35,26 @@ def process_file(input_dir, file):
         data += "\x00"
     results.append({'data': bytes(data, "utf-8"), 'comment': comment});
 
-    # Header
-    response_type = 200
-    for response_id in response_types:
-        if file.name.startswith(f"{response_id}."):
-            response_type = response_id
-            break
-    data = f"{response_types[response_type]}\r\n"
-    comment = f"\"{response_types[response_type]}\" ({len(data)} chars)"
+    # If we find a file with the same name and a "response" extension - use its contents for the response
+    response_file = file.with_suffix('.response')
+    if response_file.is_file():
+        data = response_file.read_text()
+        comment = f"content from {response_file.name} ({len(data)} chars)"
+    else:
+        # response result
+        response_type = 200
+        for response_id in response_types:
+            if file.name.startswith(f"{response_id}."):
+                response_type = response_id
+                break
+        data = f"{response_types[response_type]}\r\n"
+        comment = f"\"{response_types[response_type]}\" ({len(data)} chars)"
     results.append({'data': bytes(data, "utf-8"), 'comment': comment});
+
+    # load file contents
+    file_contents = file.read_bytes()
+    if len(file_contents) == 0 and response_file.is_file():
+        return results
 
     # user agent
     data = f"Server: {HTTPD_SERVER_AGENT}\r\n"
@@ -53,15 +68,20 @@ def process_file(input_dir, file):
         comment = f"\"Content-Length: {file_size}\" ({len(data)} chars)"
         results.append({'data': bytes(data, "utf-8"), 'comment': comment});
 
-    # content type
-    data = f"Content-Type: {content_type}\r\n\r\n"
-    comment = f"\"Content-Type: {content_type}\" ({len(data)} chars)"
+    # content type and content encoding
+    content_type_header = f"Content-Type: {content_type}"
+    if content_encoding is None:
+        data = f"{content_type_header}\r\n\r\n"
+        comment = f"\"{content_type_header}\" ({len(data)} chars)"
+    else:
+        content_encoding_header = f"Content-Encoding: {content_encoding}"
+        data = f"{content_type_header}\r\n{content_encoding_header}\r\n\r\n"
+        comment = f"\"{content_type_header} {content_encoding_header}\" ({len(data)} chars)"
     results.append({'data': bytes(data, "utf-8"), 'comment': comment});
 
-    # file contents
-    data = file.read_bytes()
-    comment = f"raw file data ({len(data)} bytes)"
-    results.append({'data': data, 'comment': comment});
+    # add file contents
+    comment = f"raw file data ({len(file_contents)} bytes)"
+    results.append({'data': file_contents, 'comment': comment});
 
     return results;
 
@@ -79,6 +99,8 @@ def process_file_list(fd, input):
         if input_dir is None:
             input_dir = file.parent
         results = process_file(input_dir, file)
+        if not results:
+            continue
 
         # make a variable name
         var_name = str(file.relative_to(input_dir))

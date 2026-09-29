@@ -1,0 +1,76 @@
+CC                 = clang
+CXX                = clang++
+LLVM_PROFDATA     ?= llvm-profdata
+LLVM_COV          ?= llvm-cov
+LLVM_PROFILE_FILE ?= default.profraw
+
+BTSTACK_ROOT      ?=  ../..
+PYTHON             = python3
+LCOV_UTIL          = ${BTSTACK_ROOT}/tool/lcov_util.py
+
+GENERIC_FLAGS    := -O2 -g -Wall -Wextra
+CPPUTEST_CFLAGS  := ${shell pkg-config --cflags cpputest}
+CPPUTEST_LDFLAGS := $(filter-out -lstdc++ -lc++,${shell pkg-config --libs cpputest})
+
+# CppuTest from pkg-config
+CFLAGS   += ${CPPUTEST_CFLAGS}
+CXXFLAGS += ${CPPUTEST_CFLAGS}
+LDFLAGS  += ${CPPUTEST_LDFLAGS}
+
+# General
+CFLAGS   += ${GENERIC_FLAGS} -std=gnu11
+CXXFLAGS += ${GENERIC_FLAGS} -std=gnu++17
+
+# Coverage
+CFLAGS_COVERAGE   = ${CFLAGS} -Ibuild-coverage -fprofile-instr-generate -fcoverage-mapping
+CXXFLAGS_COVERAGE = ${CXXFLAGS} -Ibuild-coverage -fprofile-instr-generate -fcoverage-mapping
+LDFLAGS_COVERAGE  = ${LDFLAGS} -fprofile-instr-generate
+
+# Address sanitiser
+CFLAGS_ASAN     = ${CFLAGS} -Ibuild-asan -fsanitize=address -DHAVE_ASSERT
+CXXFLAGS_ASAN   = ${CXXFLAGS} -Ibuild-asan -DCPPUTEST_MEM_LEAK_DETECTION_DISABLED -fsanitize=address -DHAVE_ASSERT
+LDFLAGS_ASAN    = ${LDFLAGS} -fsanitize=address
+
+build-%:
+	mkdir -p $@
+
+.PRECIOUS: build-%
+
+build-asan/%.h: %.gatt | build-asan
+	${PYTHON} ${BTSTACK_ROOT}/tool/compile_gatt.py $< $@
+
+build-coverage/%.h: %.gatt | build-coverage
+	${PYTHON} ${BTSTACK_ROOT}/tool/compile_gatt.py $< $@
+
+build-coverage/%.o: %.c | build-coverage
+	${CC} -c $(CFLAGS_COVERAGE) $< -o $@
+
+build-asan/%.o: %.c | build-asan
+	${CC} -c $(CFLAGS_ASAN) $< -o $@
+
+build-coverage/%.o: %.cpp | build-coverage
+	${CXX} -c $(CXXFLAGS_COVERAGE) $< -o $@
+
+build-asan/%.o: %.cpp | build-asan
+	${CXX} -c $(CXXFLAGS_ASAN) $< -o $@
+
+build-coverage/%: build-coverage/%.o | build-coverage
+	${CXX} $^ ${LDFLAGS_COVERAGE} -o $@
+
+build-asan/%: build-asan/%.o | build-asan
+	${CXX} $^ ${LDFLAGS_ASAN} -o $@
+
+%.info: %
+	./$<
+	${LLVM_PROFDATA} merge -o $<.profdata $$(find . -type f -iname "*.profraw")
+	find . -type f -iname "*.profraw" -delete
+	${LLVM_COV} export $< -ignore-filename-regex="*/test/*" -format=lcov -instr-profile=$<.profdata > $<.temp
+	${LCOV_UTIL} $<.temp -o $<.info
+	rm $<.profdata $<.temp
+
+.NOTPARALLEL: coverage
+
+.PHONY: clean-common
+clean-common:
+	rm -rf build-coverage build-asan
+	rm -rf *.gcno *.gcda *.profraw

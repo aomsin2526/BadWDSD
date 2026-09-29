@@ -96,6 +96,7 @@ static hid_device_t    hid_device_singleton;
 static bool            hid_device_boot_protocol_mode_supported;
 static const uint8_t * hid_device_descriptor;
 static uint16_t        hid_device_descriptor_len;
+static bool            hid_device_accept_shorter_hid_reports;
 
 
 static uint16_t hid_device_cid = 0;
@@ -149,15 +150,11 @@ static hid_device_t * hid_device_get_instance_for_hid_cid(uint16_t hid_cid){
 }
 
 static void hid_device_setup_instance(hid_device_t *hid_device, const uint8_t *bd_addr) {
+    (void)memset(hid_device, 0, sizeof(*hid_device));
     (void)memcpy(hid_device->bd_addr, bd_addr, 6);
     hid_device->cid = hid_device_get_next_cid();
-    // reset state
     hid_device->protocol_mode = HID_PROTOCOL_MODE_REPORT;
     hid_device->con_handle    = HCI_CON_HANDLE_INVALID;
-    hid_device->incoming      = 0;
-    hid_device->connected     = 0;
-    hid_device->control_cid   = 0;
-    hid_device->interrupt_cid = 0;
 }
 
 static hid_device_t * hid_device_provide_instance_for_bd_addr(bd_addr_t bd_addr){
@@ -237,8 +234,10 @@ void hid_create_sdp_record(uint8_t *service, uint32_t service_record_handle, con
     de_pop_sequence(service, attribute); 
 
     // 0x0100 "ServiceName"
-    de_add_number(service,  DE_UINT, DE_SIZE_16, 0x0100);
-    de_add_data(service,  DE_STRING, (uint16_t) strlen(params->device_name), (uint8_t *) params->device_name);
+    if (params->device_name != NULL){
+        de_add_number(service,  DE_UINT, DE_SIZE_16, 0x0100);
+        de_add_data(service,  DE_STRING, (uint16_t) strlen(params->device_name), (uint8_t *) params->device_name);
+    }
 
     de_add_number(service,  DE_UINT, DE_SIZE_16, BLUETOOTH_ATTRIBUTE_BLUETOOTH_PROFILE_DESCRIPTOR_LIST);
     attribute = de_push_sequence(service);
@@ -374,7 +373,12 @@ static int hid_report_size_valid(uint16_t cid, int report_id, hid_report_type_t 
         }
     } else {
         int size =  btstack_hid_get_report_size_for_id(report_id, report_type, hid_device_descriptor, hid_device_descriptor_len);
-        if ((size == 0) || (size != report_size)) return 0;
+        if (size == 0) return 0;
+        if (hid_device_accept_shorter_hid_reports){
+            if (report_size > size) return 0;
+        } else {
+            if (size != report_size) return 0;
+        }
     }
     return 1;
 }
@@ -411,6 +415,10 @@ static hid_report_id_status_t hid_report_id_status(uint16_t cid, uint16_t report
 static hid_handshake_param_type_t hid_device_set_report_cmd_is_valid(uint16_t cid, hid_report_type_t report_type, int report_size, uint8_t * report){
     int pos = 0;
     int report_id = 0;
+
+    if (report_size == 0) {
+        return HID_HANDSHAKE_PARAM_TYPE_ERR_INVALID_PARAMETER;
+    }
 
     if (btstack_hid_report_id_declared(hid_device_descriptor, hid_device_descriptor_len)){
         report_id = report[pos++];
@@ -839,6 +847,7 @@ void hid_device_init(bool boot_protocol_mode_supported, uint16_t descriptor_len,
     hid_device_boot_protocol_mode_supported = boot_protocol_mode_supported;
     hid_device_descriptor =  descriptor;
     hid_device_descriptor_len = descriptor_len;
+    hid_device_accept_shorter_hid_reports = false;
     hci_device_get_report = dummy_write_report;
     hci_device_set_report = dummy_set_report;
     hci_device_report_data = dummy_report_data;
@@ -848,6 +857,8 @@ void hid_device_init(bool boot_protocol_mode_supported, uint16_t descriptor_len,
 }
 
 void hid_device_deinit(void){
+    // Test-only: the deinit functions of all protocols/profiles have to be called before a new init
+
     hid_device_callback = NULL;
     hci_device_get_report = NULL;
     hci_device_set_report = NULL;
@@ -858,7 +869,12 @@ void hid_device_deinit(void){
     hid_device_boot_protocol_mode_supported = false;
     hid_device_descriptor = NULL;
     hid_device_descriptor_len = 0;
+    hid_device_accept_shorter_hid_reports = false;
     hid_device_cid = 0;
+}
+
+void hid_device_accept_truncated_hid_reports(bool accept_truncated){
+    hid_device_accept_shorter_hid_reports = accept_truncated;
 }
 
 /**

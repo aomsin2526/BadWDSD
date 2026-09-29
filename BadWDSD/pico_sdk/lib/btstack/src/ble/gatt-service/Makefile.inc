@@ -10,9 +10,11 @@ SRC_BLE_GATT_SERVICE_FILES = \
     device_information_service_client.c \
     device_information_service_server.c \
     heart_rate_service_server.c \
-    hids_client.c \
+    hids_host.c \
     hids_device.c \
     nordic_spp_service_server.c \
+    object_transfer_service_client.c \
+    object_transfer_service_server.c \
     scan_parameters_service_client.c \
     scan_parameters_service_server.c \
     tx_power_service_server.c \

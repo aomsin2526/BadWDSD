@@ -19,8 +19,8 @@
 #define CYW43_INFO(...)                     printf(__VA_ARGS__)
 #define CYW43_WARN(...)                     printf(__VA_ARGS__)
 
-#define CYW43_PIN_WL_REG_ON                 (1)
-#define CYW43_PIN_WL_RFSW_VDD               (2)
+#define CYW43_PIN_RFSW_VDD                  (1)
+#define CYW43_PIN_WL_REG_ON                 (2)
 #define CYW43_PIN_WL_SDIO_1                 (3)
 #define CYW43_PIN_WL_HOST_WAKE              (4)
 

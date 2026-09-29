@@ -76,6 +76,11 @@ void att_db_util_init(void){
     if (att_db == NULL){
         att_db = (uint8_t*) malloc((size_t)ATT_DB_BUFFER_INCREMENT);
         att_db_max_size = (uint16_t)ATT_DB_BUFFER_INCREMENT;
+    	btstack_assert(att_db != NULL);
+    	// the btstack_assert isn't sufficient for cppcheck, so we explicitly abort here
+    	if (att_db == NULL) {    // LCOV_EXCL_LINE
+			abort();			 // LCOV_EXCL_LINE
+    	}                        // LCOV_EXCL_LINE
     }
 #else
 	att_db = att_db_storage;
@@ -127,21 +132,28 @@ static bool att_db_util_hash_include_without_value(uint16_t uuid16){
  * asserts that the requested amount of bytes can be stored in the att_db
  * @return TRUE if space is available
  */
-static int att_db_util_assert_space(uint16_t size){
-	uint16_t required_size = att_db_size + size + 2u;
+static int att_db_util_assert_space(uint32_t size){
+	uint32_t required_size = (uint32_t) att_db_size + size + 2u;
+	if (required_size > UINT16_MAX){
+		log_error("att_db: maximum database size exceeded");
+		return 0;
+	}
 	if (required_size <= att_db_max_size) return 1;
 #ifdef HAVE_MALLOC
-    uint16_t new_size = att_db_max_size;
+    uint32_t new_size = att_db_max_size;
 	while (new_size < required_size){
-        new_size += (uint16_t)ATT_DB_BUFFER_INCREMENT;
+		new_size += ATT_DB_BUFFER_INCREMENT;
+		if (new_size > UINT16_MAX){
+			new_size = UINT16_MAX;
+		}
 	}
-	uint8_t * new_db = (uint8_t*) realloc(att_db, new_size);
+	uint8_t * new_db = (uint8_t*) realloc(att_db, (size_t) new_size);
 	if (!new_db) {
 		log_error("att_db: realloc failed");
 		return 0;
 	}
 	att_db = new_db;
-	att_db_max_size = new_size;
+	att_db_max_size = (uint16_t) new_size;
     att_set_db(att_db); // Update att_db with the new db
 	return 1;
 #else
@@ -155,9 +167,9 @@ static int att_db_util_assert_space(uint16_t size){
 // db endds with 0x00 0x00
 
 static void att_db_util_add_attribute_uuid16(uint16_t uuid16, uint16_t flags, uint8_t * data, uint16_t data_len){
-	int size = 2u + 2u + 2u + 2u + data_len;
+	uint32_t size = 2u + 2u + 2u + 2u + data_len;
 	if (!att_db_util_assert_space(size)) return;
-	little_endian_store_16(att_db, att_db_size, size);
+	little_endian_store_16(att_db, att_db_size, (uint16_t) size);
 	att_db_size += 2u;
 	little_endian_store_16(att_db, att_db_size, flags);
 	att_db_size += 2u;
@@ -178,10 +190,10 @@ static void att_db_util_add_attribute_uuid16(uint16_t uuid16, uint16_t flags, ui
 }
 
 static void att_db_util_add_attribute_uuid128(const uint8_t * uuid128, uint16_t flags, uint8_t * data, uint16_t data_len){
-	int size = 2u + 2u + 2u + 16u + data_len;
+	uint32_t size = 2u + 2u + 2u + 16u + data_len;
 	if (!att_db_util_assert_space(size)) return;
 	uint16_t flags_to_store = flags | (uint16_t)ATT_PROPERTY_UUID128;
-	little_endian_store_16(att_db, att_db_size, size);
+	little_endian_store_16(att_db, att_db_size, (uint16_t) size);
 	att_db_size += 2u;
 	little_endian_store_16(att_db, att_db_size, flags_to_store);
 	att_db_size += 2u;
@@ -240,7 +252,11 @@ uint16_t att_db_util_add_included_service_uuid16(uint16_t start_group_handle, ui
 static void att_db_util_add_client_characteristic_configuration(uint16_t flags){
 	uint8_t buffer[2];
 	// drop permission for read (0xc00), keep write permissions (0x0091)
-	uint16_t flags_to_store = (flags & 0x1f391u) | (uint16_t)ATT_PROPERTY_READ | (uint16_t)ATT_PROPERTY_WRITE | (uint16_t)ATT_PROPERTY_DYNAMIC;
+	uint16_t flags_to_store = (flags & 0x1f391u) |
+		ATT_PROPERTY_READ |
+		ATT_PROPERTY_WRITE |
+		ATT_PROPERTY_WRITE_WITHOUT_RESPONSE |
+		ATT_PROPERTY_DYNAMIC;
 	little_endian_store_16(buffer, 0, 0); 
 	att_db_util_add_attribute_uuid16(GATT_CLIENT_CHARACTERISTICS_CONFIGURATION, flags_to_store, buffer, 2);
 }
@@ -285,14 +301,14 @@ static uint16_t att_db_util_encode_permissions(uint16_t properties, uint8_t read
 
 uint16_t att_db_util_add_characteristic_uuid16(uint16_t uuid16, uint16_t properties, uint8_t read_permission, uint8_t write_permission, uint8_t * data, uint16_t data_len){
 	uint8_t buffer[5];
-	buffer[0] = (uint8_t) (properties & 0xff);
+	buffer[0] = (uint8_t) (properties & 0xffu);
 	little_endian_store_16(buffer, 1u, att_db_next_handle + 1u);
 	little_endian_store_16(buffer, 3, uuid16);
 	att_db_util_add_attribute_uuid16(GATT_CHARACTERISTICS_UUID, ATT_PROPERTY_READ, buffer, sizeof(buffer));
 	uint16_t flags = att_db_util_encode_permissions(properties, read_permission, write_permission);	
 	uint16_t value_handle = att_db_next_handle;
 	att_db_util_add_attribute_uuid16(uuid16, flags, data, data_len);
-	if ((properties & (uint8_t)(ATT_PROPERTY_NOTIFY | ATT_PROPERTY_INDICATE)) != 0u){
+	if ((properties & (ATT_PROPERTY_NOTIFY | ATT_PROPERTY_INDICATE)) != 0u){
 		att_db_util_add_client_characteristic_configuration(flags);
 	}
 	return value_handle;
@@ -300,14 +316,14 @@ uint16_t att_db_util_add_characteristic_uuid16(uint16_t uuid16, uint16_t propert
 
 uint16_t att_db_util_add_characteristic_uuid128(const uint8_t * uuid128, uint16_t properties, uint8_t read_permission, uint8_t write_permission, uint8_t * data, uint16_t data_len){
 	uint8_t buffer[19];
-	buffer[0] = (uint8_t) (properties & 0xff);
+	buffer[0] = (uint8_t) (properties & 0xffu);
 	little_endian_store_16(buffer, 1u, att_db_next_handle + 1u);
 	reverse_128(uuid128, &buffer[3]);
 	att_db_util_add_attribute_uuid16(GATT_CHARACTERISTICS_UUID, ATT_PROPERTY_READ, buffer, sizeof(buffer));
 	uint16_t flags = att_db_util_encode_permissions(properties, read_permission, write_permission);	
 	uint16_t value_handle = att_db_next_handle;
 	att_db_util_add_attribute_uuid128(uuid128, flags, data, data_len);
-	if ((properties & (uint8_t)(ATT_PROPERTY_NOTIFY | ATT_PROPERTY_INDICATE)) != 0u){
+	if ((properties & (ATT_PROPERTY_NOTIFY | ATT_PROPERTY_INDICATE)) != 0u){
 		att_db_util_add_client_characteristic_configuration(flags);
 	}
 	return value_handle;
@@ -342,7 +358,7 @@ static uint16_t att_db_util_hash_bytes_available;
 static void att_db_util_hash_fetch_next_attribute(void){
     while (true){
         uint16_t size = little_endian_read_16(att_db_util_hash_att_ptr, 0);
-        btstack_assert(size != 0);
+        btstack_assert(size != 0u);
         UNUSED(size);
         uint16_t flags = little_endian_read_16(att_db_util_hash_att_ptr, 2);
         if ((flags & (uint16_t)ATT_PROPERTY_UUID128) == 0u) {

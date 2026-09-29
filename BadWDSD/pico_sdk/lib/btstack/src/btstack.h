@@ -54,6 +54,9 @@
 #include "bluetooth_gatt.h"
 #include "bluetooth_sdp.h"
 #include "btstack_audio.h"
+#include "btstack_audio_generator.h"
+#include "btstack_audio_player.h"
+#include "btstack_audio_song.h"
 #include "btstack_control.h"
 #include "btstack_crypto.h"
 #include "btstack_debug.h"
@@ -93,7 +96,7 @@
 #include "ble/gatt-service/device_information_service_server.h"
 #include "ble/gatt_service_client.h"
 #include "ble/gatt-service/heart_rate_service_server.h"
-#include "ble/gatt-service/hids_client.h"
+#include "ble/gatt-service/hids_host.h"
 #include "ble/gatt-service/hids_device.h"
 #include "ble/gatt-service/immediate_alert_service_client.h"
 #include "ble/gatt-service/immediate_alert_service_server.h"
@@ -156,9 +159,6 @@
 
 #include "le-audio/le_audio.h"
 #include "le-audio/le_audio_util.h"
-#include "le-audio/gatt-service/broadcast_audio_scan_service_client.h"
-#include "le-audio/gatt-service/broadcast_audio_scan_service_server.h"
-#include "le-audio/gatt-service/broadcast_audio_scan_service_util.h"
 
 #ifdef ENABLE_MESH
 #include "mesh/adv_bearer.h"
@@ -190,5 +190,9 @@
 #include "mesh/provisioning_device.h"
 #include "mesh/provisioning_provisioner.h"
 #endif
+
+#include "ble/gatt-service/object_transfer_service_client.h"
+#include "ble/gatt-service/object_transfer_service_server.h"
+#include "ble/gatt-service/object_transfer_service_util.h"
 
 #endif  // __BTSTACK_H 

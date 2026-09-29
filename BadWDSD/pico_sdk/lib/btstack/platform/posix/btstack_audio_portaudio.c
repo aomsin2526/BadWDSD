@@ -65,7 +65,7 @@ static int                    num_bytes_per_sample_sink;
 static int                    num_bytes_per_sample_source;
 
 static const char * sink_device_name;
-static const char * source_device_name = "4-chan";
+static const char * source_device_name = NULL;
 
 // portaudio
 static int portaudio_initialized;
@@ -82,8 +82,8 @@ static PaStream * stream_source;
 static PaStream * stream_sink;
 
 // client
-static void (*playback_callback)(int16_t * buffer, uint16_t num_samples);
-static void (*recording_callback)(const int16_t * buffer, uint16_t num_samples);
+static void (*playback_callback)(int16_t * buffer, uint16_t num_samples, const btstack_audio_context_t * context);
+static void (*recording_callback)(const int16_t * buffer, uint16_t num_samples, const btstack_audio_context_t * context);
 
 // output buffer
 static int16_t               output_buffer_storage[NUM_OUTPUT_BUFFERS * NUM_FRAMES_PER_PA_BUFFER * MAX_NR_AUDIO_CHANNELS];
@@ -102,6 +102,10 @@ static int                   input_buffer_to_fill;
 static btstack_timer_source_t  driver_timer_sink;
 static btstack_timer_source_t  driver_timer_source;
 
+// context array
+static btstack_audio_context_t sink_playback_audio_contexts[NUM_OUTPUT_BUFFERS];
+static btstack_audio_context_t source_recording_audio_contexts[NUM_INPUT_BUFFERS];
+
 static int portaudio_callback_sink( const void *                     inputBuffer, 
                                     void *                           outputBuffer,
                                     unsigned long                    frames_per_buffer,
@@ -111,11 +115,14 @@ static int portaudio_callback_sink( const void *                     inputBuffer
 
     /** portaudio_callback is called from different thread, don't use hci_dump / log_info here without additional checks */
 
-    (void) timeInfo; /* Prevent unused variable warnings. */
     (void) statusFlags;
     (void) userData;
     (void) frames_per_buffer;
     (void) inputBuffer;
+
+    // get microsecond timestamp
+    btstack_time_us_t time_us = (uint32_t) (uint64_t) (timeInfo->outputBufferDacTime * 1000000);
+    sink_playback_audio_contexts[output_buffer_to_play].timestamp = time_us;
 
     // simplified volume control
     uint16_t index;
@@ -153,11 +160,14 @@ static int portaudio_callback_source( const void *                     inputBuff
 
     /** portaudio_callback is called from different thread, don't use hci_dump / log_info here without additional checks */
 
-    (void) timeInfo; /* Prevent unused variable warnings. */
     (void) statusFlags;
     (void) userData;
     (void) samples_per_buffer;
     (void) outputBuffer;
+
+    // get microsecond timestamp
+    btstack_time_us_t time_us = (uint32_t) (uint64_t) (timeInfo->outputBufferDacTime * 1000000);
+    source_recording_audio_contexts[input_buffer_to_fill].timestamp = time_us;
 
     // store in one of our buffers
     memcpy(input_buffers[input_buffer_to_fill], inputBuffer, NUM_FRAMES_PER_PA_BUFFER * num_bytes_per_sample_source);
@@ -172,7 +182,8 @@ static void driver_timer_handler_sink(btstack_timer_source_t * ts){
 
     // playback buffer ready to fill
     while (output_buffer_to_play != output_buffer_to_fill){
-        (*playback_callback)(output_buffers[output_buffer_to_fill], NUM_FRAMES_PER_PA_BUFFER);
+        (*playback_callback)(output_buffers[output_buffer_to_fill], NUM_FRAMES_PER_PA_BUFFER,
+            &sink_playback_audio_contexts[output_buffer_to_fill]);
 
         // next
         output_buffer_to_fill = (output_buffer_to_fill + 1 ) % NUM_OUTPUT_BUFFERS;
@@ -188,7 +199,8 @@ static void driver_timer_handler_source(btstack_timer_source_t * ts){
     // recording buffer ready to process
     if (input_buffer_to_record != input_buffer_to_fill){
 
-        (*recording_callback)(input_buffers[input_buffer_to_record], NUM_FRAMES_PER_PA_BUFFER);
+        (*recording_callback)(input_buffers[input_buffer_to_record], NUM_FRAMES_PER_PA_BUFFER,
+            &source_recording_audio_contexts[input_buffer_to_record]);
 
         // next
         input_buffer_to_record = (input_buffer_to_record + 1 ) % NUM_INPUT_BUFFERS;
@@ -202,19 +214,15 @@ static void driver_timer_handler_source(btstack_timer_source_t * ts){
 static int btstack_audio_portaudio_sink_init(
     uint8_t channels,
     uint32_t samplerate, 
-    void (*playback)(int16_t * buffer, uint16_t num_samples)
+    void (*playback)(int16_t * buffer, uint16_t num_samples, const btstack_audio_context_t * context)
 ){
     PaError err;
 
     btstack_assert(channels <= MAX_NR_AUDIO_CHANNELS);
+    btstack_assert(playback != NULL);
 
     num_channels_sink = channels;
     num_bytes_per_sample_sink = 2 * channels;
-
-    if (!playback){
-        log_error("No playback callback");
-        return 1;
-    }
 
     for (int i=0;i<NUM_OUTPUT_BUFFERS;i++){
         output_buffers[i] = &output_buffer_storage[i * NUM_FRAMES_PER_PA_BUFFER * MAX_NR_AUDIO_CHANNELS];
@@ -279,8 +287,18 @@ static int btstack_audio_portaudio_sink_init(
     log_info("PortAudio: sink stream created");
 
     const PaStreamInfo * stream_info = Pa_GetStreamInfo(stream_sink);
-    log_info("PortAudio: sink latency: %f", stream_info->outputLatency);
-    UNUSED(stream_info);
+
+    // verify latency
+    uint32_t latency_samples = (uint32_t) (stream_info->outputLatency * samplerate);
+    uint32_t buffer_samples = NUM_FRAMES_PER_PA_BUFFER * NUM_OUTPUT_BUFFERS;
+    int buffers_needed = (latency_samples + NUM_FRAMES_PER_PA_BUFFER - 1) / NUM_FRAMES_PER_PA_BUFFER;
+    log_info("PortAudio: output latency of %f requires %u buffers, %u buffers available\n",
+    stream_info->outputLatency, buffers_needed, NUM_OUTPUT_BUFFERS);
+    UNUSED(buffers_needed);
+    if (latency_samples > buffer_samples) {
+        log_error("PortAudio: output latency of %f requires %u buffers, but only %u buffers are available\n",
+            stream_info->outputLatency, buffers_needed, NUM_OUTPUT_BUFFERS);
+    }
 
     playback_callback  = playback;
 
@@ -293,19 +311,16 @@ static int btstack_audio_portaudio_sink_init(
 static int btstack_audio_portaudio_source_init(
     uint8_t channels,
     uint32_t samplerate, 
-    void (*recording)(const int16_t * buffer, uint16_t num_samples)
+    void (*recording)(const int16_t * buffer, uint16_t num_samples, const btstack_audio_context_t * context)
 ){
     PaError err;
 
     btstack_assert(channels <= MAX_NR_AUDIO_CHANNELS);
+    btstack_assert(recording != NULL);
 
     num_channels_source = channels;
     num_bytes_per_sample_source = 2 * channels;
 
-    if (!recording){
-        log_error("No recording callback");
-        return 1;
-    }
 
     for (int i=0;i<NUM_INPUT_BUFFERS;i++){
         input_buffers[i] = &input_buffer_storage[i * NUM_FRAMES_PER_PA_BUFFER * MAX_NR_AUDIO_CHANNELS];
@@ -406,7 +421,7 @@ static void btstack_audio_portaudio_sink_start_stream(void){
     // fill buffers once
     uint8_t i;
     for (i=0;i<NUM_OUTPUT_BUFFERS-1;i++){
-        (*playback_callback)(&output_buffer_storage[i * NUM_FRAMES_PER_PA_BUFFER * MAX_NR_AUDIO_CHANNELS], NUM_FRAMES_PER_PA_BUFFER);
+        (*playback_callback)(&output_buffer_storage[i * NUM_FRAMES_PER_PA_BUFFER * MAX_NR_AUDIO_CHANNELS], NUM_FRAMES_PER_PA_BUFFER, 0);
     }
     output_buffer_to_play = 0;
     output_buffer_to_fill = NUM_OUTPUT_BUFFERS-1;

@@ -140,6 +140,13 @@ uint8_t a2dp_source_start_stream(uint16_t a2dp_cid, uint8_t local_seid);
 uint8_t a2dp_source_pause_stream(uint16_t a2dp_cid, uint8_t local_seid);
 
 /**
+ * @brief Stop stream.
+ * @param a2dp_cid             A2DP channel identifier.
+ * @param local_seid           ID of a local stream endpoint.
+ */
+uint8_t a2dp_source_stop_stream(uint16_t a2dp_cid, uint8_t local_seid);
+
+/**
  * @brief Release stream and disconnect from remote. 
  * @param a2dp_cid 			A2DP channel identifier.
  */
@@ -182,7 +189,7 @@ uint8_t a2dp_source_stream_send_media_payload_rtp(uint16_t a2dp_cid, uint8_t loc
  * @param size
  * @return status
  */
-uint8_t	a2dp_source_stream_send_media_packet(uint16_t a2dp_cid, uint8_t local_seid, const uint8_t * packet, uint16_t size);
+uint8_t a2dp_source_stream_send_media_packet(uint16_t a2dp_cid, uint8_t local_seid, const uint8_t * packet, uint16_t size);
 
 /**
  * @brief Select and configure SBC endpoint
@@ -213,6 +220,16 @@ uint8_t a2dp_source_set_config_mpeg_audio(uint16_t a2dp_cid, uint8_t local_seid,
  * @return status
  */
 uint8_t a2dp_source_set_config_mpeg_aac(uint16_t a2dp_cid,  uint8_t local_seid,  uint8_t remote_seid, const avdtp_configuration_mpeg_aac_t * configuration);
+
+/**
+ * @brief Select and configure MPEG-D USAC endpoint
+ * @param a2dp_cid          A2DP channel identifier.
+ * @param local_seid        ID of a local stream endpoint.
+ * @param remote_seid       ID of a remote stream endpoint.
+ * @param configuration     MPEG-D USAC Configuration
+ * @return status
+ */
+uint8_t a2dp_source_set_config_mpegd_usac(uint16_t a2dp_cid,  uint8_t local_seid,  uint8_t remote_seid, const avdtp_configuration_mpegd_usac_t * configuration);
 
 /**
  * @brief Select and configure ATRAC endpoint

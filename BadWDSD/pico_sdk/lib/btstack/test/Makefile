@@ -1,15 +1,24 @@
+LLVM_PROFDATA ?= llvm-profdata
+LCOV ?= lcov
+GENHTML ?= genhtml
+
+JOB_FLAG  := $(filter -j%, $(subst -j ,-j,${MAKEFLAGS}))
+JOBS_PARM := $(subst -j,,$(JOB_FLAG))
+JOBS      := $(if $(JOBS_PARAM),$(JOBS_PARAM),1)
 
 # Makefile to build and run all tests
 
-SUBDIRS =  \
+SUBDIRS :=  \
 	ad_parser \
 	att_db \
 	avdtp \
 	avdtp_util \
 	base64 \
 	ble_client \
+	btstack-event \
 	btstack_link_key_db \
 	btstack_util \
+	btstack_resample \
 	btstack_memory \
 	classic-oob-pairing \
 	crypto \
@@ -33,10 +42,11 @@ SUBDIRS =  \
 	sdp \
 	sdp_client \
 	security_manager \
-	tlv_posix \
+	tlv_posix
 
 # not testing anything in source tree
 #	maths \
+#	pts \
 # no unit tests
 #	embedded \
 #	gatt_server \
@@ -45,11 +55,13 @@ SUBDIRS =  \
 # hangs on buildbot (no output for 20 minutes -> abort)
 #	security_manager_sc
 
-SUBDIRS_BLE = \
+SUBDIRS_BLE := \
 	ad_parser \
 	att_db \
 	ble_client \
+	btstack-event \
 	btstack_memory \
+	btstack_resample \
 	btstack_util \
 	crypto \
 	embedded \
@@ -63,7 +75,7 @@ SUBDIRS_BLE = \
 	le_device_db_tlv \
 	linked_list \
 	ring_buffer \
-	security_manager \
+	security_manager
 
 # test fails
 
@@ -73,77 +85,32 @@ SUBDIRS_BLE = \
 # sbc \
 #	gatt_server \
 
-.PHONY: coverage coverage-sm-sc.info
+SUBDIRS_UNIQ := $(sort $(SUBDIRS) $(SUBDIRS_BLE))
+test coverage-all clean: $(SUBDIRS_UNIQ)
 
-subdirs:
-	echo Building all tests
-	@set -e; \
-	for dir in $(SUBDIRS); do \
-	  $(MAKE) -C $$dir; \
-	done
+test-ble: MAKECMDGOALS = test
+test-ble: $(SUBDIRS_BLE)
+
+coverage-ble: MAKECMDGOALS = coverage
+coverage-ble: $(SUBDIRS_BLE)
+
+$(SUBDIRS_UNIQ):
+	$(MAKE) -C $@ $(MAKECMDGOALS)
+
+.PHONY: $(SUBDIRS_UNIQ)
+.SUFFIXES:
+
+coverage%: export LLVM_PROFILE_FILE=coverage-%m-%p.profraw
+
+coverage%:
+	LCOV_INFO=$$(find */ -iname "*.info") &&\
+	${LCOV} $$(printf -- '-a %s ' $$LCOV_INFO) -j $(JOBS) --demangle-cpp --ignore-errors unused --ignore-errors inconsistent --rc branch_coverage=1 --exclude "/Applications/*" --exclude "/Library/*" --exclude "/usr/*" --exclude "*/test/*" -o $@.info
+	${GENHTML} $@.info --ignore-errors inconsistent -j $(JOBS) --show-navigation --hierarchical --branch-coverage --demangle-cpp --config-file lcovrc --output-directory $@
+
+coverage: coverage-all
 
 clean:
-	echo Clean all test
-	@set -e; \
-	for dir in $(SUBDIRS); do \
-	  $(MAKE) -C $$dir clean; \
-	done
-	rm -f *.info
-	rm -rf coverage coverage-unit-ble
-
-subdirs-coverage:
-	echo Run all tests for coverage
-	@set -e; \
-	for dir in $(SUBDIRS); do \
-	  $(MAKE) -C $$dir coverage; \
-	done
-
-subdirs-coverage-ble:
-	echo Run all BLE tests for coverage
-	@set -e; \
-	for dir in $(SUBDIRS_BLE); do \
-	  $(MAKE) -C $$dir coverage; \
-	done
-
-
-coverage-unit.info: subdirs-coverage
-	# delete trace data
-	find . -name "*.gcda" -type f -delete
-	# run tests
-	$(MAKE) subdirs-coverage
-	# collect traces
-	lcov --capture --ignore-errors inconsistent --ignore-errors unused --rc lcov_branch_coverage=1 --directory . --exclude "/Applications/*" --exclude "/Library/*" --exclude "/usr/*" --exclude "*/test/*" --output-file coverage-unit.info
-
-coverage-unit-ble.info: subdirs-coverage-ble
-	# delete trace data
-	find . -name "*.gcda" -type f -delete
-	# run tests
-	$(MAKE) subdirs-coverage-ble
-	# collect traces
-	lcov --capture --ignore-errors inconsistent --ignore-errors unused --rc lcov_branch_coverage=1 --directory . --exclude "/Applications/*" --exclude "/Library/*" --exclude "/usr/*" --exclude "*/test/*" --output-file coverage-unit-ble.info
-
-
-coverage-all: coverage-unit.info
-	# generate html output
-	genhtml coverage-unit.info --branch-coverage --demangle-cpp --config-file lcovrc --output-directory coverage
-
-coverage-unit-ble: coverage-unit-ble.info
-	# generate html output
-	genhtml coverage-unit-ble.info --branch-coverage --demangle-cpp --config-file lcovrc --output-directory coverage-unit-ble
-
-
-coverage: coverage-all coverage-unit-ble
-
-test:
-	echo Run all tests with ASAN
-	@set -e; \
-	for dir in $(SUBDIRS); do \
-	  $(MAKE) -C $$dir test; \
-	done
-
-test-ble:
-	echo Run all BLE tests with ASAN
-	@set -e; \
-	for dir in $(SUBDIRS_BLE); do \
-	  $(MAKE) -C $$dir test; \
-	done
+	rm -rf coverage-all coverage-ble
+	find . -name "*.gcda" -delete
+	find . -name "*.gcno" -delete
+	find . -name "*.info" -delete

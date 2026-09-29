@@ -78,7 +78,22 @@
 
 // configure ECC implementations
 #if defined(ENABLE_MICRO_ECC_P256) && defined(HAVE_MBEDTLS_ECC_P256)
-#error "If you have mbedTLS (HAVE_MBEDTLS_ECC_P256), please disable uECC (ENABLE_MICRO_ECC_P256) in bstack_config.h"
+#error "If you have mbedTLS (HAVE_MBEDTLS_ECC_P256), please disable uECC (ENABLE_MICRO_ECC_P256) in btstack_config.h"
+#endif
+#if defined(ENABLE_MICRO_ECC_P256) && defined(HAVE_ESP_IDF_TINYCRYPT_ECC_P256)
+#error "If you use ESP-IDF TinyCrypt (HAVE_ESP_IDF_TINYCRYPT_ECC_P256), please disable uECC (ENABLE_MICRO_ECC_P256) in btstack_config.h"
+#endif
+#if defined(HAVE_MBEDTLS_ECC_P256) && defined(HAVE_ESP_IDF_TINYCRYPT_ECC_P256)
+#error "Please enable only one ECC P-256 implementation in btstack_config.h"
+#endif
+
+// Software ECC-P256 implementation provided by ESP-IDF TinyCrypt, based on micro-ecc
+#ifdef HAVE_ESP_IDF_TINYCRYPT_ECC_P256
+#define ENABLE_ECC_P256
+#define USE_ESP_IDF_TINYCRYPT_ECC_P256
+#define USE_SOFTWARE_ECC_P256_IMPLEMENTATION
+#include "tinycrypt/ecc.h"
+#include "tinycrypt/ecc_dh.h"
 #endif
 
 // Software ECC-P256 implementation provided by micro-ecc
@@ -145,8 +160,8 @@ static btstack_crypto_cmac_state_t btstack_crypto_cmac_state;
 static sm_key_t btstack_crypto_cmac_k;
 static sm_key_t btstack_crypto_cmac_x;
 static sm_key_t btstack_crypto_cmac_subkey;
-static uint8_t  btstack_crypto_cmac_block_current;
-static uint8_t  btstack_crypto_cmac_block_count;
+static uint16_t btstack_crypto_cmac_block_current;
+static uint16_t btstack_crypto_cmac_block_count;
 #endif
 
 // state for AES-CCM
@@ -154,10 +169,24 @@ static uint8_t btstack_crypto_ccm_s[16];
 
 #ifdef ENABLE_ECC_P256
 
-static uint8_t  btstack_crypto_ecc_p256_public_key[64];
-static uint8_t  btstack_crypto_ecc_p256_random[64];
+#define ECC_P256_PUBLIC_KEY_SIZE 64
+#ifdef USE_MBEDTLS_ECC_P256
+// mbedTLS requires additional random data for multiplication: 32 each for key gen, own DHKey and remote DHKey
+#define ECC_P256_KEYGEN_EXTRA_RANDOM 96
+#endif
+#ifdef USE_ESP_IDF_TINYCRYPT_ECC_P256
+#define ECC_P256_KEYGEN_EXTRA_RANDOM 0
+#endif
+#ifdef USE_MICRO_ECC_P256
+#define ECC_P256_KEYGEN_EXTRA_RANDOM 0
+#endif
+
+static uint8_t  btstack_crypto_ecc_p256_public_key[ECC_P256_PUBLIC_KEY_SIZE];
+#ifdef USE_SOFTWARE_ECC_P256_IMPLEMENTATION
+static uint8_t  btstack_crypto_ecc_p256_random[ECC_P256_PUBLIC_KEY_SIZE + ECC_P256_KEYGEN_EXTRA_RANDOM];
 static uint8_t  btstack_crypto_ecc_p256_random_len;
 static uint8_t  btstack_crypto_ecc_p256_random_offset;
+#endif
 static btstack_crypto_ecc_p256_key_generation_state_t btstack_crypto_ecc_p256_key_generation_state;
 
 #ifdef USE_SOFTWARE_ECC_P256_IMPLEMENTATION
@@ -167,6 +196,43 @@ static uint8_t btstack_crypto_ecc_p256_d[32];
 // Software ECDH implementation provided by mbedtls
 #ifdef USE_MBEDTLS_ECC_P256
 static mbedtls_ecp_group   mbedtls_ec_group;
+
+static int btstack_crypto_mbedtls_read_public_key(mbedtls_ecp_point * point, const uint8_t * public_key){
+    uint8_t public_key_uncompressed[65];
+    public_key_uncompressed[0] = 0x04;
+    (void)memcpy(&public_key_uncompressed[1], public_key, 64);
+    return mbedtls_ecp_point_read_binary(&mbedtls_ec_group, point, public_key_uncompressed, sizeof(public_key_uncompressed));
+}
+
+static int btstack_crypto_mbedtls_write_public_key(const mbedtls_ecp_point * point, uint8_t * public_key){
+    uint8_t public_key_uncompressed[65];
+    size_t public_key_len;
+    int res = mbedtls_ecp_point_write_binary(&mbedtls_ec_group, point, MBEDTLS_ECP_PF_UNCOMPRESSED,
+                                             &public_key_len, public_key_uncompressed, sizeof(public_key_uncompressed));
+    if (res != 0){
+        return res;
+    }
+    if (public_key_len != sizeof(public_key_uncompressed)){
+        return MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL;
+    }
+    (void)memcpy(public_key, &public_key_uncompressed[1], 64);
+    return 0;
+}
+
+static int btstack_crypto_mbedtls_write_x_coordinate(const mbedtls_ecp_point * point, uint8_t * x_coordinate){
+    uint8_t public_key_uncompressed[65];
+    size_t public_key_len;
+    int res = mbedtls_ecp_point_write_binary(&mbedtls_ec_group, point, MBEDTLS_ECP_PF_UNCOMPRESSED,
+                                             &public_key_len, public_key_uncompressed, sizeof(public_key_uncompressed));
+    if (res != 0){
+        return res;
+    }
+    if (public_key_len != sizeof(public_key_uncompressed)){
+        return MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL;
+    }
+    (void)memcpy(x_coordinate, &public_key_uncompressed[1], 32);
+    return 0;
+}
 #endif
 
 #endif /* ENABLE_ECC_P256 */
@@ -496,18 +562,13 @@ static void btstack_crypto_log_ec_publickey(const uint8_t * ec_q){
     log_info_hexdump(&ec_q[32],32);
 }
 
-#if (defined(USE_MICRO_ECC_P256) && !defined(WICED_VERSION)) || defined(USE_MBEDTLS_ECC_P256)
+#if (defined(USE_MICRO_ECC_P256) && !defined(WICED_VERSION)) || defined(USE_ESP_IDF_TINYCRYPT_ECC_P256) || defined(USE_MBEDTLS_ECC_P256)
 // @return OK
 static int sm_generate_f_rng(unsigned char * buffer, unsigned size){
-    if (btstack_crypto_ecc_p256_key_generation_state != ECC_P256_KEY_GENERATION_ACTIVE) return 0;
     log_info("sm_generate_f_rng: size %u - offset %u", (int) size, btstack_crypto_ecc_p256_random_offset);
     btstack_assert((btstack_crypto_ecc_p256_random_offset + size) <= btstack_crypto_ecc_p256_random_len);
-    uint16_t remaining_size = size;
-    uint8_t * buffer_ptr = buffer;
-    while (remaining_size) {
-        *buffer_ptr++ = btstack_crypto_ecc_p256_random[btstack_crypto_ecc_p256_random_offset++];
-        remaining_size--;
-    }
+    memcpy(buffer, &btstack_crypto_ecc_p256_random[btstack_crypto_ecc_p256_random_offset], size);
+    btstack_crypto_ecc_p256_random_offset += size;
     return 1;
 }
 #endif
@@ -519,13 +580,22 @@ static int sm_generate_f_rng_mbedtls(void * context, unsigned char * buffer, siz
 }
 #endif /* USE_MBEDTLS_ECC_P256 */
 
+#ifdef USE_SOFTWARE_ECC_P256_IMPLEMENTATION
 static void btstack_crypto_ecc_p256_generate_key_software(void){
 
     btstack_crypto_ecc_p256_random_offset = 0;
     
     // generate EC key
-#ifdef USE_MICRO_ECC_P256
+#ifdef USE_ESP_IDF_TINYCRYPT_ECC_P256
+    log_info("set uECC RNG for initial key generation with 64 random bytes");
+    uECC_set_rng(&sm_generate_f_rng);
+    uECC_make_key(btstack_crypto_ecc_p256_public_key, btstack_crypto_ecc_p256_d, uECC_secp256r1());
+    // BTstack only stages random data for key generation. TinyCrypt can operate
+    // without a RNG during shared-secret calculation, so clear the temporary RNG.
+    uECC_set_rng(NULL);
+#endif
 
+#ifdef USE_MICRO_ECC_P256
 #ifndef WICED_VERSION
     log_info("set uECC RNG for initial key generation with 64 random bytes");
     // micro-ecc from WICED SDK uses its wiced_crypto_get_random by default - no need to set it
@@ -552,17 +622,29 @@ static void btstack_crypto_ecc_p256_generate_key_software(void){
     mbedtls_ecp_point_init(&P);
     int res = mbedtls_ecp_gen_keypair(&mbedtls_ec_group, &d, &P, &sm_generate_f_rng_mbedtls, NULL);
     log_info("gen keypair %x", res);
-    mbedtls_mpi_write_binary(&P.X, &btstack_crypto_ecc_p256_public_key[0],  32);
-    mbedtls_mpi_write_binary(&P.Y, &btstack_crypto_ecc_p256_public_key[32], 32);
-    mbedtls_mpi_write_binary(&d, btstack_crypto_ecc_p256_d, 32);
+    if (res == 0){
+        res = btstack_crypto_mbedtls_write_public_key(&P, btstack_crypto_ecc_p256_public_key);
+        log_info("write public key %x", res);
+    }
+    if (res == 0){
+        mbedtls_mpi_write_binary(&d, btstack_crypto_ecc_p256_d, 32);
+    }
     mbedtls_ecp_point_free(&P);
     mbedtls_mpi_free(&d);
+    // assert key generation was successfull
+    btstack_assert(res == 0);
 #endif  /* USE_MBEDTLS_ECC_P256 */
 }
+#endif /* USE_SOFTWARE_ECC_P256_IMPLEMENTATION */
 
 #ifdef USE_SOFTWARE_ECC_P256_IMPLEMENTATION
-static void btstack_crypto_ecc_p256_calculate_dhkey_software(btstack_crypto_ecc_p256_t * btstack_crypto_ec_p192){
+static int btstack_crypto_ecc_p256_calculate_dhkey_software(btstack_crypto_ecc_p256_t * btstack_crypto_ec_p192){
     memset(btstack_crypto_ec_p192->dhkey, 0, 32);
+    int res = 0;
+
+#ifdef USE_ESP_IDF_TINYCRYPT_ECC_P256
+    res = uECC_shared_secret(btstack_crypto_ec_p192->public_key, btstack_crypto_ecc_p256_d, btstack_crypto_ec_p192->dhkey, uECC_secp256r1()) != 1;
+#endif
 
 #ifdef USE_MICRO_ECC_P256
 #if uECC_SUPPORTS_secp256r1
@@ -583,11 +665,14 @@ static void btstack_crypto_ecc_p256_calculate_dhkey_software(btstack_crypto_ecc_
     mbedtls_ecp_point_init(&Q);
     mbedtls_ecp_point_init(&DH);
     mbedtls_mpi_read_binary(&d, btstack_crypto_ecc_p256_d, 32);
-    mbedtls_mpi_read_binary(&Q.X, &btstack_crypto_ec_p192->public_key[0] , 32);
-    mbedtls_mpi_read_binary(&Q.Y, &btstack_crypto_ec_p192->public_key[32], 32);
-    mbedtls_mpi_lset(&Q.Z, 1);
-    mbedtls_ecp_mul(&mbedtls_ec_group, &DH, &d, &Q, NULL, NULL);
-    mbedtls_mpi_write_binary(&DH.X, btstack_crypto_ec_p192->dhkey, 32);
+    res = btstack_crypto_mbedtls_read_public_key(&Q, btstack_crypto_ec_p192->public_key);
+    if (res == 0){
+        res = mbedtls_ecp_mul(&mbedtls_ec_group, &DH, &d, &Q, &sm_generate_f_rng_mbedtls, NULL);
+    }
+    if (res == 0){
+        res = btstack_crypto_mbedtls_write_x_coordinate(&DH, btstack_crypto_ec_p192->dhkey);
+    }
+    log_info("calculate dhkey status: %x", res);
     mbedtls_ecp_point_free(&DH);
     mbedtls_mpi_free(&d);
     mbedtls_ecp_point_free(&Q);
@@ -595,6 +680,8 @@ static void btstack_crypto_ecc_p256_calculate_dhkey_software(btstack_crypto_ecc_
 
     log_info("dhkey");
     log_info_hexdump(btstack_crypto_ec_p192->dhkey, 32);
+
+    return res;
 }
 #endif
 
@@ -842,6 +929,9 @@ static void btstack_crypto_run(void){
 #ifdef ENABLE_ECC_P256
     btstack_crypto_ecc_p256_t      * btstack_crypto_ec_p192;
 #endif
+#ifdef USE_SOFTWARE_ECC_P256_IMPLEMENTATION
+    int res;
+#endif
 
     // stack up and running?
     if (hci_get_state() != HCI_STATE_WORKING) return;
@@ -970,7 +1060,12 @@ static void btstack_crypto_run(void){
             case BTSTACK_CRYPTO_ECC_P256_CALCULATE_DHKEY:
                 btstack_crypto_ec_p192 = (btstack_crypto_ecc_p256_t *) btstack_crypto;
 #ifdef USE_SOFTWARE_ECC_P256_IMPLEMENTATION
-                btstack_crypto_ecc_p256_calculate_dhkey_software(btstack_crypto_ec_p192);
+                res = btstack_crypto_ecc_p256_calculate_dhkey_software(btstack_crypto_ec_p192);
+    	        if (res != 0) {
+    	            log_error("Generate DHKEY failed -> abort");
+                    // set DHKEY to 0xff..ff
+    	            memset(btstack_crypto_ec_p192->dhkey, 0xff, 32);
+        	    }
                 // done
                 btstack_linked_list_pop(&btstack_crypto_operations);
                 (*btstack_crypto_ec_p192->btstack_crypto.context_callback.callback)(btstack_crypto_ec_p192->btstack_crypto.context_callback.context);
@@ -1007,12 +1102,12 @@ static void btstack_crypto_handle_random_data(const uint8_t * data, uint16_t len
                 (*btstack_crypto_random->btstack_crypto.context_callback.callback)(btstack_crypto_random->btstack_crypto.context_callback.context);
             }
             break;
-#ifdef ENABLE_ECC_P256
+#ifdef USE_SOFTWARE_ECC_P256_IMPLEMENTATION
         case BTSTACK_CRYPTO_ECC_P256_GENERATE_KEY:
-            btstack_assert((btstack_crypto_ecc_p256_random_len + 8) <= 64);
+            btstack_assert((btstack_crypto_ecc_p256_random_len + 8) <= (uint16_t) sizeof(btstack_crypto_ecc_p256_random));
             (void)memcpy(&btstack_crypto_ecc_p256_random[btstack_crypto_ecc_p256_random_len], data, 8);
             btstack_crypto_ecc_p256_random_len += 8u;
-            if (btstack_crypto_ecc_p256_random_len >= 64u) {
+            if (btstack_crypto_ecc_p256_random_len >= sizeof(btstack_crypto_ecc_p256_random)) {
                 btstack_crypto_ecc_p256_key_generation_state = ECC_P256_KEY_GENERATION_ACTIVE;
                 btstack_crypto_ecc_p256_generate_key_software();
                 btstack_crypto_ecc_p256_key_generation_state = ECC_P256_KEY_GENERATION_DONE;
@@ -1268,6 +1363,11 @@ int btstack_crypto_ecc_p256_validate_public_key(const uint8_t * public_key){
 
     int err = 0;
 
+#ifdef USE_ESP_IDF_TINYCRYPT_ECC_P256
+    // ESP-IDF TinyCrypt returns 0 for valid public keys, negative values for invalid keys.
+    err = uECC_valid_public_key(public_key, uECC_secp256r1()) != 0;
+#endif
+
 #ifdef USE_MICRO_ECC_P256
     // validate public key using micro-ecc
 
@@ -1285,10 +1385,10 @@ int btstack_crypto_ecc_p256_validate_public_key(const uint8_t * public_key){
 
     mbedtls_ecp_point Q;
     mbedtls_ecp_point_init( &Q );
-    mbedtls_mpi_read_binary(&Q.X, &public_key[0], 32);
-    mbedtls_mpi_read_binary(&Q.Y, &public_key[32], 32);
-    mbedtls_mpi_lset(&Q.Z, 1);
-    err = mbedtls_ecp_check_pubkey(&mbedtls_ec_group, &Q);
+    err = btstack_crypto_mbedtls_read_public_key(&Q, public_key);
+    if (err == 0){
+        err = mbedtls_ecp_check_pubkey(&mbedtls_ec_group, &Q);
+    }
     mbedtls_ecp_point_free( & Q);
 #endif
 

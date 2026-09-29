@@ -943,7 +943,8 @@
 // Description : Comparison used for the MOV x, STATUS instruction.
 //               0x0 -> All-ones if TX FIFO level < N, otherwise all-zeroes
 //               0x1 -> All-ones if RX FIFO level < N, otherwise all-zeroes
-//               0x2 -> All-ones if the indexed IRQ flag is raised, otherwise all-zeroes
+//               0x2 -> All-ones if the indexed IRQ flag is raised, otherwise all-
+//               zeroes
 #define PIO_SM0_EXECCTRL_STATUS_SEL_RESET  _u(0x0)
 #define PIO_SM0_EXECCTRL_STATUS_SEL_BITS   _u(0x00000060)
 #define PIO_SM0_EXECCTRL_STATUS_SEL_MSB    _u(6)
@@ -1342,7 +1343,8 @@
 // Description : Comparison used for the MOV x, STATUS instruction.
 //               0x0 -> All-ones if TX FIFO level < N, otherwise all-zeroes
 //               0x1 -> All-ones if RX FIFO level < N, otherwise all-zeroes
-//               0x2 -> All-ones if the indexed IRQ flag is raised, otherwise all-zeroes
+//               0x2 -> All-ones if the indexed IRQ flag is raised, otherwise all-
+//               zeroes
 #define PIO_SM1_EXECCTRL_STATUS_SEL_RESET  _u(0x0)
 #define PIO_SM1_EXECCTRL_STATUS_SEL_BITS   _u(0x00000060)
 #define PIO_SM1_EXECCTRL_STATUS_SEL_MSB    _u(6)
@@ -1741,7 +1743,8 @@
 // Description : Comparison used for the MOV x, STATUS instruction.
 //               0x0 -> All-ones if TX FIFO level < N, otherwise all-zeroes
 //               0x1 -> All-ones if RX FIFO level < N, otherwise all-zeroes
-//               0x2 -> All-ones if the indexed IRQ flag is raised, otherwise all-zeroes
+//               0x2 -> All-ones if the indexed IRQ flag is raised, otherwise all-
+//               zeroes
 #define PIO_SM2_EXECCTRL_STATUS_SEL_RESET  _u(0x0)
 #define PIO_SM2_EXECCTRL_STATUS_SEL_BITS   _u(0x00000060)
 #define PIO_SM2_EXECCTRL_STATUS_SEL_MSB    _u(6)
@@ -2140,7 +2143,8 @@
 // Description : Comparison used for the MOV x, STATUS instruction.
 //               0x0 -> All-ones if TX FIFO level < N, otherwise all-zeroes
 //               0x1 -> All-ones if RX FIFO level < N, otherwise all-zeroes
-//               0x2 -> All-ones if the indexed IRQ flag is raised, otherwise all-zeroes
+//               0x2 -> All-ones if the indexed IRQ flag is raised, otherwise all-
+//               zeroes
 #define PIO_SM3_EXECCTRL_STATUS_SEL_RESET  _u(0x0)
 #define PIO_SM3_EXECCTRL_STATUS_SEL_BITS   _u(0x00000060)
 #define PIO_SM3_EXECCTRL_STATUS_SEL_MSB    _u(6)
@@ -3414,4 +3418,3 @@
 #define PIO_IRQ1_INTS_SM0_RXNEMPTY_ACCESS "RO"
 // =============================================================================
 #endif // _HARDWARE_REGS_PIO_H
-

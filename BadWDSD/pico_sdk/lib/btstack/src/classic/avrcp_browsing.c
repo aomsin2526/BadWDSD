@@ -168,14 +168,15 @@ static avrcp_browsing_connection_t * avrcp_browsing_create_connection(avrcp_conn
 }
 
 static void avrcp_browsing_configure_ertm(avrcp_browsing_connection_t * browsing_connection, uint8_t * ertm_buffer, uint32_t ertm_buffer_size, l2cap_ertm_config_t * ertm_config){
+    btstack_assert(ertm_buffer != NULL);
+    btstack_assert(ertm_buffer_size > 0u);
+    btstack_assert(ertm_config != NULL);
     browsing_connection->ertm_buffer = ertm_buffer;
     browsing_connection->ertm_buffer_size = ertm_buffer_size;
-    
-    if (ertm_buffer_size > 0) {
-        (void)memcpy(&browsing_connection->ertm_config, ertm_config,
+
+    (void)memcpy(&browsing_connection->ertm_config, ertm_config,
                  sizeof(l2cap_ertm_config_t));
-        log_info("avrcp_browsing_configure_ertm");
-    }
+    log_info("avrcp_browsing_configure_ertm");
 }
 
 static avrcp_browsing_connection_t * avrcp_browsing_handle_incoming_connection(avrcp_connection_t * connection, uint16_t local_cid, uint16_t avrcp_browsing_cid){
@@ -215,6 +216,7 @@ static void avrcp_browsing_packet_handler(uint8_t packet_type, uint16_t channel,
 
     switch (packet_type){
         case L2CAP_DATA_PACKET:
+            if (size < 1u) break;
             switch (avrcp_get_frame_type(packet[0])){
                 case AVRCP_RESPONSE_FRAME:
                     (*avrcp_browsing_controller_packet_handler)(packet_type, channel, packet, size);
@@ -452,6 +454,7 @@ void avrcp_browsing_deinit(void){
 uint8_t avrcp_browsing_connect(bd_addr_t remote_addr, uint8_t * ertm_buffer, uint32_t ertm_buffer_size, l2cap_ertm_config_t * ertm_config, uint16_t * avrcp_browsing_cid){
     btstack_assert(avrcp_browsing_controller_packet_handler != NULL);
     btstack_assert(avrcp_browsing_target_packet_handler != NULL);
+    btstack_assert(remote_addr != NULL);
 
     avrcp_connection_t * connection_controller = avrcp_get_connection_for_bd_addr_for_role(AVRCP_CONTROLLER, remote_addr);
     if (!connection_controller){
@@ -548,13 +551,6 @@ uint8_t avrcp_browsing_decline_incoming_connection(uint16_t avrcp_browsing_cid){
     if (!connection_target){
         return ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER;
     }
-    
-    if (!connection_controller->browsing_connection){
-        return ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER;
-    }
-    if (!connection_target->browsing_connection){
-        return ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER;
-    }
 
     if (connection_controller->browsing_connection->state != AVCTP_CONNECTION_W4_ERTM_CONFIGURATION){
         return ERROR_CODE_COMMAND_DISALLOWED;
@@ -574,13 +570,6 @@ uint8_t avrcp_browsing_disconnect(uint16_t avrcp_browsing_cid){
     }
     avrcp_connection_t * connection_target = avrcp_get_connection_for_browsing_cid_for_role(AVRCP_TARGET, avrcp_browsing_cid);
     if (!connection_target){
-        return ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER;
-    }
-    
-    if (!connection_controller->browsing_connection){
-        return ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER;
-    }
-    if (!connection_target->browsing_connection){
         return ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER;
     }
 

@@ -8,7 +8,7 @@ find_package(PkgConfig REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 # CppuTest
-pkg_check_modules(CPPUTEST REQUIRED CppuTest)
+pkg_check_modules(CPPUTEST REQUIRED cpputest)
 include_directories(${CPPUTEST_INCLUDE_DIRS})
 link_directories(${CPPUTEST_LIBRARY_DIRS})
 link_libraries(${CPPUTEST_LIBRARIES})
@@ -18,7 +18,7 @@ add_compile_options( -DHAVE_ASSERT)
 add_compile_options( -g -fsanitize=address)
 add_link_options(       -fsanitize=address)
 
-include_directories(.)
+include_directories(../include/coverage-ble)
 include_directories(../../src)
 include_directories(../../platform/posix)
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})

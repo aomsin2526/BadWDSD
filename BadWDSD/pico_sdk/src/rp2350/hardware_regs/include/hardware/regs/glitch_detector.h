@@ -26,7 +26,8 @@
 //
 //               This register is Secure read/write only.
 //               0x5bad -> Do not force the glitch detectors to be armed
-//               0x0000 -> Force the glitch detectors to be armed. (Any value other than ARM_NO counts as YES)
+//               0x0000 -> Force the glitch detectors to be armed. (Any value other than
+//               ARM_NO counts as YES)
 #define GLITCH_DETECTOR_ARM_OFFSET _u(0x00000000)
 #define GLITCH_DETECTOR_ARM_BITS   _u(0x0000ffff)
 #define GLITCH_DETECTOR_ARM_RESET  _u(0x00005bad)
@@ -37,12 +38,12 @@
 #define GLITCH_DETECTOR_ARM_VALUE_YES _u(0x0000)
 // =============================================================================
 // Register    : GLITCH_DETECTOR_DISARM
-// Description : None
-//               Forcibly disarm the glitch detectors, if they are armed by OTP.
+// Description : Forcibly disarm the glitch detectors, if they are armed by OTP.
 //               Ignored if ARM is YES.
 //
 //               This register is Secure read/write only.
-//               0x0000 -> Do not disarm the glitch detectors. (Any value other than DISARM_YES counts as NO)
+//               0x0000 -> Do not disarm the glitch detectors. (Any value other than
+//               DISARM_YES counts as NO)
 //               0xdcaf -> Disarm the glitch detectors
 #define GLITCH_DETECTOR_DISARM_OFFSET _u(0x00000004)
 #define GLITCH_DETECTOR_DISARM_BITS   _u(0x0000ffff)
@@ -63,8 +64,10 @@
 #define GLITCH_DETECTOR_SENSITIVITY_RESET  _u(0x00000000)
 // -----------------------------------------------------------------------------
 // Field       : GLITCH_DETECTOR_SENSITIVITY_DEFAULT
-//               0x00 -> Use the default sensitivity configured in OTP for all detectors. (Any value other than DEFAULT_NO counts as YES)
-//               0xde -> Do not use the default sensitivity configured in OTP. Instead use the value from this register.
+//               0x00 -> Use the default sensitivity configured in OTP for all
+//               detectors. (Any value other than DEFAULT_NO counts as YES)
+//               0xde -> Do not use the default sensitivity configured in OTP. Instead
+//               use the value from this register.
 #define GLITCH_DETECTOR_SENSITIVITY_DEFAULT_RESET  _u(0x00)
 #define GLITCH_DETECTOR_SENSITIVITY_DEFAULT_BITS   _u(0xff000000)
 #define GLITCH_DETECTOR_SENSITIVITY_DEFAULT_MSB    _u(31)
@@ -142,8 +145,7 @@
 #define GLITCH_DETECTOR_SENSITIVITY_DET0_ACCESS "RW"
 // =============================================================================
 // Register    : GLITCH_DETECTOR_LOCK
-// Description : None
-//               Write any nonzero value to disable writes to ARM, DISARM,
+// Description : Write any nonzero value to disable writes to ARM, DISARM,
 //               SENSITIVITY and LOCK. This register is Secure read/write only.
 #define GLITCH_DETECTOR_LOCK_OFFSET _u(0x0000000c)
 #define GLITCH_DETECTOR_LOCK_BITS   _u(0x000000ff)
@@ -210,4 +212,3 @@
 #define GLITCH_DETECTOR_TRIG_FORCE_ACCESS "SC"
 // =============================================================================
 #endif // _HARDWARE_REGS_GLITCH_DETECTOR_H
-

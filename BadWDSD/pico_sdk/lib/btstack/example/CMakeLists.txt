@@ -4,6 +4,7 @@
 
 set(EXAMPLES_GENERAL
 	audio_duplex
+	audio_player
 	led_counter
 	mod_player
 	sine_player
@@ -62,6 +63,15 @@ set(EXAMPLES_LE_ONLY
 	sm_pairing_central     
 	sm_pairing_peripheral  
 	ublox_spp_le_counter   
+)
+
+# List of LE Audio Examples, enabled by selected ports
+
+set(EXAMPLES_LE_AUDIO
+	le_audio_broadcast_sink_lite
+	le_audio_broadcast_source_lite
+	le_audio_unicast_gateway_lite
+	le_audio_unicast_headset_lite
 )
 
 # List of Examples that use Bluetooth BR/EDR/LE = Dual Mode

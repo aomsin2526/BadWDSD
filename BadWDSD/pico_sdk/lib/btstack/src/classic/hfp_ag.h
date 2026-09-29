@@ -52,10 +52,26 @@
 extern "C" {
 #endif
 
+typedef enum {
+    HFP_AG_VRA_EVENT_NONE,
+    HFP_AG_VRA_EVENT_CAN_SEND_NOW,
+    HFP_AG_VRA_EVENT_OK,
+    HFP_AG_VRA_EVENT_ERROR,
+    HFP_AG_VRA_EVENT_SCO_CONNECTED,
+    HFP_AG_VRA_EVENT_SCO_DISCONNECTED,
+    HFP_AG_VRA_EVENT_AG_ACTIVATE,
+    HFP_AG_VRA_EVENT_AG_DEACTIVATE,
+    HFP_AG_VRA_EVENT_AG_STATE,
+    HFP_AG_VRA_EVENT_HF_ACTIVATE,
+    HFP_AG_VRA_EVENT_HF_ACTIVATE_ENHANCED,
+    HFP_AG_VRA_EVENT_HF_DEACTIVATE,
+} hfp_ag_vra_event_type_t;
+
 /* API_START */
 typedef struct {
     uint8_t type;
     const char * number;
+    hfp_phone_service_t service;
 } hfp_phone_number_t;
 
 /**
@@ -65,8 +81,8 @@ typedef struct {
  * @param name or NULL for default value. Provide "" (empty string) to skip attribute
  * @param ability_to_reject_call
  * @param supported_features 32-bit bitmap, see HFP_AGSF_* values in hfp.h
- * @param codecs_nr
- * @param codecs
+ * @param codecs_nr Number of entries, at most HFP_MAX_NUM_CODECS.
+ * @param codecs Non-NULL when codecs_nr is nonzero.
  */
 void hfp_ag_create_sdp_record_with_codecs(uint8_t * service, uint32_t service_record_handle, int rfcomm_channel_nr,
                                           const char * name, uint8_t ability_to_reject_call, uint16_t supported_features,
@@ -93,22 +109,22 @@ void hfp_ag_init_supported_features(uint32_t supported_features);
 
 /**
  * @brief Set AG indicators. 
- * @param indicators_nr
- * @param indicators
+ * @param ag_indicators_nr Number of entries, in the range 0 to HFP_MAX_NUM_INDICATORS.
+ * @param ag_indicators Non-NULL when ag_indicators_nr is nonzero.
  */
 void hfp_ag_init_ag_indicators(int ag_indicators_nr, const hfp_ag_indicator_t * ag_indicators);
 
 /**
  * @brief Set HF indicators. 
- * @param indicators_nr
- * @param indicators
+ * @param hf_indicators_nr Number of entries, in the range 0 to HFP_MAX_NUM_INDICATORS.
+ * @param hf_indicators Non-NULL when hf_indicators_nr is nonzero.
  */
 void hfp_ag_init_hf_indicators(int hf_indicators_nr, const hfp_generic_status_indicator_t * hf_indicators);
 
 /**
  * @brief Set Call Hold services. 
- * @param indicators_nr
- * @param indicators
+ * @param call_hold_services_nr Number of entries, in the range 0 to HFP_MAX_NUM_CALL_SERVICES.
+ * @param call_hold_services Array of non-NULL strings when call_hold_services_nr is nonzero. The serialized list, including parentheses and commas, must fit the generated response.
  */
 void hfp_ag_init_call_hold_services(int call_hold_services_nr, const char * call_hold_services[]);
 
@@ -439,11 +455,11 @@ uint8_t hfp_ag_set_signal_strength(int signal_strength);
 uint8_t hfp_ag_set_roaming_status(int roaming_status);
 
 /**
- * @brief Set subcriber number information, e.g. the phone number 
- * @param numbers
- * @param numbers_count
+ * @brief Set subscriber number information, e.g. the phone number
+ * @param numbers Array of subscriber numbers; non-NULL when numbers_count is nonzero.
+ * @param numbers_count Number of entries; must be non-negative.
  */
-void hfp_ag_set_subcriber_number_information(hfp_phone_number_t * numbers, int numbers_count);
+void hfp_ag_set_subscriber_number_information(hfp_phone_number_t * numbers, int numbers_count);
 
 /**
  * @brief Called by cellular unit after a DTMF code was transmitted, so that the next one can be emitted.
@@ -523,7 +539,7 @@ void hfp_ag_deinit(void);
  * @param rfcomm_channel_nr
  * @param name
  * @param ability_to_reject_call
- * @param suported_features 32-bit bitmap, see HFP_AGSF_* values in hfp.h
+ * @param supported_features 32-bit bitmap, see HFP_AGSF_* values in hfp.h
  * @param wide_band_speech supported
  */
 void hfp_ag_create_sdp_record(uint8_t * service, uint32_t service_record_handle, int rfcomm_channel_nr, const char * name, uint8_t ability_to_reject_call, uint16_t supported_features, int wide_band_speech);
@@ -535,6 +551,10 @@ hfp_ag_indicator_t * hfp_ag_get_ag_indicators(hfp_connection_t * hfp_connection)
 
 // @return true to process even as normal, false to cause HFP AG to ignore event
 void hfp_ag_register_custom_call_sm_handler(bool (*handler)(hfp_ag_call_event_t event));
+
+#ifdef ENABLE_TESTING_SUPPORT
+bool test_hfp_ag_vra_state_machine(hfp_connection_t * hfp_connection, hfp_ag_vra_event_type_t event);
+#endif
 
 #if defined __cplusplus
 }

@@ -41,13 +41,15 @@ function ci_tests_setup {
 }
 
 function ci_tests_build {
-    make $MAKEOPTS -C tests/sdio
-    make $MAKEOPTS -C tests/debug_print
+    for test in `ls -d tests/*/`; do
+        make $MAKEOPTS -C $test
+    done
 }
 
 function ci_tests_run {
-    make $MAKEOPTS -C tests/sdio test
-    make $MAKEOPTS -C tests/debug_print test
+    for test in `ls -d tests/*/`; do
+        make $MAKEOPTS -C $test test
+    done
 }
 
 ########################################################################################
@@ -58,11 +60,13 @@ function ci_tests_clang_setup {
 }
 
 function ci_tests_clang_build {
-    make $MAKEOPTS CC=clang -C tests/sdio
-    make $MAKEOPTS CC=clang -C tests/debug_print
+    for test in `ls -d tests/*/`; do
+        make $MAKEOPTS CC=clang -C $test
+    done
 }
 
 function ci_tests_clang_run {
-    make $MAKEOPTS CC=clang -C tests/sdio test
-    make $MAKEOPTS CC=clang -C tests/debug_print test
+    for test in `ls -d tests/*/`; do
+        make $MAKEOPTS CC=clang -C $test test
+    done
 }

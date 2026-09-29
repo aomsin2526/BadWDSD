@@ -238,9 +238,15 @@ void cyw43_cb_tcpip_init(cyw43_t *self, int itf) {
         dhcp_server_init(&self->dhcp_server, &ipconfig[0], &ipconfig[1]);
         #endif
     }
+
+    // Hook for any additional initialization than needs to be done.
+    CYW43_CB_TCPIP_INIT_EXTRA(self, itf);
 }
 
 void cyw43_cb_tcpip_deinit(cyw43_t *self, int itf) {
+    // Hook for any additional deinitialization than needs to be done.
+    CYW43_CB_TCPIP_DEINIT_EXTRA(self, itf);
+
     struct netif *n = &self->netif[itf];
     if (itf == CYW43_ITF_STA) {
         #if LWIP_IPV4 && LWIP_DHCP

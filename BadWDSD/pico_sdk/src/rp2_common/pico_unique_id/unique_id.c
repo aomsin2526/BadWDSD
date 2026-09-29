@@ -12,9 +12,15 @@ static_assert(PICO_UNIQUE_BOARD_ID_SIZE_BYTES <= FLASH_UNIQUE_ID_SIZE_BYTES, "Bo
 
 static pico_unique_board_id_t retrieved_id;
 
-static void __attribute__((constructor)) _retrieve_unique_id_on_boot(void) {
+#if PICO_UNIQUE_BOARD_ID_INIT_PRIORITY == -1
+#define PICO_UNIQUE_BOARD_ID_INIT_ATTRIBUTES constructor
+#else
+#define PICO_UNIQUE_BOARD_ID_INIT_ATTRIBUTES constructor(PICO_UNIQUE_BOARD_ID_INIT_PRIORITY)
+#endif
+
+static void __attribute__((PICO_UNIQUE_BOARD_ID_INIT_ATTRIBUTES)) _retrieve_unique_id_on_boot(void) {
 #if PICO_RP2040
-    #if PICO_NO_FLASH
+    #if PICO_NO_FLASH && !PICO_ALWAYS_INCLUDE_FLASH_ID_FUNCTIONS
         // The hardware_flash call will panic() if called directly on a NO_FLASH
         // build. Since this constructor is pre-main it would be annoying to
         // debug, so just produce something well-defined and obviously wrong.

@@ -14,7 +14,7 @@
 #include "hardware/structs/scb.h"
 #endif
 #include "hardware/structs/sio.h"
-#include "hardware/regs/psm.h"
+#include "hardware/structs/psm.h"
 #include "hardware/claim.h"
 
 #if !PICO_RP2040
@@ -28,7 +28,19 @@
 // and is a no-op if set. We DO have a new `multicore_lockout_victim_deinit()` method, which can be called in a pinch after
 // the reset before calling `multicore_lockout_victim_init()` again, so that is good. We will reset the flag
 // for core1 in `multicore_reset_core1()` though as a convenience since most people will use that to reset core 1.
-static bool lockout_victim_initialized[NUM_CORES];
+
+#define CORE_STATUS_NOT_RUNNING         ((uint8_t)0)
+#if PICO_MULTICORE_LOCKOUT_BEFORE_CORE1_STARTED
+#define CORE_STATUS_LOCKOUT_DISABLED    ((uint8_t)1)
+#define CORE_STATUS_LOCKOUT_ENABLED     ((uint8_t)2)
+#else
+// we don't care about the distinction between NOT_RUNNING & LOCKOUT_DISABLED
+// when PICO_MULTICORE_LOCKOUT_BEFORE_CORE1_STARTED == 0
+#define CORE_STATUS_LOCKOUT_DISABLED    CORE_STATUS_NOT_RUNNING
+#define CORE_STATUS_LOCKOUT_ENABLED     ((uint8_t)1)
+#endif
+
+static uint8_t core_status[NUM_CORES];
 
 void multicore_fifo_push_blocking(uint32_t data) {
     multicore_fifo_push_blocking_inline(data);
@@ -101,8 +113,13 @@ int core1_wrapper(int (*entry)(void), void *stack_base) {
 void multicore_reset_core1(void) {
     // Use atomic aliases just in case core 1 is also manipulating some PSM state
     io_rw_32 *power_off = (io_rw_32 *) (PSM_BASE + PSM_FRCE_OFF_OFFSET);
+#ifdef __STRICT_ANSI__
+    io_rw_32 *power_off_set = hw_set_alias_untyped(power_off);
+    io_rw_32 *power_off_clr = hw_clear_alias_untyped(power_off);
+#else
     io_rw_32 *power_off_set = hw_set_alias(power_off);
     io_rw_32 *power_off_clr = hw_clear_alias(power_off);
+#endif
 
     // Hard-reset core 1.
     // Reading back confirms the core 1 reset is in the correct state, but also
@@ -118,7 +135,7 @@ void multicore_reset_core1(void) {
     irq_set_enabled(irq_num, false);
 
     // Core 1 will be in un-initialized state
-    lockout_victim_initialized[1] = false;
+    core_status[1] = CORE_STATUS_NOT_RUNNING;
 
     // Bring core 1 back out of reset. It will drain its own mailbox FIFO, then push
     // a 0 to our mailbox to tell us it has done this.
@@ -171,7 +188,7 @@ void multicore_launch_core1(void (*entry)(void)) {
 void multicore_launch_core1_raw(void (*entry)(void), uint32_t *sp, uint32_t vector_table) {
     // Allow for the fact that the caller may have already enabled the FIFO IRQ for their
     // own purposes (expecting FIFO content after core 1 is launched). We must disable
-    // the IRQ during the handshake, then restore afterwards.
+    // the IRQ during the handshake, then restore afterward.
     uint irq_num = SIO_FIFO_IRQ_NUM(0);
     bool enabled = irq_is_enabled(irq_num);
     irq_set_enabled(irq_num, false);
@@ -184,6 +201,9 @@ void multicore_launch_core1_raw(void (*entry)(void), uint32_t *sp, uint32_t vect
     const uint32_t cmd_sequence[] =
             {0, 0, 1, (uintptr_t) vector_table, (uintptr_t) sp, (uintptr_t) entry};
 
+#if PICO_MULTICORE_LOCKOUT_BEFORE_CORE1_STARTED
+    core_status[1] = CORE_STATUS_LOCKOUT_DISABLED; // we'll assume up front
+#endif
     uint seq = 0;
     do {
         uint cmd = cmd_sequence[seq];
@@ -202,25 +222,27 @@ void multicore_launch_core1_raw(void (*entry)(void), uint32_t *sp, uint32_t vect
     irq_set_enabled(irq_num, enabled);
 }
 
-#define LOCKOUT_MAGIC_START 0x73a8831eu
-#define LOCKOUT_MAGIC_END (~LOCKOUT_MAGIC_START)
-
+// A non-zero initialisation value is used in order to reduce the chance of
+// entering the lock handler on bootup due to a 0-word being present in the FIFO
+static volatile uint32_t lockout_request_id = 0x73a8831eu;
 static mutex_t lockout_mutex;
-static bool lockout_in_progress;
 
 // note this method is in RAM because lockout is used when writing to flash
 // it only makes inline calls
 static void __isr __not_in_flash_func(multicore_lockout_handler)(void) {
     multicore_fifo_clear_irq();
     while (multicore_fifo_rvalid()) {
-        if (sio_hw->fifo_rd == LOCKOUT_MAGIC_START) {
+        uint32_t request_id = sio_hw->fifo_rd;
+        if (request_id == lockout_request_id) {
+            // valid lockout request received
             uint32_t save = save_and_disable_interrupts();
-            multicore_fifo_push_blocking_inline(LOCKOUT_MAGIC_START);
-            while (multicore_fifo_pop_blocking_inline() != LOCKOUT_MAGIC_END) {
-                tight_loop_contents(); // not tight but endless potentially
+            multicore_fifo_push_blocking_inline(request_id);
+            // wait for the lockout to expire
+            while (request_id == lockout_request_id) {
+                // when lockout_request_id is updated, the other CPU core calls __sev
+                __wfe();
             }
             restore_interrupts_from_disabled(save);
-            multicore_fifo_push_blocking_inline(LOCKOUT_MAGIC_END);
         }
     }
 }
@@ -242,23 +264,31 @@ void multicore_lockout_victim_init(void) {
     uint fifo_irq_this_core = SIO_FIFO_IRQ_NUM(core_num);
     irq_set_exclusive_handler(fifo_irq_this_core, multicore_lockout_handler);
     irq_set_enabled(fifo_irq_this_core, true);
-    lockout_victim_initialized[core_num] = true;
+    core_status[core_num] = CORE_STATUS_LOCKOUT_ENABLED;
 }
 
 void multicore_lockout_victim_deinit(void) {
     uint core_num = get_core_num();
-    if (lockout_victim_initialized[core_num]) {
+    if (core_status[core_num] == CORE_STATUS_LOCKOUT_ENABLED) {
         // On platforms other than RP2040, these are actually the same IRQ number
         // (each core only sees its own IRQ, always at the same IRQ number).
         uint fifo_irq_this_core = SIO_FIFO_IRQ_NUM(core_num);
         irq_remove_handler(fifo_irq_this_core, multicore_lockout_handler);
         irq_set_enabled(fifo_irq_this_core, false);
-        lockout_victim_initialized[core_num] = false;
+        core_status[core_num] = CORE_STATUS_LOCKOUT_DISABLED;
     }
 }
 
-static bool multicore_lockout_handshake(uint32_t magic, absolute_time_t until) {
-    uint irq_num = SIO_FIFO_IRQ_NUM(get_core_num());
+static bool multicore_lockout_handshake(uint32_t request_id, absolute_time_t until) {
+    uint core_num = get_core_num();
+#if PICO_MULTICORE_LOCKOUT_BEFORE_CORE1_STARTED
+    if (!core_num && core_status[1] == CORE_STATUS_NOT_RUNNING) {
+        return true;
+    }
+#else
+    ((void)core_num); // SIO_FIFO_IRQ_NUM doesn't necessarily reference it
+#endif
+    uint irq_num = SIO_FIFO_IRQ_NUM(core_num);
     bool enabled = irq_is_enabled(irq_num);
     if (enabled) irq_set_enabled(irq_num, false);
     bool rc = false;
@@ -267,7 +297,7 @@ static bool multicore_lockout_handshake(uint32_t magic, absolute_time_t until) {
         if (next_timeout_us < 0) {
             break;
         }
-        multicore_fifo_push_timeout_us(magic, (uint64_t)next_timeout_us);
+        multicore_fifo_push_timeout_us(request_id, (uint64_t)next_timeout_us);
         next_timeout_us = absolute_time_diff_us(get_absolute_time(), until);
         if (next_timeout_us < 0) {
             break;
@@ -276,7 +306,7 @@ static bool multicore_lockout_handshake(uint32_t magic, absolute_time_t until) {
         if (!multicore_fifo_pop_timeout_us((uint64_t)next_timeout_us, &word)) {
             break;
         }
-        if (word == magic) {
+        if (word == request_id) {
             rc = true;
         }
     } while (!rc);
@@ -284,14 +314,28 @@ static bool multicore_lockout_handshake(uint32_t magic, absolute_time_t until) {
     return rc;
 }
 
+static uint32_t update_lockout_request_id(void) {
+    // generate new number and then update shared variable
+    uint32_t new_request_id = lockout_request_id + 1;
+    lockout_request_id = new_request_id;
+    // notify other core
+    __sev();
+    return new_request_id;
+}
+
 static bool multicore_lockout_start_block_until(absolute_time_t until) {
     check_lockout_mutex_init();
     if (!mutex_enter_block_until(&lockout_mutex, until)) {
         return false;
     }
-    hard_assert(!lockout_in_progress);
-    bool rc = multicore_lockout_handshake(LOCKOUT_MAGIC_START, until);
-    lockout_in_progress = rc;
+    // generate a new request_id number
+    uint32_t request_id = update_lockout_request_id();
+    // attempt to lock out
+    bool rc = multicore_lockout_handshake(request_id, until);
+    if (!rc) {
+        // lockout failed - cancel it
+        update_lockout_request_id();
+    }
     mutex_exit(&lockout_mutex);
     return rc;
 }
@@ -309,13 +353,10 @@ static bool multicore_lockout_end_block_until(absolute_time_t until) {
     if (!mutex_enter_block_until(&lockout_mutex, until)) {
         return false;
     }
-    assert(lockout_in_progress);
-    bool rc = multicore_lockout_handshake(LOCKOUT_MAGIC_END, until);
-    if (rc) {
-        lockout_in_progress = false;
-    }
+    // lockout finished - cancel it
+    update_lockout_request_id();
     mutex_exit(&lockout_mutex);
-    return rc;
+    return true;
 }
 
 bool multicore_lockout_end_timeout_us(uint64_t timeout_us) {
@@ -327,7 +368,17 @@ void multicore_lockout_end_blocking(void) {
 }
 
 bool multicore_lockout_victim_is_initialized(uint core_num) {
-    return lockout_victim_initialized[core_num];
+    return core_status[core_num] == CORE_STATUS_LOCKOUT_ENABLED;
+}
+
+bool multicore_lockout_ready(void) {
+    uint core_num = get_core_num();
+#if PICO_MULTICORE_LOCKOUT_BEFORE_CORE1_STARTED
+    if (!core_num && core_status[1] == CORE_STATUS_NOT_RUNNING) {
+        return true;
+    }
+#endif
+    return multicore_lockout_victim_is_initialized(core_num ^ 1);
 }
 
 #if NUM_DOORBELLS
@@ -349,11 +400,11 @@ static inline void clear_claimed_bit(uint8_t *bits, uint bit_index) {
 static bool multicore_doorbell_claim_under_lock(uint doorbell_num, uint core_mask, bool required) {
     static_assert(NUM_CORES == 2, "");
     uint claimed_cores_for_doorbell = (uint) (is_bit_claimed(doorbell_claimed[0], doorbell_num) |
-                                              (is_bit_claimed(doorbell_claimed[1], doorbell_num + 1u) << 1));
+                                              (is_bit_claimed(doorbell_claimed[1], doorbell_num) << 1));
     if (claimed_cores_for_doorbell & core_mask) {
         if (required) {
-            panic( "Multicoore doorbell %d already claimed on core mask 0x%x; requested core mask 0x%x\n",
-                   claimed_cores_for_doorbell, core_mask);
+            panic( "Multicore doorbell %d already claimed on core mask 0x%x; requested core mask 0x%x\n",
+                   doorbell_num, claimed_cores_for_doorbell, core_mask);
         }
         return false;
     } else {
@@ -368,12 +419,14 @@ static bool multicore_doorbell_claim_under_lock(uint doorbell_num, uint core_mas
 
 void multicore_doorbell_claim(uint doorbell_num, uint core_mask) {
     check_doorbell_num_param(doorbell_num);
+    check_core_mask_param(core_mask);
     uint32_t save = hw_claim_lock();
     multicore_doorbell_claim_under_lock(doorbell_num, core_mask, true);
     hw_claim_unlock(save);
 }
 
 int multicore_doorbell_claim_unused(uint core_mask, bool required) {
+    check_core_mask_param(core_mask);
     int rc = PICO_ERROR_INSUFFICIENT_RESOURCES;
     uint32_t save = hw_claim_lock();
     for(int i=NUM_DOORBELLS-1; i>=0; i--) {
@@ -391,6 +444,7 @@ int multicore_doorbell_claim_unused(uint core_mask, bool required) {
 
 void multicore_doorbell_unclaim(uint doorbell_num, uint core_mask) {
     check_doorbell_num_param(doorbell_num);
+    check_core_mask_param(core_mask);
     uint32_t save = hw_claim_lock();
     for(uint i=0; i < NUM_CORES; i++) {
         if (core_mask & (1u << i)) {

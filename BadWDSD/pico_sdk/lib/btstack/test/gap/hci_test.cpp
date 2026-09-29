@@ -20,6 +20,7 @@
 #include "hci_dump_posix_fs.h"
 #include "btstack_debug.h"
 #include "btstack_util.h"
+#include "btstack_run_loop.h"
 #include "btstack_run_loop_posix.h"
 
 typedef struct {
@@ -33,6 +34,10 @@ static uint16_t transport_count_packets;
 static hci_packet_t transport_packets[MAX_HCI_PACKETS];
 static int can_send_now = 1;
 static  void (*packet_handler)(uint8_t packet_type, uint8_t *packet, uint16_t size);
+static uint16_t received_hci_events;
+static uint16_t received_acl_packets;
+static uint16_t received_gap_inquiry_results;
+static btstack_packet_callback_registration_t hci_event_callback_registration;
 
 #if 0
 static btstack_timer_source_t packet_sent_timer;
@@ -60,6 +65,7 @@ static int hci_transport_test_can_send_now(uint8_t packet_type){
 #endif
 
 static int hci_transport_test_set_baudrate(uint32_t baudrate){
+    UNUSED(baudrate);
     return 0;
 }
 
@@ -73,6 +79,7 @@ static int hci_transport_test_send_packet(uint8_t packet_type, uint8_t * packet,
 }
 
 static void hci_transport_test_init(const void * transport_config){
+    UNUSED(transport_config);
 }
 
 static int hci_transport_test_open(void){
@@ -114,6 +121,31 @@ void CHECK_HCI_COMMAND(const hci_cmd_t * expected_hci_command){
     CHECK_EQUAL(expected_hci_command->opcode, actual_opcode);
 }
 
+static void hci_test_execute_pending_callbacks(void){
+    btstack_run_loop_base_execute_callbacks();
+}
+
+static void test_hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size){
+    UNUSED(channel);
+    UNUSED(packet);
+    UNUSED(size);
+    if (packet_type == HCI_EVENT_PACKET){
+        received_hci_events++;
+        if (hci_event_packet_get_type(packet) == GAP_EVENT_INQUIRY_RESULT){
+            received_gap_inquiry_results++;
+        }
+    }
+}
+
+static void test_acl_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size){
+    UNUSED(channel);
+    UNUSED(packet);
+    UNUSED(size);
+    if (packet_type == HCI_ACL_DATA_PACKET){
+        received_acl_packets++;
+    }
+}
+
 TEST_GROUP(HCI){
         hci_stack_t * hci_stack;
 
@@ -125,6 +157,10 @@ TEST_GROUP(HCI){
             hci_stack = hci_get_stack();
             hci_simulate_working_fuzz();
             hci_setup_test_connections_fuzz();
+            received_hci_events = 0;
+            received_acl_packets = 0;
+            received_gap_inquiry_results = 0;
+            memset(&hci_event_callback_registration, 0, sizeof(hci_event_callback_registration));
             // register for HCI events
             mock().expectOneCall("hci_can_send_packet_now_using_packet_buffer").andReturnValue(1);
         }
@@ -172,12 +208,14 @@ TEST(HCI, gap_whitelist_add_remove){
 
     uint8_t status = gap_whitelist_add(addr_type, addr);
     CHECK_EQUAL(ERROR_CODE_SUCCESS, status);
+    hci_test_execute_pending_callbacks();
 
     status = gap_whitelist_add(addr_type, addr);
     CHECK_EQUAL(ERROR_CODE_COMMAND_DISALLOWED, status);
 
     status = gap_whitelist_remove(addr_type, addr);
     CHECK_EQUAL(ERROR_CODE_SUCCESS, status);
+    hci_test_execute_pending_callbacks();
 
     status = gap_whitelist_remove(addr_type, addr);
     CHECK_EQUAL(ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER, status);
@@ -272,6 +310,16 @@ TEST(HCI, hci_send_acl_packet_buffer_no_connection){
     CHECK_EQUAL(ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER, status);
 }
 
+TEST(HCI, hci_send_acl_packet_buffer_oversized){
+    hci_reserve_packet_buffer();
+    uint8_t status = hci_send_acl_packet_buffer(HCI_ACL_BUFFER_SIZE + 1u);
+    CHECK_EQUAL(ERROR_CODE_INVALID_HCI_COMMAND_PARAMETERS, status);
+
+    // The failed send must release the prepared-packet reservation.
+    hci_reserve_packet_buffer();
+    hci_release_packet_buffer();
+}
+
 TEST(HCI, hci_send_acl_packet_buffer){
     hci_reserve_packet_buffer();
     uint8_t * packet = hci_get_outgoing_packet_buffer();
@@ -290,6 +338,7 @@ TEST(HCI, hci_send_cmd_packet){
 
     uint8_t status = hci_send_cmd(&hci_write_loopback_mode, 1);
     CHECK_EQUAL(0, status);
+    hci_test_execute_pending_callbacks();
 
     uint8_t i;
     for (i = 0; i < 3; i++){
@@ -308,6 +357,7 @@ TEST(HCI, hci_send_cmd_packet){
             1000       // max ce length
         );
         CHECK_EQUAL(0, status);
+        hci_test_execute_pending_callbacks();
     }
 }
 
@@ -338,10 +388,12 @@ TEST(HCI, RemovePacketHandler){
     hci_remove_event_handler(NULL);
 }
 
-static void dummy_fn(const void * config){};
+static void dummy_fn(const void * config){
+    UNUSED(config);
+}
 TEST(HCI, SetChipset){
     hci_set_chipset(NULL);
-    btstack_chipset_t chipset_driver = { 0 };
+    btstack_chipset_t chipset_driver = { NULL, NULL, NULL, NULL, NULL };
     hci_set_chipset(NULL);
     chipset_driver.init = dummy_fn;
 }
@@ -570,6 +622,168 @@ TEST(HCI, acl_handling) {
     little_endian_store_16(packet, 2, 1996);
     packet_handler(HCI_ACL_DATA_PACKET, packet, 2000);
 }
+
+TEST(HCI, acl_first_fragment_requires_complete_l2cap_header) {
+    uint8_t packet[] = {
+        0x01, 0x20,
+        0x01, 0x00,
+        0x00,
+    };
+
+    packet_handler(HCI_ACL_DATA_PACKET, packet, sizeof(packet));
+}
+
+TEST(HCI, incoming_event_packet_bounds_check) {
+    hci_event_callback_registration.callback = &test_hci_event_handler;
+    hci_add_event_handler(&hci_event_callback_registration);
+
+    uint8_t packet[] = {
+        HCI_EVENT_COMMAND_COMPLETE,
+        3,
+        1,
+        0x00,
+        0x00,
+    };
+
+    packet_handler(HCI_EVENT_PACKET, packet, 1);
+    CHECK_EQUAL(0, received_hci_events);
+
+    packet_handler(HCI_EVENT_PACKET, packet, sizeof(packet) - 1);
+    CHECK_EQUAL(0, received_hci_events);
+
+    packet[1] = 2;
+    packet_handler(HCI_EVENT_PACKET, packet, sizeof(packet));
+    CHECK_EQUAL(0, received_hci_events);
+
+    packet[1] = 3;
+    packet_handler(HCI_EVENT_PACKET, packet, sizeof(packet));
+    CHECK_EQUAL(1, received_hci_events);
+}
+
+TEST(HCI, incoming_acl_packet_bounds_check) {
+    hci_register_acl_packet_handler(&test_acl_packet_handler);
+
+    uint8_t packet[] = {
+        0x01, 0x20,
+        0x04, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+    };
+
+    packet_handler(HCI_ACL_DATA_PACKET, packet, HCI_ACL_HEADER_SIZE - 1);
+    CHECK_EQUAL(0, received_acl_packets);
+
+    packet_handler(HCI_ACL_DATA_PACKET, packet, sizeof(packet) - 1);
+    CHECK_EQUAL(0, received_acl_packets);
+
+    little_endian_store_16(packet, 2, 3);
+    packet_handler(HCI_ACL_DATA_PACKET, packet, sizeof(packet));
+    CHECK_EQUAL(0, received_acl_packets);
+
+    little_endian_store_16(packet, 2, 4);
+    packet_handler(HCI_ACL_DATA_PACKET, packet, sizeof(packet));
+    CHECK_EQUAL(1, received_acl_packets);
+}
+
+TEST(HCI, incoming_unknown_packet_type_bounds_check) {
+    uint8_t packet[] = {
+        HCI_EVENT_COMMAND_COMPLETE,
+        3,
+        1,
+        0x00,
+        0x00,
+    };
+
+    packet_handler(0xff, packet, sizeof(packet));
+    CHECK_EQUAL(0, received_hci_events);
+}
+
+TEST(HCI, number_completed_packets_event_bounds_check) {
+    hci_connection_t * connection = hci_connection_for_handle(0x0003);
+    CHECK_TRUE(connection != NULL);
+    connection->num_packets_sent = 2;
+
+    uint8_t packet[] = {
+        HCI_EVENT_NUMBER_OF_COMPLETED_PACKETS,
+        5,
+        2,
+        0x03, 0x00,
+        0x01, 0x00,
+    };
+
+    packet_handler(HCI_EVENT_PACKET, packet, sizeof(packet));
+    CHECK_EQUAL(2, connection->num_packets_sent);
+
+    packet[2] = 1;
+    packet_handler(HCI_EVENT_PACKET, packet, sizeof(packet));
+    CHECK_EQUAL(1, connection->num_packets_sent);
+}
+
+TEST(HCI, le_read_buffer_size_command_complete_bounds_check) {
+    uint8_t packet[] = {
+        HCI_EVENT_COMMAND_COMPLETE,
+        6,
+        1,
+        0x02, 0x20,
+        ERROR_CODE_SUCCESS,
+        0x34, 0x00,
+    };
+
+    hci_stack->le_data_packets_length = 0;
+    hci_stack->le_acl_packets_total_num = 0;
+    packet_handler(HCI_EVENT_PACKET, packet, sizeof(packet));
+    CHECK_EQUAL(0, hci_stack->le_data_packets_length);
+    CHECK_EQUAL(0, hci_stack->le_acl_packets_total_num);
+
+    uint8_t valid_packet[] = {
+        HCI_EVENT_COMMAND_COMPLETE,
+        7,
+        1,
+        0x02, 0x20,
+        ERROR_CODE_SUCCESS,
+        0x34, 0x00,
+        0x05,
+    };
+    packet_handler(HCI_EVENT_PACKET, valid_packet, sizeof(valid_packet));
+    CHECK_EQUAL(0x0034, hci_stack->le_data_packets_length);
+    CHECK_EQUAL(0x05, hci_stack->le_acl_packets_total_num);
+}
+
+#ifdef ENABLE_CLASSIC
+TEST(HCI, inquiry_result_bounds_check) {
+    hci_event_callback_registration.callback = &test_hci_event_handler;
+    hci_add_event_handler(&hci_event_callback_registration);
+
+    uint8_t packet[] = {
+        HCI_EVENT_INQUIRY_RESULT,
+        14,
+        1,
+        0x66, 0x55, 0x44, 0x33, 0x22, 0x11,
+        0x01,
+        0x00,
+        0x00,
+        0x04, 0x03, 0x02,
+        0x08, 0x07,
+    };
+
+    packet_handler(HCI_EVENT_PACKET, packet, sizeof(packet));
+    CHECK_EQUAL(0, received_gap_inquiry_results);
+
+    uint8_t valid_packet[] = {
+        HCI_EVENT_INQUIRY_RESULT,
+        15,
+        1,
+        0x66, 0x55, 0x44, 0x33, 0x22, 0x11,
+        0x01,
+        0x00,
+        0x00,
+        0x04, 0x03, 0x02,
+        0x08, 0x07,
+    };
+    packet_handler(HCI_EVENT_PACKET, valid_packet, sizeof(valid_packet));
+    CHECK_EQUAL(1, received_gap_inquiry_results);
+}
+#endif
+
 TEST(HCI, gap_le_get_own_address) {
     uint8_t  addr_type;
     bd_addr_t addr;
@@ -645,6 +859,7 @@ TEST(HCI, handle_command_complete_event) {
 }
 
 static void simulate_hci_command_status(uint16_t opcode, uint8_t status, uint8_t variant) {
+    UNUSED(variant);
     uint8_t packet[2 + 255];
     packet[0] = HCI_EVENT_COMMAND_STATUS;
     packet[1] = sizeof(packet) - 2;

@@ -64,8 +64,8 @@
  */
 //!\{
 #define CYW43_VERSION_MAJOR 1
-#define CYW43_VERSION_MINOR 0
-#define CYW43_VERSION_MICRO 3
+#define CYW43_VERSION_MINOR 1
+#define CYW43_VERSION_MICRO 0
 //!\}
 
 /*!
@@ -91,7 +91,6 @@
 /*!
  * \name Link status
  * \anchor CYW43_LINK_
- * \see status_name() to get a user readable name of the status for debug
  * \see cyw43_wifi_link_status() to get the wifi status
  * \see cyw43_tcpip_link_status() to get the overall link status
  */
@@ -653,6 +652,7 @@ static inline uint32_t cyw43_pm_value(uint8_t pm_mode, uint16_t pm2_sleep_ret_ms
 #define CYW43_PERFORMANCE_PM (cyw43_pm_value(CYW43_PM2_POWERSAVE_MODE, 200, 1, 1, 10))
 
 #if CYW43_ENABLE_BLUETOOTH
+
 /*!
  * \brief Initialise the Bluetooth HCI layer
  *
@@ -683,7 +683,49 @@ int cyw43_bluetooth_hci_write(uint8_t *buf, size_t len);
  * \brief Callback for the Bluetooth HCI layer to do processing
  */
 void cyw43_bluetooth_hci_process(void);
-#endif
+
+#endif // CYW43_ENABLE_BLUETOOTH
+
+#if CYW43_ENABLE_BLUETOOTH_OVER_UART
+
+/*!
+ * \brief Initialise the cyw43's Bluetooth controller.
+ *
+ * The UART must be initialised and have flow control enabled before calling this function.
+ *
+ * \return zero on success
+ */
+int cyw43_bluetooth_controller_init(void);
+
+/*!
+ * \brief Deinitialise the cyw43's Bluetooth controller.
+ *
+ * \return zero on success
+ */
+int cyw43_bluetooth_controller_deinit(void);
+
+/*!
+ * \brief Tell the Bluetooth controller to go to sleep.
+ *
+ * \return zero on success
+ */
+int cyw43_bluetooth_controller_sleep_maybe(void);
+
+/*!
+ * \brief Query whether the controller woke up.
+ *
+ * \return true if the controller woke up, false otherwise
+ */
+bool cyw43_bluetooth_controller_woken(void);
+
+/*!
+ * \brief Wake up the Bluetooth controller.
+ *
+ * \return zero on success
+ */
+int cyw43_bluetooth_controller_wakeup(void);
+
+#endif // CYW43_ENABLE_BLUETOOTH_OVER_UART
 
 //!\} // cyw43_driver doxygen group
 

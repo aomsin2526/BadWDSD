@@ -47,6 +47,7 @@
 // *****************************************************************************
 
 
+#include <btstack_tlv.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,6 +70,9 @@
 // When not set to 0xffff, sniff and sniff subrating are enabled
 static uint16_t host_max_latency = 1600;
 static uint16_t host_min_timeout = 3200;
+
+// TAG to store remote device address in TLV
+#define TLV_TAG_HIDR ((((uint32_t) 'H') << 24 ) | (((uint32_t) 'I') << 16) | (((uint32_t) 'D') << 8) | 'R')
 
 #define REPORT_ID 0x01
 
@@ -194,10 +198,17 @@ static uint8_t                send_modifier;
 static uint8_t                send_keycode;
 static bool                   send_active;
 
-#ifdef HAVE_BTSTACK_STDIN
 static bd_addr_t device_addr;
-static const char * device_addr_string = "BC:EC:5D:E6:15:03";
+#ifdef HAVE_BTSTACK_STDIN
+#ifndef REMOTE_ADDR_STRING
+#define REMOTE_ADDR_STRING "00:1A:7D:DA:71:01"
 #endif
+static const char * device_addr_string = REMOTE_ADDR_STRING;
+#endif
+
+// used to store remote device in TLV
+static const btstack_tlv_t * btstack_tlv_singleton_impl;
+static void *                btstack_tlv_singleton_context;
 
 static enum {
     APP_BOOTING,
@@ -275,6 +286,20 @@ static void queue_character(char character){
 
 // Demo Application
 
+static void hid_start_reconnect(void){
+    // check if we have a bonded device
+    // used to store remote device in TLV
+    if (btstack_tlv_singleton_impl){
+        int len = btstack_tlv_singleton_impl->get_tag(btstack_tlv_singleton_context, TLV_TAG_HIDR, (uint8_t *) &device_addr, sizeof(bd_addr_t));
+        if (len == sizeof(device_addr)){
+            printf("Bonded, reconnect to device with address %s ...\n", bd_addr_to_str(device_addr));
+            hid_device_connect(device_addr, &hid_cid);
+            return;
+        }
+    }
+    printf("Please connect to HID Keyboard Demo from smartphone or computer.\n");
+}
+
 #ifdef HAVE_BTSTACK_STDIN
 
 // On systems with STDIN, we can directly type on the console
@@ -329,6 +354,7 @@ static void demo_text_timer_handler(btstack_timer_source_t * ts){
 static void packet_handler(uint8_t packet_type, uint16_t channel, uint8_t * packet, uint16_t packet_size){
     UNUSED(channel);
     UNUSED(packet_size);
+    bd_addr_t event_addr;
     uint8_t status;
     switch (packet_type){
         case HCI_EVENT_PACKET:
@@ -336,12 +362,16 @@ static void packet_handler(uint8_t packet_type, uint16_t channel, uint8_t * pack
                 case BTSTACK_EVENT_STATE:
                     if (btstack_event_state_get_state(packet) != HCI_STATE_WORKING) return;
                     app_state = APP_NOT_CONNECTED;
+                    btstack_tlv_get_instance(&btstack_tlv_singleton_impl, &btstack_tlv_singleton_context);
+                    hid_start_reconnect();
                     break;
 
                 case HCI_EVENT_USER_CONFIRMATION_REQUEST:
                     // ssp: inform about user confirmation request
                     log_info("SSP User Confirmation Request with numeric value '%06"PRIu32"'\n", hci_event_user_confirmation_request_get_numeric_value(packet));
-                    log_info("SSP User Confirmation Auto accept\n");                   
+                    log_info("Accepting Pairing - TODO: require actual user action\n");
+                    hci_event_user_confirmation_request_get_bd_addr(packet, event_addr);
+                    gap_ssp_confirmation_response(event_addr);
                     break; 
 
                 case HCI_EVENT_HID_META:
@@ -357,10 +387,18 @@ static void packet_handler(uint8_t packet_type, uint16_t channel, uint8_t * pack
                             }
                             app_state = APP_CONNECTED;
                             hid_cid = hid_subevent_connection_opened_get_hid_cid(packet);
-#ifdef HAVE_BTSTACK_STDIN                        
-                            printf("HID Connected, please start typing...\n");
+                            hid_subevent_connection_opened_get_bd_addr(packet, device_addr);
+
+                            // store device as bonded
+                            if (btstack_tlv_singleton_impl){
+                                btstack_tlv_singleton_impl->store_tag(btstack_tlv_singleton_context, TLV_TAG_HIDR, (const uint8_t *) &device_addr, sizeof(bd_addr_t));
+                            }
+
+
+#ifdef HAVE_BTSTACK_STDIN
+                            printf("HID Connected to %s, please start typing...\n", bd_addr_to_str(device_addr));
 #else                        
-                            printf("HID Connected, sending demo text...\n");
+                            printf("HID Connected to %s, sending demo text...\n", bd_addr_to_str(device_addr));
                             demo_text_timer_handler(NULL);
 #endif
                             break;

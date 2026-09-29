@@ -84,8 +84,11 @@ static int battery_service_write_callback(hci_con_handle_t con_handle, uint16_t 
     }
 
     if (attribute_handle == battery_value_client_configuration_handle){
-		battery_value_client_configuration = little_endian_read_16(buffer, 0);
-		battery_value_client_configuration_connection = con_handle;
+        uint16_t new_value;
+        if (gatt_server_get_client_configuration_value(buffer, buffer_size, &new_value)){
+            battery_value_client_configuration = new_value;
+            battery_value_client_configuration_connection = con_handle;
+        }
 	}
 	return 0;
 }
@@ -120,7 +123,7 @@ void battery_service_server_init(uint8_t value){
 
 void battery_service_server_set_battery_value(uint8_t value){
 	battery_value = value;
-	if (battery_value_client_configuration != 0){
+	if (battery_value_client_configuration != 0u){
 		battery_callback.callback = &battery_service_can_send_now;
 		battery_callback.context  = (void*) (uintptr_t) battery_value_client_configuration_connection;
 		att_server_register_can_send_now_callback(&battery_callback, battery_value_client_configuration_connection);

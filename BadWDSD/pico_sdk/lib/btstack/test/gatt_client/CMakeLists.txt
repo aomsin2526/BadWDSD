@@ -5,15 +5,18 @@ project(gatt-client-test)
 find_package(PkgConfig REQUIRED)
 
 # CppuTest
-pkg_check_modules(CPPUTEST REQUIRED CppuTest)
+pkg_check_modules(CPPUTEST REQUIRED cpputest)
 include_directories(${CPPUTEST_INCLUDE_DIRS})
 link_directories(${CPPUTEST_LIBRARY_DIRS})
 link_libraries(${CPPUTEST_LIBRARIES})
 
-include_directories(.)
+include_directories( ..//include/coverage-ble)
 include_directories(../../src)
 include_directories(../../3rd-party/rijndael/)
+include_directories(../../3rd-party/micro-ecc)
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
+
+add_compile_definitions(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
 
 set(SOURCES
 	../../src/ad_parser.c

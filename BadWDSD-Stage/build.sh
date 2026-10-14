@@ -9,7 +9,7 @@ export OBJCOPY=powerpc64-linux-gnu-objcopy
 $CC $FLAGS -T Stage0.ld Stage0.S -o Stage0.elf || exit 1
 $CC $FLAGS -T Stage0.ld Stage0.S -o Stage0.bin -Wl,--oformat=binary || exit 1
 
-export STAGEX_FLAGS="-estage_link_entry -ffunction-sections -fdata-sections -Wl,--gc-sections"
+export STAGEX_FLAGS="-estage_link_entry -ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--print-gc-sections -Wl,--orphan-handling=warn"
 echo STAGEX_FLAGS = $STAGEX_FLAGS
 
 $CC $FLAGS $STAGEX_FLAGS -T Stagex.ld Stagex.c -o Stagex.elf || exit 1

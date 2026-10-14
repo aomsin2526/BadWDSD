@@ -1,4 +1,4 @@
-#define PAYLOAD_SIZE 12968
+#define PAYLOAD_SIZE 11648
 
 // runs at 0x188 (second ch), but payload actually starts at 0x180
 // max size = 128

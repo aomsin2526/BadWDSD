@@ -11,8 +11,8 @@ SECTIONS
     main : { *(main) }
     code : { *(code) }
 
-    .text : { *(.text) }
-    .rodata : { *(.rodata) }
+    .text : { *(.text .text.*) }
+    .rodata : { *(.rodata .rodata.*) }
 
     .toc1 : { *(.toc1) }
 

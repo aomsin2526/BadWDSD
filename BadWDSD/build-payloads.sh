@@ -13,7 +13,7 @@ echo FLAGS = $FLAGS
 export CC=powerpc64-linux-gnu-gcc
 export OBJCOPY=powerpc64-linux-gnu-objcopy
 
-export STAGEXLDR_FLAGS="-estagexldr_link_entry -ffunction-sections -fdata-sections -Wl,--gc-sections"
+export STAGEXLDR_FLAGS="-estagexldr_link_entry -ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--print-gc-sections -Wl,--orphan-handling=warn"
 echo STAGEXLDR_FLAGS = $STAGEXLDR_FLAGS
 
 #

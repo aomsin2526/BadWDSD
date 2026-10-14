@@ -1,6 +1,9 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 
-#define FUNC_DECL __attribute__((section("code")))
+// gc sections wont work
+//#define FUNC_DECL __attribute__((section("code")))
+
+#define FUNC_DECL
 #define FUNC_DEF FUNC_DECL
 
 // branch-able code

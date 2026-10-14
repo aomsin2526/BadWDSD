@@ -69,6 +69,13 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         dead_beep();
     }
 
+    if ((sector_idx >= emmc_sector_count) ||
+        (sector_count > (emmc_sector_count - sector_idx)))
+    {
+        puts("bad sector range!\n");
+        dead_beep();
+    }
+
     for (uint32_t idx = 0; idx < sector_count; ++idx)
     {
         if (!emmc_is_sector_idx_valid_for_read(sector_idx + idx))
@@ -214,7 +221,8 @@ FUNC_DEF void emmc_read(uint64_t offset, void* data, uint64_t size)
     if (size == 0)
         return;
 
-    if ((offset + size) > emmc_max_size)
+    if ((offset > emmc_max_size) ||
+        (size > (emmc_max_size - offset)))
     {
         puts("emmc_read overflow!!!\n");
         dead_beep();
@@ -282,7 +290,10 @@ FUNC_DEF void NorRead(uint32_t offset, void* outBuf, uint32_t readSize)
     if (readSize == 0)
         return;
 
-    if ((offset + readSize) > (16 * 1024 * 1024))
+    static const uint32_t nor_max_size = (16 * 1024 * 1024);
+
+    if ((offset > nor_max_size) ||
+        (readSize > (nor_max_size - offset)))
         dead_beep();
 
     // volatile is too slow to the point of can't enter safe mode

@@ -379,6 +379,10 @@ FUNC_DEF void Stage2()
             puts("\n");
 #endif
 
+#if STAGEX_SPU_ELF_CACHE_ENABLED
+            ctx->cached_StagexSpuElf = NULL;
+#endif
+
             if (CoreOS2_FindFileEntry_Aux("Stagex_spu.elf", &ctx->cached_StagexSpuElf_FileFlashOffset, &ctx->cached_StagexSpuElf_FileSize))
             {
                 puts("cached_StagexSpuElf_FileFlashOffset = ");
@@ -388,6 +392,15 @@ FUNC_DEF void Stage2()
                 puts("cached_StagexSpuElf_FileSize = ");
                 print_decimal(ctx->cached_StagexSpuElf_FileSize);
                 puts("\n");
+
+#if STAGEX_SPU_ELF_CACHE_ENABLED
+                ctx->cached_StagexSpuElf = SimpleHeap_Alloc(&heap, ctx->cached_StagexSpuElf_FileSize, 32);
+                FlashRead(ctx->cached_StagexSpuElf_FileFlashOffset, ctx->cached_StagexSpuElf, ctx->cached_StagexSpuElf_FileSize);
+
+                puts("cached_StagexSpuElf = ");
+                print_hex((uint64_t)ctx->cached_StagexSpuElf);
+                puts("\n");
+#endif
             }
             else
             {
@@ -582,6 +595,14 @@ FUNC_DEF void Stage2()
                     ctx->cached_sharedLdr_CurKind = 3;
                 }
             }
+
+            //
+
+#if 1
+            real_puts("heap free memory = ");
+            real_print_decimal((heap.heapPtr + heap.heapSize) - heap.curPtr);
+            real_puts(" bytes\n");
+#endif
 
             //
         }

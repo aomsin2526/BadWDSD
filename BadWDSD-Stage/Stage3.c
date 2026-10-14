@@ -152,10 +152,58 @@ FUNC_DEF void Stage3()
     }
 
     {
+#if 0
+
+        // nor
+
+        Sc_Rx: #!calc_spu_id = 1:6
+        Sc_Rx: #!aux_init = 27389:2
+        Sc_Rx: #!stage3 = 29111:0
+        Sc_Rx: #!aux_uninit = 2:3
+
+        // emmc
+
+        Sc_Rx: #!calc_spu_id = 2:6
+        Sc_Rx: #!aux_init = 17654:2
+        Sc_Rx: #!stage3 = 25877:1
+        Sc_Rx: #!aux_uninit = 2:3
+
+        // emmc with cache
+
+        Sc_Rx: #!calc_spu_id = 2:6
+        Sc_Rx: #!aux_init = 179:C
+        Sc_Rx: #!stage3 = 25875:1
+        Sc_Rx: #!aux_uninit = 2:3
+
+#endif
+
+        //uint64_t t4 = GetTimeInUs();
         uint64_t spu_id = calc_myspu_id();
+
+        //real_puts("calc_spu_id = ");
+        //real_print_decimal(GetTimeInUs() - t4);
+        //real_puts("\n");
+
+        //uint64_t t1 = GetTimeInUs();
         uint64_t spu_old_mfc_sr1 = SpuAux_Init_lv1(spu_id);
+
+        //real_puts("aux_init = ");
+        //real_print_decimal(GetTimeInUs() - t1);
+        //real_puts("\n");
+
+        //uint64_t t2 = GetTimeInUs();
         spu_stage3(spu_id);
+
+        //real_puts("stage3 = ");
+        //real_print_decimal(GetTimeInUs() - t2);
+        //real_puts("\n");
+
+        //uint64_t t3 = GetTimeInUs();
         SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
+
+        //real_puts("aux_uninit = ");
+        //real_print_decimal(GetTimeInUs() - t3);
+        //real_puts("\n");
     }
 
     // qcfw marker

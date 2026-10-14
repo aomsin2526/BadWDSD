@@ -19,6 +19,8 @@
 
 //#define STAGEX_DEBUG_ENABLED 1
 
+#define STAGEX_SPU_ELF_CACHE_ENABLED 1
+
 #if !LOGGING_ENABLED
 #undef SC_LV1_LOGGING_ENABLED
 #undef STAGE5_LOG_ENABLED
@@ -133,6 +135,10 @@ struct Stagex_Context_s
 
     uint32_t cached_StagexSpuElf_FileFlashOffset;
     uint32_t cached_StagexSpuElf_FileSize;
+
+#if STAGEX_SPU_ELF_CACHE_ENABLED
+    uint8_t* cached_StagexSpuElf;
+#endif
 
     uint8_t* cached_mymetldrElf;
 

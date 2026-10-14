@@ -92,8 +92,15 @@ FUNC_DEF uint64_t SpuAux_Init_lv1(uint64_t spu_id)
         dead_beep();
     }
 
-    uint8_t* elfFileData = (uint8_t*)0xD000000;
+    uint8_t* elfFileData = 
+
+#if STAGEX_SPU_ELF_CACHE_ENABLED
+        ctx->cached_StagexSpuElf;
+#else
+        (uint8_t*)0xD000000;
+
     FlashRead(ctx->cached_StagexSpuElf_FileFlashOffset, elfFileData, ctx->cached_StagexSpuElf_FileSize);
+#endif
 
     uint64_t v = SpuAux_Init(spu_id, elfFileData);
 

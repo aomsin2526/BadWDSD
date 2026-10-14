@@ -42,8 +42,10 @@ SECTIONS
 
     code : { *(code) }
 
-    .rodata : { *(.rodata) }
     .text : { *(.text) }
+    .rodata : { *(.rodata) }
+
+    .toc1 : { *(.toc1) }
 
     .opd : { *(.opd) }
 }

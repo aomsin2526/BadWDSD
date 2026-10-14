@@ -148,6 +148,9 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
 
         // tid
         SPU_LS_Write64(spu_id, 0x39060, 0x82);
+
+        // marker
+        SPU_LS_Write64(spu_id, 0x39100, 0x123456789);
     }
 
     SPU_StartRequest(spu_id);

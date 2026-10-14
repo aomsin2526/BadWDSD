@@ -520,12 +520,18 @@ FUNC_DEF void SPU_DoIsoExitRequest(uint64_t spu_id)
 
 FUNC_DEF void SPU_IsoExitRequest(uint64_t spu_id)
 {
+    if (SPU_IsRunning(spu_id))
+    {
+        puts("spu must be stopped first!\n");
+        dead_beep();
+    }
+
     if (SPU_IsIsolated(spu_id))
     {
         // iso exit request
         SPU_DoIsoExitRequest(spu_id);
 
-        while (SPU_IsIsolated(spu_id)) {}
+        while (SPU_IsIsolated(spu_id) || SPU_IsRunning(spu_id)) {}
     }
 }
 

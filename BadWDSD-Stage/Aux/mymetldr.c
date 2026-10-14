@@ -105,12 +105,6 @@ void main()
         *((uint8_t*)(0x2E680 + 3)) = minor_ver_hex;
 
     {
-        // marker
-
-        *((uint64_t *)0x39100) = 0x123456789;
-    }
-
-    {
         // erk/eid0
 
 #if 1

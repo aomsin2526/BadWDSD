@@ -1,4 +1,3 @@
-#pragma GCC optimize("align-functions=8")
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 #define FUNC_DECL __attribute__((section("code")))

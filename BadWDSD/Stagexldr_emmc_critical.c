@@ -173,8 +173,8 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         {
             const uint16_t v_data = volatile_read_uint16(a_data);
 
-            *((uint16_t*)(&outBuf_u8[curOutBufOffset])) = v_data;
-            curOutBufOffset += 2;
+            outBuf_u8[curOutBufOffset] = (v_data >> 8); ++curOutBufOffset;
+            outBuf_u8[curOutBufOffset] = (v_data & 0xff); ++curOutBufOffset;
         }
 
         //
@@ -364,8 +364,13 @@ FUNC_DEF void emmc_write_sector(uint32_t sector_idx, const void* inBuf)
 
         for (uint32_t i2 = 0; i2 < (emmc_sector_size / 2); ++i2)
         {
-            volatile_write_uint16(a_data, *((const uint16_t*)(&inBuf_u8[curInBufOffset])));
-            curInBufOffset += 2;
+            uint16_t v_data = 0;
+
+            v_data |= inBuf_u8[curInBufOffset]; ++curInBufOffset;
+            v_data <<= 8;
+            v_data |= inBuf_u8[curInBufOffset]; ++curInBufOffset;
+
+            volatile_write_uint16(a_data, v_data);
         }
 
         //

@@ -51,15 +51,25 @@ FUNC_DEF __attribute__((noinline)) uint64_t get_pc()
 
 FUNC_DEF uint64_t GetTimeInNs()
 {
-    uint64_t my_timebase = 79800000;
-    uint64_t MUL_NS = 1000000000;
+    static const uint64_t freq = 79800000;
+    static const uint64_t NS_PER_SECOND = 1000000000;
 
-    uint64_t cur_tb_ns;
-    SYS_TIMEBASE_GET(cur_tb_ns);
+    uint64_t counter;
+    SYS_TIMEBASE_GET(counter);
 
-    cur_tb_ns *= MUL_NS;
+    // secs.nsec
+    uint64_t secs = counter;
+    secs /= freq;
 
-    return (cur_tb_ns / my_timebase);
+    uint64_t nsec = (counter % freq);
+    nsec *= NS_PER_SECOND;
+    nsec /= freq;
+
+    uint64_t timeInNs = secs;
+    timeInNs *= NS_PER_SECOND;
+    timeInNs += nsec;
+
+    return timeInNs;
 }
 
 FUNC_DEF void WaitInNs(uint64_t ns)
@@ -78,15 +88,7 @@ FUNC_DEF void WaitInNs(uint64_t ns)
 
 FUNC_DEF uint64_t GetTimeInUs()
 {
-    uint64_t my_timebase = 79800000;
-    uint64_t MUL_US = 1000000;
-
-    uint64_t cur_tb_us;
-    SYS_TIMEBASE_GET(cur_tb_us);
-
-    cur_tb_us *= MUL_US;
-
-    return (cur_tb_us / my_timebase);
+    return (GetTimeInNs() / 1000);
 }
 
 FUNC_DEF void WaitInUs(uint64_t us)
@@ -105,15 +107,7 @@ FUNC_DEF void WaitInUs(uint64_t us)
 
 FUNC_DEF uint64_t GetTimeInMs()
 {
-    uint64_t my_timebase = 79800000;
-    uint64_t MUL_MS = 1000;
-
-    uint64_t cur_tb_ms;
-    SYS_TIMEBASE_GET(cur_tb_ms);
-
-    cur_tb_ms *= MUL_MS;
-
-    return (cur_tb_ms / my_timebase);
+    return (GetTimeInNs() / 1000000);
 }
 
 FUNC_DEF void WaitInMs(uint64_t ms)

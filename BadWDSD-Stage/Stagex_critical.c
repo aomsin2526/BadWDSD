@@ -144,8 +144,8 @@ FUNC_DEF void emmc_read_sectors(uint32_t sector_idx, uint32_t sector_count, void
         {
             const uint16_t v_data = volatile_read_uint16(a_data);
 
-            *((uint16_t*)(&outBuf_u8[curOutBufOffset])) = v_data;
-            curOutBufOffset += 2;
+            outBuf_u8[curOutBufOffset] = (v_data >> 8); ++curOutBufOffset;
+            outBuf_u8[curOutBufOffset] = (v_data & 0xff); ++curOutBufOffset;
         }
 
         //

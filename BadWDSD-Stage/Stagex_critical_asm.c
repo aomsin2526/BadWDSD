@@ -1,3 +1,4 @@
+#pragma GCC optimize("align-functions=8") // this is needed to run directly on nor
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 // gc sections wont work

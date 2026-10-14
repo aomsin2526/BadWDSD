@@ -629,21 +629,30 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet
         {
             uint64_t clearSize = (phdr->p_memsz - phdr->p_filesz);
 
-            for (uint64_t i = 0; i < clearSize; i += 8)
-                SPU_LS_Write64(spu_id, ((phdr->p_vaddr + phdr->p_filesz) + i), 0);
+            if (clearSize > 0)
+            {
+                memset(
+                    (void*)SPU_CalcMMIOAddress_LS(spu_id, (phdr->p_vaddr + phdr->p_filesz)),
+                    0,
+                    clearSize
+                );
+            }
         }
 
-        for (uint64_t i = 0; i < phdr->p_filesz; i += 8)
-        {
-            uint64_t v = *((const uint64_t *)(elfFileAddress + phdr->p_offset + i));
-            SPU_LS_Write64(spu_id, (phdr->p_vaddr + i), v);
-        }
+        memcpy(
+            (void*)SPU_CalcMMIOAddress_LS(spu_id, phdr->p_vaddr),
+            (const void*)(elfFileAddress + phdr->p_offset),
+            phdr->p_filesz
+        );
 
         curPhdrAddress += elfHdr->e_phentsize;
     }
 
     // SPU_NPC[0:29] = entry (LS)
     SPU_Write_SPU_NPC(spu_id, elfHdr->e_entry);
+
+    // do not remove!
+    eieio();
 
     if (!quiet)
         puts("LoadElfSpu() done.\n");

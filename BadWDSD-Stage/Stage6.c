@@ -138,20 +138,16 @@ FUNC_DEF void Stage6_IsoLoadRequest(uint64_t spu_id)
         mctx.myldrElfAddress = (uint64_t)myldrElf;
         mctx.fwVersion = ctx->cached_fwVersion;
 
-        volatile_memcpy((volatile void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &mctx, sizeof(mctx));
+        memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &mctx, sizeof(mctx));
     }
 
     {
-        // idps
-        SPU_LS_Write64(spu_id, 0x39050, 0x0000000100820001);
-        SPU_LS_Write64(spu_id, 0x39058, 0x040034D1807DED30);
-
-        // tid
-        SPU_LS_Write64(spu_id, 0x39060, 0x82);
-
         // marker
         SPU_LS_Write64(spu_id, 0x39100, 0x123456789);
     }
+
+    // do not remove!
+    eieio();
 
     SPU_StartRequest(spu_id);
 }

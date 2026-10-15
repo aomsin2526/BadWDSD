@@ -319,9 +319,12 @@ FUNC_DEF void spu_stage3(uint64_t spu_id)
             struct Stagex_spu_context_s context;
             context.jobType = 3;
 
-            volatile_memcpy((volatile void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &context, sizeof(context));
+            memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &context, sizeof(context));
         }
     }
+
+    // do not remove!
+    eieio();
 
     // set jobStart
     SPU_LS_Write64(spu_id, 0xf00, 1);
@@ -330,6 +333,34 @@ FUNC_DEF void spu_stage3(uint64_t spu_id)
     while (SPU_LS_Read64(spu_id, 0xf08) != 1) {}
 
     puts("spu_stage3() done.\n");
+}
+
+FUNC_DEF void spu_stage3_2(uint64_t spu_id)
+{
+    puts("spu_stage3_2()\n");
+
+    // clear jobDone
+    SPU_LS_Write64(spu_id, 0xf08, 0);
+
+    {
+        {
+            struct Stagex_spu_context_s context;
+            context.jobType = 7;
+
+            memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &context, sizeof(context));
+        }
+    }
+
+    // do not remove!
+    eieio();
+
+    // set jobStart
+    SPU_LS_Write64(spu_id, 0xf00, 1);
+
+    // wait for jobDone to be 1
+    while (SPU_LS_Read64(spu_id, 0xf08) != 1) {}
+
+    puts("spu_stage3_2() done.\n");
 }
 
 struct __attribute__((aligned(8))) Stagex_spu_job_DecryptLv0Self_context_s

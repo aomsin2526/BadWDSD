@@ -168,6 +168,7 @@ struct Stagex_Context_s
     uint8_t has_myappldr;
 
     uint8_t stage3_alreadyDone;
+    uint8_t stage3_2_alreadyDone;
 
     uint8_t stage6_isAppldr;
     uint8_t stage6_isLv2ldr;

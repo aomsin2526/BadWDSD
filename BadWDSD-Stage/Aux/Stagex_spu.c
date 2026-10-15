@@ -238,9 +238,6 @@ void Stagex_spu_job_stage3()
     static const uint32_t tmpBufSize = (128 * 1024); // 0x20000
     uint8_t *tmpBuf = (uint8_t *)0x10000;
 
-    uint64_t invalid_handler_addr = 0;
-    uint64_t hvcallTable = 0;
-
     uint32_t foundInitialLPARSizeCount = 0;
 
     uint8_t done = 0;
@@ -248,7 +245,7 @@ void Stagex_spu_job_stage3()
     // /flh/os/lv2_kernel.self
     // need to truncate it or it will conflict with "Boot OtherOS (qCFW)" option
     const char *lv2FilePathSearchData = "/flh/os/lv2_ker";
-    uint32_t lv2FilePathSearchDataSize = strlen(lv2FilePathSearchData);
+    uint32_t lv2FilePathSearchDataSize = 15;
 
     static const uint64_t initialLparSizeSearchEndAddr = 0x200000;
     static const uint32_t foundInitialLPARSizeMaxCount = 2;
@@ -260,14 +257,6 @@ void Stagex_spu_job_stage3()
         for (uint32_t i = 0; i < tmpBufSize; i += 4)
         {
             uint64_t curEaAddr = (tmpBuf_CurEaAddr + i);
-
-            if (invalid_handler_addr == 0)
-            {
-                const uint32_t *v = (const uint32_t *)&tmpBuf[i];
-
-                if (v[0] == 0x38600000 && v[1] == 0x6463ffff && v[2] == 0x6063ffec && v[3] == 0x4e800020)
-                    invalid_handler_addr = curEaAddr;
-            }
 
             if ((curEaAddr < initialLparSizeSearchEndAddr) && (foundInitialLPARSizeCount < foundInitialLPARSizeMaxCount))
             {
@@ -300,7 +289,7 @@ void Stagex_spu_job_stage3()
                 }
             }
 
-            if ((invalid_handler_addr != 0) && ((curEaAddr >= initialLparSizeSearchEndAddr) || (foundInitialLPARSizeCount >= foundInitialLPARSizeMaxCount)))
+            if ((curEaAddr >= initialLparSizeSearchEndAddr) || (foundInitialLPARSizeCount >= foundInitialLPARSizeMaxCount))
                 done = 1;
 
             if (done)
@@ -311,10 +300,47 @@ void Stagex_spu_job_stage3()
             break;
     }
 
-    if (invalid_handler_addr == 0)
-        stop(6);
-
     if (foundInitialLPARSizeCount == 0)
+        stop(6);
+}
+
+void Stagex_spu_job_stage3_2()
+{
+    static const uint32_t tmpBufSize = (128 * 1024); // 0x20000
+    uint8_t *tmpBuf = (uint8_t *)0x10000;
+
+    uint64_t invalid_handler_addr = 0;
+    uint64_t hvcallTable = 0;
+
+    uint8_t done = 0;
+
+    for (uint64_t tmpBuf_CurEaAddr = 0x80000; tmpBuf_CurEaAddr < (16 * 1024 * 1024); tmpBuf_CurEaAddr += tmpBufSize)
+    {
+        DMARead(tmpBuf, tmpBuf_CurEaAddr, tmpBufSize);
+
+        for (uint32_t i = 0; i < tmpBufSize; i += 4)
+        {
+            uint64_t curEaAddr = (tmpBuf_CurEaAddr + i);
+
+            if (invalid_handler_addr == 0)
+            {
+                const uint32_t *v = (const uint32_t *)&tmpBuf[i];
+
+                if (v[0] == 0x38600000 && v[1] == 0x6463ffff && v[2] == 0x6063ffec && v[3] == 0x4e800020)
+                {
+                    invalid_handler_addr = curEaAddr;
+
+                    done = 1;
+                    break;
+                }
+            }
+        }
+
+        if (done)
+            break;
+    }
+
+    if (invalid_handler_addr == 0)
         stop(6);
 
     done = 0;
@@ -1193,6 +1219,8 @@ void main()
                 Stagex_spu_job_stage2((const struct Stagex_spu_job_stage2_context_s*)0x200);
             else if (context->jobType == 6)
                 Stagex_spu_job_aes_decrypt_cbc((const struct Stagex_spu_job_aes_decrypt_cbc_context_s*)0x200, (uint8_t*)0x10000, (128 * 1024));
+            else if (context->jobType == 7)
+                Stagex_spu_job_stage3_2();
             else
                 stop(3);
 

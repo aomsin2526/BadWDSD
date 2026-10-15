@@ -11,16 +11,18 @@ export SPU_MYMETLDR_FLAGS="-Os -estart"
 
 echo Building Stagex_spu...
 
+rm Stagex_spu.elf
 $SPU_CC $SPU_FLAGS $SPU_STAGEX_FLAGS -T Stagex_spu.ld Stagex_spu.S Stagex_spu.c -o Stagex_spu_tmp.elf || exit 1
-$SPU_STRIP --strip-all --remove-section=.comment --remove-section=.shstrtab Stagex_spu_tmp.elf Stagex_spu.elf || exit 1
+$SPU_STRIP --strip-all --remove-section=.comment --remove-section=.shstrtab Stagex_spu_tmp.elf -o Stagex_spu.elf || exit 1
 rm Stagex_spu_tmp.elf || exit 1
 
 $SPU_CC $SPU_FLAGS $SPU_STAGEX_FLAGS -g -T Stagex_spu.ld Stagex_spu.S Stagex_spu.c -o Stagex_spu_debug.elf || exit 1
 
 echo Building mymetldr...
 
+rm mymetldr.elf
 $SPU_CC $SPU_FLAGS $SPU_MYMETLDR_FLAGS -T mymetldr.ld mymetldr.S mymetldr.c -o mymetldr_tmp.elf || exit 1
-$SPU_STRIP --strip-all --remove-section=.comment --remove-section=.shstrtab mymetldr_tmp.elf mymetldr.elf || exit 1
+$SPU_STRIP --strip-all --remove-section=.comment --remove-section=.shstrtab mymetldr_tmp.elf -o mymetldr.elf || exit 1
 rm mymetldr_tmp.elf || exit 1
 
 $SPU_CC $SPU_FLAGS $SPU_MYMETLDR_FLAGS -g -T mymetldr.ld mymetldr.S mymetldr.c -o mymetldr_debug.elf || exit 1

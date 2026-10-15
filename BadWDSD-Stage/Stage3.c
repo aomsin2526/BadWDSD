@@ -40,6 +40,14 @@ FUNC_DEF uint64_t FindHvcallTable()
 
 FUNC_DEF void Stage3()
 {
+    struct Stagex_Context_s *ctx = GetStagexContext();
+
+    if (ctx->stage3_alreadyDone != 0)
+    {
+        lv1_puts("Stage3 already done!!!\n");
+        dead_beep();
+    }
+
     lv1_puts("BadWDSD Stage3 by Kafuu(aomsin2526)\n");
 
     lv1_puts("(Build Date: ");
@@ -49,6 +57,85 @@ FUNC_DEF void Stage3()
     lv1_puts(")\n");
 
     print_pc();
+
+    {
+#if 0
+
+        // nor
+
+        Sc_Rx: #!calc_spu_id = 1:6
+        Sc_Rx: #!aux_init = 27389:2
+        Sc_Rx: #!stage3 = 29111:0
+        Sc_Rx: #!aux_uninit = 2:3
+
+        // emmc
+
+        Sc_Rx: #!calc_spu_id = 2:6
+        Sc_Rx: #!aux_init = 17654:2
+        Sc_Rx: #!stage3 = 25877:1
+        Sc_Rx: #!aux_uninit = 2:3
+
+        // emmc with cache
+
+        Sc_Rx: #!calc_spu_id = 2:6
+        Sc_Rx: #!aux_init = 179:C
+        Sc_Rx: #!stage3 = 25875:1
+        Sc_Rx: #!aux_uninit = 2:3
+
+        // nor without hvcall
+        Sc_Rx: #!stage3 = 5622:D
+
+#endif
+
+        //uint64_t t4 = GetTimeInUs();
+        uint64_t spu_id = calc_myspu_id();
+
+        //real_puts("calc_spu_id = ");
+        //real_print_decimal(GetTimeInUs() - t4);
+        //real_puts("\n");
+
+        //uint64_t t1 = GetTimeInUs();
+        uint64_t spu_old_mfc_sr1 = SpuAux_Init_lv1(spu_id);
+
+        //real_puts("aux_init = ");
+        //real_print_decimal(GetTimeInUs() - t1);
+        //real_puts("\n");
+
+        //uint64_t t2 = GetTimeInUs();
+        spu_stage3(spu_id);
+
+        //real_puts("stage3 = ");
+        //real_print_decimal(GetTimeInUs() - t2);
+        //real_puts("\n");
+
+        //uint64_t t3 = GetTimeInUs();
+        SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
+
+        //real_puts("aux_uninit = ");
+        //real_print_decimal(GetTimeInUs() - t3);
+        //real_puts("\n");
+    }
+
+    // qcfw marker
+    *((uint64_t*)0x240) = 0x11223344aabbccdd;
+
+    // done
+    ctx->stage3_alreadyDone = 1;
+
+    lv1_puts("Stage3 done.\n");
+}
+
+FUNC_DEF void Stage3_2()
+{
+    struct Stagex_Context_s *ctx = GetStagexContext();
+
+    if (ctx->stage3_2_alreadyDone != 0)
+    {
+        lv1_puts("Stage3_2 already done!!!\n");
+        dead_beep();
+    }
+
+    lv1_puts("Stage3_2()\n");
 
     {
         {
@@ -152,64 +239,17 @@ FUNC_DEF void Stage3()
     }
 
     {
-#if 0
-
-        // nor
-
-        Sc_Rx: #!calc_spu_id = 1:6
-        Sc_Rx: #!aux_init = 27389:2
-        Sc_Rx: #!stage3 = 29111:0
-        Sc_Rx: #!aux_uninit = 2:3
-
-        // emmc
-
-        Sc_Rx: #!calc_spu_id = 2:6
-        Sc_Rx: #!aux_init = 17654:2
-        Sc_Rx: #!stage3 = 25877:1
-        Sc_Rx: #!aux_uninit = 2:3
-
-        // emmc with cache
-
-        Sc_Rx: #!calc_spu_id = 2:6
-        Sc_Rx: #!aux_init = 179:C
-        Sc_Rx: #!stage3 = 25875:1
-        Sc_Rx: #!aux_uninit = 2:3
-
-#endif
-
-        //uint64_t t4 = GetTimeInUs();
         uint64_t spu_id = calc_myspu_id();
 
-        //real_puts("calc_spu_id = ");
-        //real_print_decimal(GetTimeInUs() - t4);
-        //real_puts("\n");
-
-        //uint64_t t1 = GetTimeInUs();
         uint64_t spu_old_mfc_sr1 = SpuAux_Init_lv1(spu_id);
-
-        //real_puts("aux_init = ");
-        //real_print_decimal(GetTimeInUs() - t1);
-        //real_puts("\n");
-
-        //uint64_t t2 = GetTimeInUs();
-        spu_stage3(spu_id);
-
-        //real_puts("stage3 = ");
-        //real_print_decimal(GetTimeInUs() - t2);
-        //real_puts("\n");
-
-        //uint64_t t3 = GetTimeInUs();
+        spu_stage3_2(spu_id);
         SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
-
-        //real_puts("aux_uninit = ");
-        //real_print_decimal(GetTimeInUs() - t3);
-        //real_puts("\n");
     }
 
-    // qcfw marker
-    *((uint64_t*)0x240) = 0x11223344aabbccdd;
+    // done
+    ctx->stage3_2_alreadyDone = 1;
 
-    lv1_puts("Stage3 done.\n");
+    lv1_puts("Stage3_2 done.\n");
 }
 
 FUNC_DEF uint8_t IsLv2(uint64_t addr)
@@ -480,9 +520,14 @@ __attribute__((section("main3"))) void stage3_main(
         return;
     }
 
+    const struct Stagex_Context_s *ctx = GetStagexContext();
+
     // auth lv2
     if (in_r5 == 0x30)
     {
+        if (ctx->stage3_2_alreadyDone == 0)
+            Stage3_2();
+
         // r6 = laid
         Stage3_AuthLv2(in_r6);
         return;
@@ -491,6 +536,9 @@ __attribute__((section("main3"))) void stage3_main(
     // Call Stage4
     if (in_r5 == 0x21)
     {
+        if (ctx->stage3_2_alreadyDone == 0)
+            Stage3_2();
+
         Stage4();
         return;
     }
@@ -499,14 +547,10 @@ __attribute__((section("main3"))) void stage3_main(
     if (in_r5 != 0x31)
         return;
 
-    struct Stagex_Context_s *ctx = GetStagexContext();
-
-    if (ctx->stage3_alreadyDone == 0x69)
+    if (ctx->stage3_alreadyDone != 0)
         return;
 
     Stage3();
-
-    ctx->stage3_alreadyDone = 0x69;
 }
 
 // in:

@@ -297,6 +297,7 @@ FUNC_DEF void Stage2()
             //
 
             ctx->stage3_alreadyDone = 0;
+            ctx->stage3_2_alreadyDone = 0;
 
             ctx->stage6_isAppldr = 0;
             ctx->stage6_isLv2ldr = 0;

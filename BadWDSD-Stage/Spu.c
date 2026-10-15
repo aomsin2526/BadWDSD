@@ -651,9 +651,6 @@ FUNC_DEF void LoadElfSpu(uint64_t elfFileAddress, uint64_t spu_id, uint8_t quiet
     // SPU_NPC[0:29] = entry (LS)
     SPU_Write_SPU_NPC(spu_id, elfHdr->e_entry);
 
-    // do not remove!
-    eieio();
-
     if (!quiet)
         puts("LoadElfSpu() done.\n");
 }

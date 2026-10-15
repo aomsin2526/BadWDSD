@@ -323,9 +323,6 @@ FUNC_DEF void spu_stage3(uint64_t spu_id)
         }
     }
 
-    // do not remove!
-    eieio();
-
     // set jobStart
     SPU_LS_Write64(spu_id, 0xf00, 1);
 
@@ -359,9 +356,6 @@ FUNC_DEF void spu_stage3_2(uint64_t spu_id, const struct Stagex_spu_job_stage3_2
             memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x200), job_context, sizeof(struct Stagex_spu_job_stage3_2_context_s));
         }
     }
-
-    // do not remove!
-    eieio();
 
     // set jobStart
     SPU_LS_Write64(spu_id, 0xf00, 1);

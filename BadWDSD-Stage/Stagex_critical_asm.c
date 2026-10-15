@@ -1,4 +1,7 @@
-#pragma GCC optimize("align-functions=8") // this is needed to execute directly on nor, DO NOT REMOVE!!!!!!
+// This is needed to execute directly on nor, DO NOT REMOVE!!!!!!
+// because of embedded data inside HW_Init()
+#pragma GCC optimize("align-functions=8")
+
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 // gc sections wont work

@@ -229,7 +229,7 @@ FUNC_DEF uint8_t IsLogEnabled()
 FUNC_DEF __attribute__((noinline)) uint64_t get_pc()
 {
     uint64_t result;
-    ASM("mflr %0":"=r"(result)::);
+    ASMX("mflr %0":"=r"(result)::);
     return result;
 }
 
@@ -242,11 +242,11 @@ FUNC_DEF __attribute__((noinline)) uint64_t get_pc()
 #define SYS_TIMEBASE_GET(tb)                          \
     do                                                \
     {                                                 \
-        ASM("1: mftb %[current_tb];"                  \
+        ASMX("1: mftb %[current_tb];"                 \
                          "cmpwi 7, %[current_tb], 0;" \
                          "beq-  7, 1b;"               \
                          : [current_tb] "=r"(tb) :    \
-                         : "cr7");                    \
+                         : "cr7", );                  \
     } while (0)
 
 FUNC_DEF uint64_t GetTimeInNs()
@@ -341,16 +341,16 @@ FUNC_DEF_BCODE void WaitInMs2(uint64_t ms)
 {
     // save lr
     register uint64_t lr asm("r0");
-    ASM("mflr %0" : "=r"(lr)::);
+    ASMX("mflr %0" : "=r"(lr)::);
 
     // ms2 = ms
     register uint64_t ms2 asm("r7");
-    ASM("mr %0, %1" : "=r"(ms2) : "r"(ms) :);
+    ASMX("mr %0, %1" : "=r"(ms2) : "r"(ms) :);
 
     // start = GetTimeInMs2();
     register uint64_t start asm("r8");
     ASM("bl GetTimeInMs2");
-    ASM("mr %0, 3" : "=r"(start)::);
+    ASMX("mr %0, 3" : "=r"(start)::);
 
     // end = start + ms2
     register uint64_t end asm("r9") = start + ms2;
@@ -362,7 +362,7 @@ FUNC_DEF_BCODE void WaitInMs2(uint64_t ms)
         // cur = GetTimeInMs2();
         register uint64_t cur asm("r10");
         ASM("bl GetTimeInMs2");
-        ASM("mr %0, 3" : "=r"(cur)::);
+        ASMX("mr %0, 3" : "=r"(cur)::);
 
         if (cur >= end)
             break;
@@ -371,7 +371,7 @@ FUNC_DEF_BCODE void WaitInMs2(uint64_t ms)
     //
 
     // restore lr
-    ASM("mtlr %0" ::"r"(lr) :);
+    ASMX("mtlr %0" ::"r"(lr) :);
 }
 
 //
@@ -1361,29 +1361,29 @@ FUNC_DEF uint32_t read_spu_avail()
 
 FUNC_DEF void Xdr_Ch0_SendScmd(uint32_t data)
 {
-    ASM("lis %r4, 0x200");
-    ASM("ori %r4, %r4, 0x50");
-    ASM("sldi %r4, %r4, 16");
-    ASM("ori %r4, %r4, 0xA108");
+    ASM("lis %%r4, 0x200");
+    ASM("ori %%r4, %%r4, 0x50");
+    ASM("sldi %%r4, %%r4, 16");
+    ASM("ori %%r4, %%r4, 0xA108");
 
-    ASM("stw %r3, 0(%r4)");
+    ASM("stw %%r3, 0(%%r4)");
     eieio();
 
-    ASM("lwz %r5, 8(%r4)");
+    ASM("lwz %%r5, 8(%%r4)");
     eieio();
 }
 
 FUNC_DEF void Xdr_Ch1_SendScmd(uint32_t data)
 {
-    ASM("lis %r4, 0x200");
-    ASM("ori %r4, %r4, 0x50");
-    ASM("sldi %r4, %r4, 16");
-    ASM("ori %r4, %r4, 0xA148");
+    ASM("lis %%r4, 0x200");
+    ASM("ori %%r4, %%r4, 0x50");
+    ASM("sldi %%r4, %%r4, 16");
+    ASM("ori %%r4, %%r4, 0xA148");
 
-    ASM("stw %r3, 0(%r4)");
+    ASM("stw %%r3, 0(%%r4)");
     eieio();
 
-    ASM("lwz %r5, 8(%r4)");
+    ASM("lwz %%r5, 8(%%r4)");
     eieio();
 }
 

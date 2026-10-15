@@ -637,7 +637,7 @@ __attribute__((noreturn, section("entry2"))) void stage2_entry()
 {
     // set stage_entry_ra
     ASM("bl 4");
-    ASM("mflr %0" : "=r"(stage_entry_ra)::);
+    ASMX("mflr %0" : "=r"(stage_entry_ra)::);
     stage_entry_ra -= 4;
 
     // set is_lv1 to 0
@@ -652,13 +652,13 @@ __attribute__((noreturn, section("entry2"))) void stage2_entry()
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc
-    ASM("mr 2, %0" ::"r"(stage_rtoc) :);
+    ASMX("mr 2, %0" ::"r"(stage_rtoc) :);
 
     // set stage_sp to 0xDFFFF00
     stage_sp = 0xDFFFF00;
 
     // set r1 to stage_sp
-    ASM("mr 1, %0" ::"r"(stage_sp) :);
+    ASMX("mr 1, %0" ::"r"(stage_sp) :);
 
     // push stack
     ASM("addi 1, 1, -128");

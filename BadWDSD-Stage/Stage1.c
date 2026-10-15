@@ -90,8 +90,8 @@ FUNC_DEF void WDSDTest_2()
             r3 = (0x100 + r5);
             r4 = 0;
 
-            ASM("stb %0, 0(%1)"::"r"(r4),"r"(r3):);
-            ASM("dcbf %0, %1"::"r"(r4),"r"(r3):);
+            ASMX("stb %0, 0(%1)"::"r"(r4),"r"(r3):);
+            ASMX("dcbf %0, %1"::"r"(r4),"r"(r3):);
             eieio();
         }
     }
@@ -545,7 +545,7 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
 {
     // set stage_entry_ra
     ASM("bl 4");
-    ASM("mflr %0" : "=r"(stage_entry_ra)::);
+    ASMX("mflr %0" : "=r"(stage_entry_ra)::);
     stage_entry_ra -= 4;
 
     // set is_lv1 to 0
@@ -563,7 +563,7 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
     stage_rtoc += 0x8000;
 
     // set r2 to stage_rtoc
-    ASM("mr 2, %0" ::"r"(stage_rtoc) :);
+    ASMX("mr 2, %0" ::"r"(stage_rtoc) :);
 
     // restore XDR now
     {
@@ -590,11 +590,11 @@ __attribute__((noreturn, section("entry1"))) void stage1_entry()
     stage_sp = 0xDFFFF00;
 
     // set r1 to stage_sp
-    ASM("mr 1, %0" ::"r"(stage_sp) :);
+    ASMX("mr 1, %0" ::"r"(stage_sp) :);
 
 #if ENTRY_WAIT_IN_MS > 0
     // Can't use ram yet until pico releases it, so we wait using register only
-    ASM("li 3, %0" ::"i"(ENTRY_WAIT_IN_MS) :);
+    ASMX("li 3, %0" ::"i"(ENTRY_WAIT_IN_MS) :);
     ASM("bl WaitInMs2");
 #endif
 

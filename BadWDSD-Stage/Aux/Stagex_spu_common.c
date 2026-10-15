@@ -6,10 +6,11 @@
 
 #pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
 
-#define ASM(...) asm volatile(__VA_ARGS__)
+#define ASM(...) asm volatile(__VA_ARGS__ ::: "memory")
+#define ASMX(...) asm volatile(__VA_ARGS__ "memory")
 
 #define sync() ASM("sync")
-#define stop(...) ASM("stop %0" ::"i"(__VA_ARGS__) :)
+#define stop(...) ASMX("stop %0" ::"i"(__VA_ARGS__) :)
 
 void memset(void *buf, uint8_t v, uint32_t count)
 {

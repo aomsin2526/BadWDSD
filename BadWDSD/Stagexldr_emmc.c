@@ -33,7 +33,7 @@ register uint64_t is_emmc asm("r16");
 FUNC_DEF __attribute__((noinline)) uint64_t get_pc()
 {
     uint64_t result;
-    ASM("mflr %0":"=r"(result)::);
+    ASMX("mflr %0":"=r"(result)::);
     return result;
 }
 
@@ -42,11 +42,11 @@ FUNC_DEF __attribute__((noinline)) uint64_t get_pc()
 #define SYS_TIMEBASE_GET(tb)                          \
     do                                                \
     {                                                 \
-        ASM("1: mftb %[current_tb];"                  \
+        ASMX("1: mftb %[current_tb];"                 \
                          "cmpwi 7, %[current_tb], 0;" \
                          "beq-  7, 1b;"               \
                          : [current_tb] "=r"(tb) :    \
-                         : "cr7");                    \
+                         : "cr7", );                  \
     } while (0)
 
 FUNC_DEF uint64_t GetTimeInNs()
@@ -861,7 +861,7 @@ FUNC_DEF void RelocateStagexAndJumpToStage1(const volatile void* stagex_data)
 
     puts("Jumping to Stage1...\n");
 
-    ASM("mtctr %0" ::"r"(new_stagex_addr):);
+    ASMX("mtctr %0" ::"r"(new_stagex_addr):);
     ASM("bctr");
 
     dead_beep();
@@ -1021,23 +1021,23 @@ __attribute__((section("main"))) void stagexldr_main()
 __attribute__((noreturn, section("entry"))) void stagexldr_entry()
 {
     // .toc
-    ASM("li %r2, 0x7fff");
-    ASM("addi %r2, %r2, 0x7fff");
-    ASM("addi %r2, %r2, 0x1102"); // 0x11100
+    ASM("li %%r2, 0x7fff");
+    ASM("addi %%r2, %%r2, 0x7fff");
+    ASM("addi %%r2, %%r2, 0x1102"); // 0x11100
 
     // += 0x8000
-    ASM("addi %r2, %r2, 0x7fff");
-    ASM("addi %r2, %r2, 1");
+    ASM("addi %%r2, %%r2, 0x7fff");
+    ASM("addi %%r2, %%r2, 1");
 
     // set sp to 0x1FFFF00
-    ASM("lis %r1, 0x200");
-    ASM("addi %r1, %r1, -0x100");
+    ASM("lis %%r1, 0x200");
+    ASM("addi %%r1, %%r1, -0x100");
 
     // init ppu
     ASM("bl HW_Init");
 
     // push stack
-    ASM("addi %r1, %r1, -128");
+    ASM("addi %%r1, %%r1, -128");
 
     // jump to stagexldr_main
     ASM("b stagexldr_main");

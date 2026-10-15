@@ -17,10 +17,11 @@ typedef unsigned long uint64_t;
 
 typedef uint64_t size_t;
 
-#define ASM(...) asm volatile(__VA_ARGS__)
+#define ASM(...) asm volatile(__VA_ARGS__ ::: "memory")
+#define ASMX(...) asm volatile(__VA_ARGS__ "memory")
 
 #define SC()              \
-    ASM("sc" :"=r"(r3), "=r"(r4), "=r"(r5), "=r"(r6), "=r"(r7):"r"(r11), "r"(r3), "r"(r4), "r"(r5), "r"(r6), "r"(r7):)
+    ASMX("sc" :"=r"(r3), "=r"(r4), "=r"(r5), "=r"(r6), "=r"(r7):"r"(r11), "r"(r3), "r"(r4), "r"(r5), "r"(r6), "r"(r7):)
 
 #define dead() \
     while (1)  \
@@ -85,25 +86,25 @@ __attribute__((noreturn)) void stage4j_entry()
             // r10 = temp
 
             // r3 = src
-            ASM("ld %0, 24(1)" : "=r"(r3)::); // example: 0xa0008000
+            ASMX("ld %0, 24(1)" : "=r"(r3)::); // example: 0xa0008000
 
             // r8 = 0
-            ASM("li %0, 0" : "=r"(r8)::);
+            ASMX("li %0, 0" : "=r"(r8)::);
 
             // r9 = 0
-            ASM("li %0, 0" : "=r"(r9)::);
+            ASMX("li %0, 0" : "=r"(r9)::);
 
             // r10 = file offset
-            ASM("ld %0, 0x10(%1)" : "=r"(r10) : "r"(r3) :);
+            ASMX("ld %0, 0x10(%1)" : "=r"(r10) : "r"(r3) :);
 
             // r9 += file offset
-            ASM("add %0, %1, %2" : "=r"(r9) : "r"(r9), "r"(r10) :);
+            ASMX("add %0, %1, %2" : "=r"(r9) : "r"(r9), "r"(r10) :);
 
             // r10 = file size
-            ASM("ld %0, 0x18(%1)" : "=r"(r10) : "r"(r3) :);
+            ASMX("ld %0, 0x18(%1)" : "=r"(r10) : "r"(r3) :);
 
             // r9 += file size
-            ASM("add %0, %1, %2" : "=r"(r9) : "r"(r9), "r"(r10) :);
+            ASMX("add %0, %1, %2" : "=r"(r9) : "r"(r9), "r"(r10) :);
 
             //
             ASM("src_copy_loop:");
@@ -121,41 +122,41 @@ __attribute__((noreturn)) void stage4j_entry()
             if (r9 < 8)
             {
                 r5 = 0x8; // poke8
-                ASM("lbz %0, 0(%1)" : "=r"(r7) : "r"(r10) :);
+                ASMX("lbz %0, 0(%1)" : "=r"(r7) : "r"(r10) :);
                 r10 = 1;
             }
             else
             {
                 r5 = 0x2; // poke64
-                ASM("ld %0, 0(%1)" : "=r"(r7) : "r"(r10) :);
+                ASMX("ld %0, 0(%1)" : "=r"(r7) : "r"(r10) :);
                 r10 = 8;
             }
 
             // store register to stack
-            ASM("std %0, 32(1)" ::"r"(r0) :);
-            ASM("std %0, 40(1)" ::"r"(r8) :);
-            ASM("std %0, 48(1)" ::"r"(r9) :);
-            ASM("std %0, 56(1)" ::"r"(r10) :);
-            ASM("std %0, 64(1)" ::"r"(r3) :);
+            ASMX("std %0, 32(1)" ::"r"(r0) :);
+            ASMX("std %0, 40(1)" ::"r"(r8) :);
+            ASMX("std %0, 48(1)" ::"r"(r9) :);
+            ASMX("std %0, 56(1)" ::"r"(r10) :);
+            ASMX("std %0, 64(1)" ::"r"(r3) :);
 
             SC();
 
             // restore register from stack
-            ASM("ld %0, 64(1)" : "=r"(r3)::);
-            ASM("ld %0, 56(1)" : "=r"(r10)::);
-            ASM("ld %0, 48(1)" : "=r"(r9)::);
-            ASM("ld %0, 40(1)" : "=r"(r8)::);
-            ASM("ld %0, 32(1)" : "=r"(r0)::);
+            ASMX("ld %0, 64(1)" : "=r"(r3)::);
+            ASMX("ld %0, 56(1)" : "=r"(r10)::);
+            ASMX("ld %0, 48(1)" : "=r"(r9)::);
+            ASMX("ld %0, 40(1)" : "=r"(r8)::);
+            ASMX("ld %0, 32(1)" : "=r"(r0)::);
 
             // curOffset += r10
-            ASM("add %0, %1, %2" : "=r"(r8) : "r"(r8), "r"(r10) :);
+            ASMX("add %0, %1, %2" : "=r"(r8) : "r"(r8), "r"(r10) :);
 
             // left -= r10
-            ASM("sub %0, %1, %2" : "=r"(r9) : "r"(r9), "r"(r10) :);
+            ASMX("sub %0, %1, %2" : "=r"(r9) : "r"(r9), "r"(r10) :);
 
             // break if left == 0
-            ASM("li %0, 0" : "=r"(r0)::);
-            ASM("cmp 0, 0, %0, %1" ::"r"(r9), "r"(r0) :);
+            ASMX("li %0, 0" : "=r"(r0)::);
+            ASMX("cmp 0, 0, %0, %1" ::"r"(r9), "r"(r0) :);
             ASM("beq src_copy_done");
 
             ASM("b src_copy_loop");
@@ -180,22 +181,22 @@ __attribute__((noreturn)) void stage4j_entry()
 
     {
         // r10 = dest
-        ASM("ld %0, 16(1)" : "=r"(r10)::);
+        ASMX("ld %0, 16(1)" : "=r"(r10)::);
 
         r3 = 0x4C4F4144;
-        ASM("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
+        ASMX("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
         r10 += 4;
 
         r3 = 0x4D455858;
-        ASM("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
+        ASMX("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
         r10 += 4;
 
         r3 = 0x58584C4F;
-        ASM("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
+        ASMX("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
         r10 += 4;
 
         r3 = 0x41444D45;
-        ASM("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
+        ASMX("stw %0, 0(%1)" ::"r"(r3), "r"(r10) :);
         r10 += 4;
     }
 

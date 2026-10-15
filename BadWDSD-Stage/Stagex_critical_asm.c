@@ -11,7 +11,8 @@
 #define FUNC_DECL_BCODE __attribute__((section("bcode")))
 #define FUNC_DEF_BCODE FUNC_DECL_BCODE
 
-#define ASM(...) asm volatile(__VA_ARGS__)
+#define ASM(...) asm volatile(__VA_ARGS__ ::: "memory")
+#define ASMX(...) asm volatile(__VA_ARGS__ "memory")
 
 #define eieio()                \
     {                          \
@@ -21,13 +22,6 @@
 
 #define dcbf(___in_addr_register)                                                  \
     {                                                                              \
-        ASM("dcbf %0, %1" ::"r"(stage_zero), "r"(___in_addr_register) :);          \
+        ASMX("dcbf %0, %1" ::"r"(stage_zero), "r"(___in_addr_register) :);         \
         ASM("sync");                                                               \
-    }
-
-#define sync()                 \
-    {                          \
-        ASM("eieio");          \
-        ASM("isync");          \
-        ASM("sync");           \
     }

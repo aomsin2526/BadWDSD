@@ -187,22 +187,6 @@ FUNC_DEF void Stage2()
                 }
 
                 {
-                    job_context.patch_nobd = 0;
-
-                    uint8_t nobd_toggle_flag = sc_read_nobd_toggle_flag();
-
-                    puts("nobd_toggle_flag = ");
-                    print_hex(nobd_toggle_flag);
-                    puts("\n");
-
-                    if (((nobd_toggle_flag == 0x1) && isqCFW) || (nobd_toggle_flag == 0x2))
-                    {
-                        puts("patch_nobd\n");
-                        job_context.patch_nobd = 1;
-                    }
-                }
-
-                {
                     uint8_t fsm_counter = sc_read_fsm_counter();
                     uint8_t fsm_toggle_flag = sc_read_fsm_toggle_flag();
 
@@ -292,6 +276,14 @@ FUNC_DEF void Stage2()
 
             puts("cached_qcfw_lite_flag = ");
             print_hex(ctx->cached_qcfw_lite_flag);
+            puts("\n");
+
+            //
+
+            ctx->cached_nobd_toggle_flag = sc_read_nobd_toggle_flag();
+
+            puts("cached_nobd_toggle_flag = ");
+            print_hex(ctx->cached_nobd_toggle_flag);
             puts("\n");
 
             //

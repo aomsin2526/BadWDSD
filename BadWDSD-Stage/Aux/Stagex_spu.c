@@ -1,12 +1,12 @@
 #include "Stagex_spu_common.c"
 #include "../Aes/Aes.c"
 
-struct __attribute__((aligned(8))) Stagex_spu_context_s
+struct Stagex_spu_context_s
 {
     uint32_t jobType; // 1 = aes128_decrypt_ctr, 2 = zlib_decompress, 3 = stage3, 4 = DecryptLv0Self, 5 = stage2
 };
 
-struct __attribute__((aligned(8))) Stagex_spu_job_aes128_decrypt_ctr_context_s
+struct Stagex_spu_job_aes128_decrypt_ctr_context_s
 {
     uint8_t key[16];
     uint8_t iv[16];
@@ -58,7 +58,7 @@ void Stagex_spu_job_aes128_decrypt_ctr(const struct Stagex_spu_job_aes128_decryp
     }
 }
 
-struct __attribute__((aligned(8))) Stagex_spu_job_aes_decrypt_cbc_context_s
+struct Stagex_spu_job_aes_decrypt_cbc_context_s
 {
     uint8_t key[32];
     uint32_t key_size;
@@ -117,7 +117,7 @@ void Stagex_spu_job_aes_decrypt_cbc(const struct Stagex_spu_job_aes_decrypt_cbc_
 #include "../uzlib/tinflate.c"
 #include "../uzlib/tinfzlib.c"
 
-struct __attribute__((aligned(8))) Stagex_spu_job_zlib_decompress_context_s
+struct Stagex_spu_job_zlib_decompress_context_s
 {
     uint64_t in_ea;
     uint64_t compressed_size;
@@ -245,7 +245,7 @@ void Stagex_spu_job_stage3()
     // /flh/os/lv2_kernel.self
     // need to truncate it or it will conflict with "Boot OtherOS (qCFW)" option
     const char *lv2FilePathSearchData = "/flh/os/lv2_ker";
-    uint32_t lv2FilePathSearchDataSize = 15;
+    static const uint32_t lv2FilePathSearchDataSize = 15;
 
     static const uint64_t initialLparSizeSearchEndAddr = 0x200000;
     static const uint32_t foundInitialLPARSizeMaxCount = 2;
@@ -304,7 +304,12 @@ void Stagex_spu_job_stage3()
         stop(6);
 }
 
-void Stagex_spu_job_stage3_2()
+struct Stagex_spu_job_stage3_2_context_s
+{
+    uint8_t patch_nobd;
+};
+
+void Stagex_spu_job_stage3_2(const struct Stagex_spu_job_stage3_2_context_s* job_context)
 {
     static const uint32_t tmpBufSize = (128 * 1024); // 0x20000
     uint8_t *tmpBuf = (uint8_t *)0x10000;
@@ -446,6 +451,89 @@ void Stagex_spu_job_stage3_2()
             DMAWrite(&code_addr, (hvcallTable + (38 * 8)), sizeof(code_addr));
         }
     }
+
+    //
+
+    uint8_t found_nobd_1 = 0;
+    uint8_t found_nobd_2 = 0;
+    uint8_t found_nobd_3 = 0;
+    uint8_t found_nobd_4 = 0;
+
+    if (job_context->patch_nobd)
+    {
+        for (uint64_t tmpBuf_CurEaAddr = 0x80000; tmpBuf_CurEaAddr < (8 * 1024 * 1024); tmpBuf_CurEaAddr += tmpBufSize)
+        {
+            DMARead(tmpBuf, tmpBuf_CurEaAddr, tmpBufSize);
+
+            for (uint32_t i = 0; i < tmpBufSize; i += 4)
+            {
+                uint64_t curEaAddr = (tmpBuf_CurEaAddr + i);
+
+                if (job_context->patch_nobd)
+                {
+                    if (!found_nobd_1)
+                    {
+                        __attribute__((aligned(16))) static const uint8_t searchData[] = {0xF9, 0x21, 0x00, 0x78, 0x40, 0x9D, 0x00, 0x14};
+                        __attribute__((aligned(16))) static const uint8_t replaceData[] = {0xF9, 0x21, 0x00, 0x78, 0x60, 0x00, 0x00, 0x00};
+
+                        if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                        {
+                            DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                            found_nobd_1 = 1;
+                        }
+                    }
+
+                    if (!found_nobd_2)
+                    {
+                        __attribute__((aligned(16))) static const uint8_t searchData[] = {0x2F, 0xBF, 0x00, 0xA7, 0x41, 0x9E, 0x00, 0x0C, 0x2F, 0xBF, 0x00, 0xA5, 0x40, 0x9E, 0x00, 0x54};
+                        __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x2F, 0xBF, 0x00, 0xA7, 0x41, 0x9E, 0x00, 0x0C, 0x2F, 0xBF, 0x00, 0xA5, 0x60, 0x00, 0x00, 0x00};
+
+                        if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                        {
+                            DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                            found_nobd_2 = 1;
+                        }
+                    }
+
+                    if (!found_nobd_3)
+                    {
+                        __attribute__((aligned(16))) static const uint8_t searchData[] = {0x78, 0x84, 0x00, 0x20, 0xF8, 0x01, 0x00, 0x70, 0xF9, 0x21, 0x00, 0x78, 0x40, 0x9E, 0x00, 0x0C};
+                        __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x78, 0x84, 0x00, 0x20, 0xF8, 0x01, 0x00, 0x70, 0xF9, 0x21, 0x00, 0x78, 0x60, 0x00, 0x00, 0x00};
+
+                        if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                        {
+                            DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                            found_nobd_3 = 1;
+                        }
+                    }
+
+                    if (!found_nobd_4)
+                    {
+                        __attribute__((aligned(16))) static const uint8_t searchData[] = {0xF8, 0x01, 0x00, 0x90, 0x4B, 0xFF, 0xFF, 0x99, 0x2F, 0x83, 0x00, 0x00, 0x78, 0x63, 0x00, 0x20, 0x40, 0x9E, 0x00, 0x18};
+                        __attribute__((aligned(16))) static const uint8_t replaceData[] = {0xF8, 0x01, 0x00, 0x90, 0x4B, 0xFF, 0xFF, 0x99, 0x2F, 0x83, 0x00, 0x00, 0x78, 0x63, 0x00, 0x20, 0x60, 0x00, 0x00, 0x00};
+
+                        if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
+                        {
+                            DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
+                            found_nobd_4 = 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (job_context->patch_nobd)
+    {
+        if (!found_nobd_1)
+            stop(8);
+        if (!found_nobd_2)
+            stop(8);
+        if (!found_nobd_3)
+            stop(8);
+        if (!found_nobd_4)
+            stop(8);
+    }
 }
 
 struct ElfHeader_s
@@ -526,7 +614,7 @@ struct SceMetaKey_s
     uint64_t key[2];
 };
 
-struct __attribute__((aligned(8))) Stagex_spu_job_DecryptLv0Self_context_s
+struct Stagex_spu_job_DecryptLv0Self_context_s
 {
     uint64_t inDestEa;
     uint64_t inSrcEa;
@@ -641,7 +729,7 @@ void Stagex_spu_job_DecryptLv0Self(const struct Stagex_spu_job_DecryptLv0Self_co
     }
 }
 
-struct __attribute__((aligned(8))) Stagex_spu_job_stage2_context_s
+struct Stagex_spu_job_stage2_context_s
 {
     uint8_t is_qcfw_jig;
 
@@ -649,8 +737,6 @@ struct __attribute__((aligned(8))) Stagex_spu_job_stage2_context_s
     uint8_t patch_inspect_package_tophalf;
 
     uint8_t fsm_toggle; // 0x0 = exit, 0x1 = enter, other values = do nothing
-
-    uint8_t patch_nobd;
 };
 
 void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s *job_context)
@@ -676,11 +762,6 @@ void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s 
 
     uint8_t found_acl = 0;
     uint8_t found_stor_access = 0;
-
-    uint8_t found_nobd_1 = 0;
-    uint8_t found_nobd_2 = 0;
-    uint8_t found_nobd_3 = 0;
-    uint8_t found_nobd_4 = 0;
 
     uint8_t found_aim_get_device_type = 0;
     uint8_t found_aim_get_device_id = 0;
@@ -871,57 +952,6 @@ void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s 
                 }
             }
 
-            if (job_context->patch_nobd)
-            {
-                if (!found_nobd_1)
-                {
-                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0xF9, 0x21, 0x00, 0x78, 0x40, 0x9D, 0x00, 0x14};
-                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0xF9, 0x21, 0x00, 0x78, 0x60, 0x00, 0x00, 0x00};
-
-                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
-                    {
-                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
-                        found_nobd_1 = 1;
-                    }
-                }
-
-                if (!found_nobd_2)
-                {
-                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0x2F, 0xBF, 0x00, 0xA7, 0x41, 0x9E, 0x00, 0x0C, 0x2F, 0xBF, 0x00, 0xA5, 0x40, 0x9E, 0x00, 0x54};
-                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x2F, 0xBF, 0x00, 0xA7, 0x41, 0x9E, 0x00, 0x0C, 0x2F, 0xBF, 0x00, 0xA5, 0x60, 0x00, 0x00, 0x00};
-
-                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
-                    {
-                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
-                        found_nobd_2 = 1;
-                    }
-                }
-
-                if (!found_nobd_3)
-                {
-                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0x78, 0x84, 0x00, 0x20, 0xF8, 0x01, 0x00, 0x70, 0xF9, 0x21, 0x00, 0x78, 0x40, 0x9E, 0x00, 0x0C};
-                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0x78, 0x84, 0x00, 0x20, 0xF8, 0x01, 0x00, 0x70, 0xF9, 0x21, 0x00, 0x78, 0x60, 0x00, 0x00, 0x00};
-
-                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
-                    {
-                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
-                        found_nobd_3 = 1;
-                    }
-                }
-
-                if (!found_nobd_4)
-                {
-                    __attribute__((aligned(16))) static const uint8_t searchData[] = {0xF8, 0x01, 0x00, 0x90, 0x4B, 0xFF, 0xFF, 0x99, 0x2F, 0x83, 0x00, 0x00, 0x78, 0x63, 0x00, 0x20, 0x40, 0x9E, 0x00, 0x18};
-                    __attribute__((aligned(16))) static const uint8_t replaceData[] = {0xF8, 0x01, 0x00, 0x90, 0x4B, 0xFF, 0xFF, 0x99, 0x2F, 0x83, 0x00, 0x00, 0x78, 0x63, 0x00, 0x20, 0x60, 0x00, 0x00, 0x00};
-
-                    if (!memcmp32(&tmpBuf[i], searchData, sizeof(searchData)))
-                    {
-                        DMAWrite(replaceData, curEaAddr, sizeof(replaceData));
-                        found_nobd_4 = 1;
-                    }
-                }
-            }
-
             if (job_context->patch_aim)
             {
                 if (!found_aim_get_device_type)
@@ -1016,18 +1046,6 @@ void Stagex_spu_job_stage2_generic(const struct Stagex_spu_job_stage2_context_s 
         stop(8);
     if (!found_stor_access)
         stop(8);
-
-    if (job_context->patch_nobd)
-    {
-        if (!found_nobd_1)
-            stop(8);
-        if (!found_nobd_2)
-            stop(8);
-        if (!found_nobd_3)
-            stop(8);
-        if (!found_nobd_4)
-            stop(8);
-    }
 
     if (job_context->patch_aim)
     {
@@ -1220,7 +1238,7 @@ void main()
             else if (context->jobType == 6)
                 Stagex_spu_job_aes_decrypt_cbc((const struct Stagex_spu_job_aes_decrypt_cbc_context_s*)0x200, (uint8_t*)0x10000, (128 * 1024));
             else if (context->jobType == 7)
-                Stagex_spu_job_stage3_2();
+                Stagex_spu_job_stage3_2((const struct Stagex_spu_job_stage3_2_context_s*)0x200);
             else
                 stop(3);
 

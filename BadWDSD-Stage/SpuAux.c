@@ -108,7 +108,7 @@ FUNC_DEF uint64_t SpuAux_Init_lv1(uint64_t spu_id)
     return v;
 }
 
-struct __attribute__((aligned(8))) Stagex_spu_DMACmd_s
+struct Stagex_spu_DMACmd_s
 {
     uint32_t ls;
     uint64_t ea;
@@ -118,12 +118,12 @@ struct __attribute__((aligned(8))) Stagex_spu_DMACmd_s
     uint16_t cmd;
 };
 
-struct __attribute__((aligned(8))) Stagex_spu_context_s
+struct Stagex_spu_context_s
 {
     uint32_t jobType;
 };
 
-struct __attribute__((aligned(8))) Stagex_spu_job_aes128_decrypt_ctr_context_s
+struct Stagex_spu_job_aes128_decrypt_ctr_context_s
 {
     uint8_t key[16];
     uint8_t iv[16];
@@ -178,7 +178,7 @@ FUNC_DEF void spu_aes128_decrypt_ctr(uint64_t spu_id, const uint8_t* in, uint64_
     puts("spu_aes128_decrypt_ctr() done.\n");
 }
 
-struct __attribute__((aligned(8))) Stagex_spu_job_aes_decrypt_cbc_context_s
+struct Stagex_spu_job_aes_decrypt_cbc_context_s
 {
     uint8_t key[32];
     uint32_t key_size;
@@ -236,7 +236,7 @@ FUNC_DEF void spu_aes_decrypt_cbc(uint64_t spu_id, const uint8_t* in, uint64_t s
     puts("spu_aes_decrypt_cbc() done.\n");
 }
 
-struct __attribute__((aligned(8))) Stagex_spu_job_zlib_decompress_context_s
+struct Stagex_spu_job_zlib_decompress_context_s
 {
     uint64_t in_ea;
     uint64_t compressed_size;
@@ -335,7 +335,12 @@ FUNC_DEF void spu_stage3(uint64_t spu_id)
     puts("spu_stage3() done.\n");
 }
 
-FUNC_DEF void spu_stage3_2(uint64_t spu_id)
+struct Stagex_spu_job_stage3_2_context_s
+{
+    uint8_t patch_nobd;
+};
+
+FUNC_DEF void spu_stage3_2(uint64_t spu_id, const struct Stagex_spu_job_stage3_2_context_s* job_context)
 {
     puts("spu_stage3_2()\n");
 
@@ -348,6 +353,10 @@ FUNC_DEF void spu_stage3_2(uint64_t spu_id)
             context.jobType = 7;
 
             memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x100), &context, sizeof(context));
+        }
+
+        {
+            memcpy((void*)SPU_CalcMMIOAddress_LS(spu_id, 0x200), job_context, sizeof(struct Stagex_spu_job_stage3_2_context_s));
         }
     }
 
@@ -363,7 +372,7 @@ FUNC_DEF void spu_stage3_2(uint64_t spu_id)
     puts("spu_stage3_2() done.\n");
 }
 
-struct __attribute__((aligned(8))) Stagex_spu_job_DecryptLv0Self_context_s
+struct Stagex_spu_job_DecryptLv0Self_context_s
 {
     uint64_t inDestEa;
     uint64_t inSrcEa;
@@ -403,7 +412,7 @@ FUNC_DEF void SPU_DecryptLv0Self(uint64_t spu_id, void* inDest, const void* inSr
     puts("SPU_DecryptLv0Self() done.\n");
 }
 
-struct __attribute__((aligned(8))) Stagex_spu_job_stage2_context_s
+struct Stagex_spu_job_stage2_context_s
 {
     uint8_t is_qcfw_jig;
 
@@ -411,8 +420,6 @@ struct __attribute__((aligned(8))) Stagex_spu_job_stage2_context_s
     uint8_t patch_inspect_package_tophalf;
 
     uint8_t fsm_toggle;
-
-    uint8_t patch_nobd;
 };
 
 FUNC_DEF void spu_stage2(uint64_t spu_id, const struct Stagex_spu_job_stage2_context_s* job_context)

@@ -180,7 +180,7 @@ uint8_t strcmp(const char *str1, const char *str2)
     return 0;
 }
 
-struct __attribute__((aligned(8))) DMACmd_s
+struct DMACmd_s
 {
     uint32_t ls;
     uint64_t ea;

@@ -67,7 +67,7 @@ void LoadElfSpu(uint64_t elfFileAddress)
     }
 }
 
-struct __attribute__((aligned(8))) mymetldr_context_s
+struct mymetldr_context_s
 {
     uint64_t myldrElfAddress;
     uint64_t fwVersion;

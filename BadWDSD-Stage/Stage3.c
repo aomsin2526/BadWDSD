@@ -239,10 +239,28 @@ FUNC_DEF void Stage3_2()
     }
 
     {
+        struct Stagex_spu_job_stage3_2_context_s job_context;
+
+        {
+            job_context.patch_nobd = 0;
+
+            uint8_t nobd_toggle_flag = ctx->cached_nobd_toggle_flag;
+
+            puts("nobd_toggle_flag = ");
+            print_hex(nobd_toggle_flag);
+            puts("\n");
+
+            if (nobd_toggle_flag == 0x1) // stage3_2 only run on qcfw
+            {
+                puts("patch_nobd\n");
+                job_context.patch_nobd = 1;
+            }
+        }
+
         uint64_t spu_id = calc_myspu_id();
 
         uint64_t spu_old_mfc_sr1 = SpuAux_Init_lv1(spu_id);
-        spu_stage3_2(spu_id);
+        spu_stage3_2(spu_id, &job_context);
         SpuAux_Uninit(spu_id, spu_old_mfc_sr1);
     }
 

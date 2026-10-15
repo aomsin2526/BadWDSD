@@ -163,6 +163,7 @@ struct Stagex_Context_s
 
     uint8_t cached_os_bank_indicator;
     uint8_t cached_qcfw_lite_flag;
+    uint8_t cached_nobd_toggle_flag;
 
     uint8_t has_mylv2ldr;
     uint8_t has_myappldr;

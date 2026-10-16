@@ -17,4 +17,22 @@ SECTIONS
     .toc1 : { *(.toc1) }
 
     .opd : { *(.opd) }
+
+    /* Forbidden: initialized writable data */
+    .data :
+    {
+        *(.data .data.*)
+        *(.sdata .sdata.*)
+    }
+
+    /* Forbidden: zero-initialized data */
+    .bss (NOLOAD) :
+    {
+        *(.bss .bss.*)
+        *(.sbss .sbss.*)
+        *(COMMON)
+    }
+
+    ASSERT(SIZEOF(.data) == 0, "ERROR: .data is forbidden in ROM")
+    ASSERT(SIZEOF(.bss) == 0, "ERROR: .bss is forbidden in ROM")
 }

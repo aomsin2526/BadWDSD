@@ -140,7 +140,7 @@ FUNC_DEF void sb_putc(char c)
 {
     while ((volatile_read_uint32(0x24000FFF308) & 0x100) == 0) {}
 
-    volatile_write_uint32(0x24000FFF31C, c);
+    volatile_write_uint32(0x24000FFF31C, (c & 0xff));
 }
 
 FUNC_DEF void sb_puts(const char* str)

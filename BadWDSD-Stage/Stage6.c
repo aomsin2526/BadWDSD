@@ -325,8 +325,8 @@ __attribute__((noreturn, section("entry6"))) void stage6_entry()
     // set lv1_sp
     ASMX("mr %0, 1" : "=r"(lv1_sp)::);
 
-    // set stage_sp to 0xE000000
-    //stage_sp = 0xE000000;
+    // set stage_sp to 0xDFFFF00
+    //stage_sp = 0xDFFFF00;
 
     // set r1 to stage_sp
     //ASM("mr 1, %0" ::"r"(stage_sp) :);
